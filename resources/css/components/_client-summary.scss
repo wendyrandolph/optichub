@@ -1,0 +1,58 @@
+// scss/components/_client-summary.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.client-summary {
+  margin-bottom: 40px;
+  padding: 20px;
+
+  .welcome-box {
+    background: var(--welcome-box-bg); // <<< USE CSS VARIABLE HERE
+    border-left: 6px solid var(--brand-primary); // <<< USE CSS VARIABLE HERE
+    padding: 20px;
+    border-radius: var(--border-radius-card, 8px); // Use CSS variable for border-radius
+    margin-bottom: 20px;
+
+    h2 {
+      margin-top: 0;
+      color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+    }
+
+    p {
+      margin: 5px 0 0;
+      color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+    }
+  }
+
+  .quick-glance {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    .summary-card {
+      background: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+      border: 1px solid var(--border-default); // <<< USE CSS VARIABLE HERE
+      border-radius: var(--border-radius-card, 10px); // Use CSS variable for border-radius
+      padding: 20px;
+      min-width: 150px;
+      text-align: center;
+      box-shadow: var(--card-shadow); // <<< USE CSS VARIABLE HERE
+
+      strong {
+        font-size: 1.6rem;
+        color: var(--brand-primary); // <<< USE CSS VARIABLE HERE
+      }
+
+      span {
+        display: block;
+        margin-top: 5px;
+        font-size: 0.9rem;
+        color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+      }
+    }
+  }
+}

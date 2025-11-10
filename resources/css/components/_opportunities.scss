@@ -1,0 +1,144 @@
+// scss/components/_opportunities.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.table-opportunities {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  font-size: 1.5rem;
+  background-color: var(--table-bg); // <<< USE CSS VARIABLE HERE
+  border-top-right-radius: var(--border-radius-card, 8px); // Use CSS variable
+  border-top-left-radius: var(--border-radius-card, 8px); // Use CSS variable
+  overflow: hidden; // Ensures border-radius applies to content
+  table-layout: auto;
+
+  @include mixins.atTablet {
+    font-size: 1rem;
+
+  }
+
+
+
+  thead {
+    background-color: var(--table-head-bg); // <<< USE CSS VARIABLE HERE (from _admins.scss refactor)
+
+    th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      border-bottom: 2px solid var(--table-border); // <<< USE CSS VARIABLE HERE
+      color: var(--text-heading-table); // <<< USE CSS VARIABLE HERE
+    }
+
+
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--table-row-border); // <<< USE CSS VARIABLE HERE
+      color: var(--text-body); // Ensure table body text uses main body text color
+
+      &:hover {
+        background-color: var(--table-row-hover-bg); // <<< USE CSS VARIABLE HERE
+      }
+
+      .action-column {
+        text-align: center;
+
+        .fa-trash {
+          font-size: 1.5rem;
+
+          @include mixins.atTablet {
+            font-size: 1.2rem;
+          }
+        }
+      }
+
+      td {
+        padding: 10px;
+        vertical-align: middle;
+
+        &.actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        &.value {
+          font-weight: 400;
+          color: var(--brand-secondary); // <<< USE CSS VARIABLE HERE (or a specific --table-value-color)
+        }
+
+
+
+        &.status-cell {
+
+          justify-content: center;
+          /* Centers horizontally */
+          align-items: center;
+          /* Centers vertically, useful if the pill has height */
+          height: 100%;
+          /* Ensure the td has a defined height for vertical centering */
+
+          .stage {
+            // Apply this to the td.stage class directly
+            display: flex;
+            padding: 0.25em 0.75em;
+            border-radius: 9999px;
+            font-size: .85rem;
+            font-weight: 300;
+            text-align: center;
+            box-shadow: var(--card-shadow-light); // Lighter shadow for tags/stages
+          }
+        }
+      }
+    }
+  }
+}
+
+
+// Ensure this is `input` not `cws.input` unless `cws` is a parent class
+input {
+  width: 100%;
+  padding: 8px;
+  display: block;
+  border: none;
+  border-bottom: 1px solid var(--input-border); // <<< USE CSS VARIABLE HERE
+  margin-top: 5px;
+  background-color: var(--input-background); // Add background
+  color: var(--input-text); // Add text color
+}
+
+// --- Specific Stage Status Colors (Fixed, non-customizable for consistency) ---
+// These should use specific, fixed HEX values or derived from your status colors.
+// Using `!important` is generally discouraged; define them correctly with specificity.
+
+
+span.stage.prospect {
+  background-color: var(--stage-prospect-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--stage-prospect-text); // <<< USE CSS VARIABLE HERE
+}
+
+span.stage.negotiation {
+  background-color: var(--stage-negotiation-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--stage-negotiation-text); // <<< USE CSS VARIABLE HERE
+}
+
+span.stage.proposal-sent {
+  background-color: var(--stage-proposal-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--stage-proposal-text); // <<< USE CSS VARIABLE HERE
+}
+
+span.stage.contract-signed {
+  background-color: var(--stage-signed-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--stage-signed-text); // <<< USE CSS VARIABLE HERE
+}
+
+span.stage.lost {
+  background-color: var(--status-danger); // <<< USE CSS VARIABLE HERE (use your fixed status-danger)
+  color: var(--text-on-brand-bg); // White text on danger background
+}

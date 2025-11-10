@@ -1,0 +1,114 @@
+// scss/components/_calendar-modal.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../core/mixins' as mixins; // For SASS mixins like breakpoints
+@use '../theme/_color-palette'; // SASS variables like spacing, z-index
+@use '../core/breakpoints' as breakpoints; // SASS variables like spacing, z-index
+
+#calendar {
+  width: calc(100% - 2rem);
+  margin: 0 auto;
+
+  @include mixins.atLaptop {
+    width: 80%;
+    max-width: 1200px;
+  }
+
+  h2 {
+    color: var(--brand-primary);
+  }
+}
+
+.calendar-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)); // <<< USE CSS VARIABLE HERE (define --overlay-bg in style.scss :root)
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+
+  &.hidden {
+    display: none;
+  }
+
+  .modal-content {
+    background: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+    border-radius: var(--border-radius-card, 10px); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+    padding: 1.5rem 2rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: var(--card-shadow, 0 12px 25px rgba(0, 0, 0, 0.15)); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+    position: relative;
+    font-family: var(--font-family-base, "Inter", sans-serif); // Use CSS var for font family
+    color: var(--text-body); // <<< USE CSS VARIABLE HERE (main text color)
+
+    .close {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--text-muted); // <<< USE CSS VARIABLE HERE (define --text-muted in style.scss :root)
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text-body); // Hover to main text color for stronger contrast
+      }
+    }
+  }
+
+  #calendar-modal-body {
+    min-width: 80%;
+  }
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  justify-content: center;
+  align-items: center;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-box {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--border-radius-small, 3px); // Use CSS variable for small radius
+  }
+
+  // --- Status/Legend Colors (use your fixed status colors) ---
+  // These should be directly from your status-success, status-danger, etc. variables
+
+  .admin-complete {
+    background-color: var(--brand-primary); // Assuming admin-complete aligns with brand primary
+  }
+
+  .admin-incomplete {
+    background-color: var(--status-admin-incomplete); // Assuming admin-incomplete aligns with status-warning
+  }
+
+  .client-complete {
+    background-color: var(--status-client-complete); // Directly use status-success
+  }
+
+  .client-incomplete {
+    background-color: var(--status-client-incomplete); // Directly use status-warning
+  }
+
+  .overdue {
+    background-color: var(--overdue-task); // Directly use status-danger
+  }
+}

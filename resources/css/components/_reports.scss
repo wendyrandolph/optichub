@@ -1,0 +1,112 @@
+// scss/components/_reports.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.report-cards {
+  display: flex;
+
+  @include mixins.atTablet {
+    display: grid;
+    grid-template-columns: repeat(3, calc(25% - 20px)); // Adjust calc if needed for gaps
+    gap: 20px;
+    margin: 2rem auto;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .card {
+    // These styles will override or be overridden by _card-base.scss depending on import order
+    // It's better to define general card styles in _card-base.scss and specific overrides here.
+    border: 2px solid var(--card-border-report); // <<< USE CSS VARIABLE HERE
+    background-color: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+    transition: transform 0.2s ease, box-shadow 0.2s ease; // Add box-shadow to transition
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--card-shadow-hover); // <<< USE CSS VARIABLE HERE (from _card-base refactor)
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+      color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+    }
+
+    p {
+      font-size: 1rem;
+      margin: 0;
+      color: var(--text-body); // <<< USE CSS VARIABLE HERE
+    }
+
+    @include mixins.atTablet {
+      height: 150px;
+      min-width: calc(33% - 20px); // Adjust calc if needed for gaps
+    }
+  }
+}
+
+.report-section {
+  margin-bottom: 50px;
+  margin-top: 1rem;
+
+  h2 {
+    margin-bottom: 15px;
+    color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+    font-size: 1.25rem;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background-color: var(--table-bg); // Default table background
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--table-row-border); // <<< USE CSS VARIABLE HERE
+      text-align: left;
+      color: var(--text-body); // Default text color for table cells
+    }
+
+    th {
+      background: var(--table-head-bg); // <<< USE CSS VARIABLE HERE
+      font-weight: bold;
+      color: var(--text-heading-table); // <<< USE CSS VARIABLE HERE
+    }
+
+    tbody tr:hover {
+      background-color: var(--table-row-hover-bg); // <<< USE CSS VARIABLE HERE
+    }
+
+    a {
+      color: var(--link-color); // <<< USE CSS VARIABLE HERE (general link color)
+    }
+  }
+
+
+}
+
+// Global card styles (if not already handled by _card-base.scss)
+// If you have a .card class in _card-base.scss, these might be redundant or override it.
+// It's best to define .card once in _card-base.scss and then use specific classes
+// or CSS variables for variations.
+/*
+.card {
+  background: var(--card-bg-default); // Assuming card-bg-1 is your default card background
+  border-radius: var(--border-radius-card, 12px);
+  padding: 20px;
+  color: var(--text-body);
+  box-shadow: var(--card-shadow);
+}
+
+.card:hover {
+  // This logic should be handled by the --card-shadow-hover variable in style.scss
+  // The @if $theme == light / @else is no longer needed with CSS variables
+  box-shadow: var(--card-shadow-hover);
+}
+*/

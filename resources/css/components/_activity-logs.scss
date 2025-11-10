@@ -1,0 +1,100 @@
+// scss/components/_activity-logs.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+//@use '../core/_variables'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../theme/_color-palette';
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.table-logs {
+  width: 100%; // Ensure table takes full width
+  border-collapse: collapse; // Collapse borders for a cleaner look
+  margin-top: 1.5rem; // Space above the table
+  font-size: 0.95rem; // Base font size for table content
+  background-color: var(--table-bg); // Use CSS variable for table background
+  border-radius: var(--border-radius-card-small, 6px); // Apply border radius, fallback to 6px
+  overflow: hidden; // Ensures border-radius applies to content
+  box-shadow: var(--card-shadow-light); // Apply a light shadow
+
+  // Header Styling
+  th {
+    background-color: var(--table-head-bg); // Use CSS variable for header background
+    color: var(--text-heading-table); // Use CSS variable for header text color
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 0.75rem;
+    border-bottom: 2px solid var(--table-border); // Use CSS variable for border
+    text-align: left; // Ensure text alignment is left
+  }
+
+  // Row Striping & hover
+  tr {
+    // Default row background and text color
+    background-color: var(--table-bg);
+    color: var(--text-body);
+    border-bottom: 1px solid var(--table-row-border); // Ensure a consistent row border
+
+    &:nth-child(even) {
+      background-color: var(--table-row-alt-bg); // Use CSS variable for alternating row background
+    }
+
+    &:hover {
+      background-color: var(--table-row-hover-bg); // Use CSS variable for row hover background
+    }
+
+    // Cell padding and vertical alignment
+    td {
+      padding: 0.75rem; // Consistent padding for cells
+      vertical-align: top; // Align content to the top
+    }
+  }
+
+  td strong {
+    color: var(--brand-primary); // Use CSS variable for strong text in table cells
+  }
+
+  // Action Tag Styling
+  .log-action {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--border-radius-small, 4px); // Use CSS variable for border radius
+    display: inline-block;
+    text-transform: capitalize;
+    white-space: nowrap; // Prevent text from wrapping inside the tag
+  }
+
+  .log-action.created {
+    background-color: var(--log-action-created-bg); // Use CSS variable
+    color: var(--log-action-created-text); // Use CSS variable
+  }
+
+  .log-action.updated {
+    background-color: var(--log-action-updated-bg); // Use CSS variable
+    color: var(--log-action-updated-text); // Use CSS variable
+  }
+
+  .log-action.completed {
+    background-color: var(--log-action-completed-bg); // Use CSS variable
+    color: var(--log-action-completed-text); // Use CSS variable
+  }
+
+  // Timestamp Formatting
+  .log-timestamp {
+    font-size: 0.75rem;
+    color: var(--text-muted); // Use CSS variable for muted text
+  }
+
+  // User & Role Styling
+  .log-role.admin {
+    color: var(--brand-primary); // Use CSS variable for admin role text
+    font-weight: 600;
+  }
+
+  .log-role.client {
+    color: var(--log-role-client-text); // Use CSS variable for client role text
+    font-style: italic;
+  }
+}

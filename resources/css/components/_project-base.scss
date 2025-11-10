@@ -1,0 +1,529 @@
+// scss/components/_project-base.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+/* Stats row */
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: .5rem 0 1.25rem;
+}
+
+.dashboard-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 92px;
+  padding: .9rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--card-bg-default);
+  box-shadow: var(--card-shadow-light, none);
+}
+
+.cws-db-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.cws-db-row i {
+  color: var(--icon-default);
+  font-size: 1.05rem;
+}
+
+.dashboard-number {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.db-card-header {
+  margin-top: .35rem;
+  color: var(--text-muted);
+  font-size: .9rem;
+}
+
+
+.project-group {
+  padding: 1rem;
+  margin: 2.5rem auto 2rem;
+  border-radius: var(--border-radius-card-small, 6px); // Use CSS variable
+  border: 1px solid var(--project-group-border); // <<< USE CSS VARIABLE HERE
+  width: 80%;
+  max-width: 1000px;
+  background-color: var(--card-bg-default); // Default background for project group
+  color: var(--text-body); // Default text color
+}
+
+.project-view {
+  .project-header {
+    margin-bottom: .6rem;
+    color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  }
+
+  .project-title {
+    font-size: 2rem;
+    margin: .1rem 0 .35rem;
+    color: var(--text-heading); // <<< USE CSS VARIABLE HERE (or --text-heading-2)
+  }
+
+  .project-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: .95rem;
+  }
+
+  .project-desc {
+    margin: .6rem 0 0;
+    color: var(--text-body); // Default text color
+  }
+
+  .phase-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    background: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+    cursor: pointer;
+    color: var(--text-body); // <<< USE CSS VARIABLE HERE
+    box-shadow: var(--card-shadow-light); // Add a light shadow for depth
+    border-radius: var(--border-radius-card-small, 6px); // Add border radius
+  }
+
+  .phase-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .project-block {
+    h3 {
+      font-size: 1.2rem;
+    }
+  }
+
+  // -------- ACTIONS ----------------------------------------------------------- 
+  .project-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin: .5rem 0 1rem;
+  }
+
+  .btn {
+    height: 38px;
+    padding: 0 .9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--card-bg-default);
+    color: var(--text-body);
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+  }
+
+  .btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--link-color);
+  }
+
+  .btn--brand {
+    background: var(--brand-primary);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  // -------- KPI STRIP -----------------------------------------------------------------
+  .proj-kpis {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-bottom: 1rem;
+
+    @include mixins.atTablet {
+      display: grid;
+      grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+
+    }
+
+  }
+
+  .kpi {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .6rem .75rem;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--card-bg-default);
+  }
+
+  .kpi__label {
+    color: var(--text-muted);
+    font-size: .9rem;
+  }
+
+  .kpi__value {
+    margin-left: auto;
+    font-weight: 700;
+  }
+
+  .kpi__bar {
+    position: relative;
+    flex: 1;
+    height: 8px;
+    border-radius: 6px;
+    background: var(--background-2);
+    overflow: hidden;
+  }
+
+  .kpi__bar i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--brand-secondary);
+    border-radius: 6px;
+  }
+
+  .kpi--warn {
+    border-color: rgba(234, 125, 81, .35);
+    background: rgba(234, 125, 81, .06);
+  }
+
+  // -------- Phases -----------------------------------------------------------------
+  /* Grid of phase tiles; 1 col mobile, 2 cols >= 1024px */
+  .phases-grid {
+    display: grid;
+    gap: .75rem;
+  }
+
+  @media (max-width: 1023.98px) {
+    .phases-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (min-width: 1024px) and (max-width: 1199.98px) {
+
+    /* One centered column at “squeezed” widths */
+    .phases-grid {
+      grid-template-columns: 1fr;
+      max-width: 920px;
+      margin-inline: auto;
+    }
+  }
+
+  @media (min-width: 1200px) {
+
+    /* Comfortable two-up tiles on desktop+ */
+    .phases-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* When a phase is opened, give it the whole row */
+    /* Use :has if supported, or add the .is-open class via tiny JS fallback below */
+    .phases-grid .phase-card:has(.phase-block[open]) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Optional fallback if you want full-row open on older browsers */
+  @media (min-width: 1200px) {
+    .phases-grid .phase-card.is-open {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* 2) Summary density tweaks around 1024–1199px */
+  @media (min-width: 1024px) and (max-width: 1199.98px) {
+    .phase-summary {
+      gap: .6rem;
+    }
+
+    .phase-meta {
+      gap: .45rem;
+    }
+
+    .phase-progress .progress-bar {
+      width: 100px;
+    }
+
+    /* smaller so header breathes */
+  }
+
+  /* 3) KPI strip wraps nicely (no overflow at 1024) */
+  .proj-kpis {
+    display: grid;
+    gap: .6rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+/* Make closed phases card-sized */
+.phase-card .phase-block {
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--card-bg-default);
+  overflow: hidden;
+}
+
+.caret {
+  width: 0;
+  height: 0;
+  border-left: 6px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  margin-right: .35rem;
+  opacity: .7;
+  transition: transform .18s ease;
+}
+
+.phase-block[open] .caret {
+  transform: rotate(90deg);
+}
+
+/* When a phase is open, make it span the full grid width on large screens */
+@media (min-width: 1024px) {
+
+  /* If :has is supported, this one line is enough */
+  .phases-grid .phase-card:has(.phase-block[open]) {
+    grid-column: 1 / -1;
+  }
+
+  /* Fallback if you prefer JS (below): */
+  .phases-grid .phase-card.is-open {
+    grid-column: 1 / -1;
+  }
+}
+
+
+
+/* Right-side meta (chips + progress) */
+.phase-meta {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-left: auto;
+}
+
+/* Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  /* can switch to 8px if you prefer square */
+  font-size: .8rem;
+  line-height: 1;
+  color: var(--text-body);
+  border: 1px solid var(--border-light);
+  background: var(--background-1);
+}
+
+.chip--open {
+  border-color: rgba(120, 209, 71, .35);
+  background: rgba(120, 209, 71, .10);
+}
+
+.chip--overdue {
+  border-color: rgba(234, 125, 81, .35);
+  background: rgba(234, 125, 81, .10);
+}
+
+/* Progress (you already have these—kept here for completeness) */
+.phase-progress {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 180px;
+}
+
+.phase-progress .progress-bar {
+  width: 120px;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--background-2);
+  overflow: hidden;
+}
+
+.phase-progress .progress-bar .fill {
+  height: 100%;
+  background: var(--brand-secondary);
+}
+
+/* Hover/focus affordance */
+.phase-summary:hover {
+  background: color-mix(in srgb, var(--card-bg-default) 92%, #fff);
+}
+
+.phase-summary:focus-visible {
+  outline: 2px solid var(--brand-secondary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* -----------  Task header + rows ---------------------------------- */
+.task-header-row,
+.task-row {
+  display: grid;
+  align-items: start;
+  gap: .5rem .75rem;
+  grid-template-columns: 2fr 1fr 1fr 1fr 3fr auto;
+  /* title | assignee | due | status | desc | actions */
+  padding: .55rem .9rem;
+}
+
+.task-header-row {
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--background-2);
+}
+
+.task-row:nth-child(odd) {
+  background: color-mix(in srgb, var(--card-bg-default) 90%, #fff);
+}
+
+.task-row .badge {
+  display: inline-block;
+  font-size: .8rem;
+  padding: .15rem .45rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background: var(--background-1);
+}
+
+.badge.status-open {
+  border-color: rgba(120, 209, 71, .35);
+  background: rgba(120, 209, 71, .10);
+}
+
+.badge.status-closed {
+  border-color: rgba(99, 115, 129, .35);
+  background: rgba(99, 115, 129, .10);
+}
+
+.col-actions {
+  display: flex;
+  gap: .25rem;
+  justify-content: flex-end;
+}
+
+.col-actions .btn {
+  height: 32px;
+  padding: 0 .6rem;
+}
+
+/* Overdue due date highlight */
+.task-row.is-overdue {
+  box-shadow: inset 4px 0 0 rgba(234, 125, 81, .75);
+}
+
+
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: .25rem 0;
+  color: var(--text-body);
+}
+
+.list-row span {
+  color: var(--text-muted);
+}
+
+
+// --------------------------------------------------------------- 
+
+.project-summary-grid {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  @include mixins.atTablet {
+    flex-direction: row;
+  }
+
+  h3 {
+    font-size: 2rem;
+
+    @include mixins.atTablet {
+      font-size: 1.15rem;
+    }
+
+  }
+
+  .col-1 {
+    width: 67%;
+    margin-top: 0;
+  }
+
+  .col-2 {
+    width: 33%;
+    margin-top: 0;
+  }
+
+  .action-buttons {
+    width: 100%;
+
+    align-items: flex-start;
+
+    i {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+  }
+
+  .action-buttons:hover {
+    border-top: none;
+    border-bottom: none;
+  }
+
+}
+
+
+.section-heading {
+  color: var(--text-heading); // <<< USE CSS VARIABLE HERE (or --text-heading-2)
+}
+
+
+
+.progress-text {
+  font-size: 0.85rem;
+  color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+}
+
+
+// --- Status Badges (Fixed, non-customizable) ---
+// These should use specific, fixed HEX values or derived from your status colors.
+.status-open {
+  background: var(--status-open-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--status-open-text); // <<< USE CSS VARIABLE HERE
+}
+
+.status-in_progress {
+  background: var(--status-in-progress-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--status-in-progress-text); // <<< USE CSS VARIABLE HERE
+}
+
+.status-completed {
+  background: var(--status-completed-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--status-completed-text); // <<< USE CSS VARIABLE HERE
+}
+
+.status-needs_refinement {
+  background: var(--status-needs-refinement-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--status-needs-refinement-text); // <<< USE CSS VARIABLE HERE
+}

@@ -1,0 +1,308 @@
+// scss/components/_buttons.scss
+
+// Import SASS variables and mixins needed for button structural styles.
+// DO NOT import theme maps or define theme classes here.
+@use 'sass:meta';
+@use '../core/mixins' as mixins; // For SASS mixins like breakpoints
+@use '../theme/_color-palette'; // SASS variables like spacing, z-index
+@use '../core/breakpoints' as breakpoints; // SASS variables like spacing, z-index
+
+// at the top of _buttons.scss after imports
+@if not meta.mixin-exists('themed-button', mixins) {
+  @error "Missing mixin: themed-button";
+}
+
+// Base button styles (applies to all themes and tenants)
+button {
+  background-color: transparent;
+  border: none;
+}
+
+.btn,
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .6rem 1rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--brand-secondary); // green ring
+    outline-offset: 2px;
+  }
+
+}
+
+/* Reset anchor defaults for button links */
+a.btn,
+a.btn:link,
+a.btn:visited {
+  text-decoration: none;
+  /* let the variant set the color, or set it here for safety */
+  color: inherit;
+}
+
+/* Ensure primary button color wins for all link states */
+.btn--primary,
+a.btn--primary:link,
+a.btn--primary:visited,
+a.btn--primary:hover,
+a.btn--primary:focus {
+  background-color: var(--oh-btn-primary-bg, var(--btn-primary-bg, var(--brand-secondary)));
+  color: var(--oh-btn-primary-text, var(--btn-primary-text, var(--text-on-brand-bg)));
+  border-color: transparent;
+  background-image: none;
+  /* neutralize any gradient from elsewhere */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+  .btn,
+  a.btn {
+    transition: filter .15s ease, transform .06s ease, box-shadow .2s ease;
+  }
+
+  .btn:active,
+  a.btn:active {
+    transform: translateY(1px);
+  }
+}
+
+.btn[disabled],
+.btn[aria-disabled="true"],
+.btn.is-loading {
+  opacity: .55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: none;
+  /* avoid hover brightening */
+}
+
+// -------------------- Icon Color Match ----------------- 
+.btn .fa,
+.btn [class^="fa-"] {
+  color: currentColor;
+  margin-inline: .25rem;
+}
+
+
+.btn {
+  &.btn-small {
+    font-size: .875rem;
+    padding: .4rem .7rem;
+  }
+
+  &.btn-full {
+    font-size: 1.125rem;
+    padding: .9rem 1.2rem;
+  }
+
+  // --- Specific Button Styles using CSS Custom Properties ---
+  // These will dynamically change based on :root / .theme-dark / JavaScript overrides
+
+  &.btn-add {
+    background-color: var(--btn-secondary-bg);
+    color: var(--btn-secondary-text);
+
+    .fa-plus {
+      color: var(--btn-secondary-text) !important; // Match button text color
+    }
+  }
+
+  &.btn-complete {
+    background-color: var(--btn-complete-bg); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+    color: var(--btn-complete-text); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+  }
+
+  &.btn-delete {
+    background-color: var(--btn-danger-bg); // <<< USE CSS VARIABLE HERE (fixed status color)
+    color: var(--btn-danger-text); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+  }
+
+  &.btn-edit {
+    background-color: var(--btn-edit-bg, var(--btn-primary-bg));
+    color: var(--btn-edit-text, var(--btn-primary-text));
+  }
+
+  &.btn-comment {
+    background-color: var(--btn-comment-bg, var(--brand-accent-tertiary));
+    color: var(--btn-comment-text, var(--text-on-brand-bg));
+  }
+
+  &.btn-back {
+    border: 5px double var(--btn-back-border); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+    color: var(--btn-back-text); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+  }
+
+  &.btn-view {
+    background-color: var(--btn-view-bg); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+    color: var(--btn-view-text); // <<< USE CSS VARIABLE HERE (define in style.scss :root)
+  }
+
+  &.btn-save {
+    @include mixins.themed-button(--oh-btn-primary-bg, --oh-btn-primary-text);
+    height: 40px;
+
+    &:hover {
+      filter: brightness(110%); // Filter works on CSS vars too
+    }
+  }
+
+  @include mixins.atTablet {
+    font-size: 1.05rem;
+  }
+
+  @include mixins.atLaptop {
+    font-size: 1rem;
+  }
+
+
+  &--primary {
+    background-color: var(--oh-btn-primary-bg);
+    color: var(--oh-btn-primary-text);
+    border-color: transparent;
+  }
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+
+  &--secondary {
+    background: var(--background-1);
+    color: var(--text-body);
+    border-color: var(--border-light);
+
+    &:hover {
+      background: var(--background-2);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--text-heading);
+    border-color: var(--brand-secondary);
+  }
+
+  &--brand {
+    background: var(--brand-secondary);
+    color: var(--text-on-brand-bg);
+    border-color: transparent;
+
+    &:hover {
+      filter: brightness(1.05);
+    }
+  }
+
+  &--glow {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--oh-btn-primary-bg, var(--btn-primary-bg)) 20%, transparent),
+      0 8px 18px color-mix(in srgb, var(--oh-btn-primary-bg, var(--btn-primary-bg)) 25%, transparent);
+    transition: transform .08s ease, box-shadow .18s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--oh-btn-primary-bg, var(--btn-primary-bg)) 28%, transparent),
+        0 10px 22px color-mix(in srgb, var(--oh-btn-primary-bg, var(--btn-primary-bg)) 32%, transparent);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
+// Button Underline hover effect (no color changes needed here, currentColor works dynamically)
+.btn-underline {
+  position: relative;
+  overflow: hidden;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    background-color: currentColor; // This will use the text color of the button dynamically
+    width: 0;
+    transition: width 0.3s ease;
+  }
+
+  &::before {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &::after {
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  &:hover::before,
+  &:hover::after {
+    width: 50%;
+  }
+}
+
+
+.menu-button {
+  background: none;
+  border: none;
+  color: var(--icon-on-brand-bg); // Assuming this is on a dark header, use icon-on-brand-bg
+  font-size: 24px;
+  margin-left: 16px;
+  cursor: pointer;
+}
+
+.user-menu-button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-on-brand-bg); // Match header text color
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+// Used in Login Form
+.action-button {
+  background-color: var(--btn-primary-bg); // Assuming this is a primary action button
+  color: var(--btn-primary-text);
+  border: none;
+  padding: 1rem;
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: var(--border-radius-btn, 8px); // Use CSS var if dynamic
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    filter: brightness(110%); // Filter works on CSS vars
+  }
+}
+
+.btn-delete-comment {
+  background: none;
+  border: none;
+  color: var(--link-danger); // Use fixed status color
+  cursor: pointer;
+  margin-top: 0.25rem;
+
+  &:hover {
+    color: var(--link-danger); // SASS darken on CSS var won't work in compiled CSS
+    // Alternative for hover: Define a --status-danger-hover CSS var
+    // or use filter: brightness(90%);
+  }
+}

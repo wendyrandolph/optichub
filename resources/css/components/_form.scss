@@ -1,0 +1,460 @@
+// scss/components/_form.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+
+
+
+.form-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: 1fr;
+
+  @include mixins.atTablet {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    /* main + sidebar */
+    align-items: start;
+    gap: 20px;
+  }
+}
+
+.form-col {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row-2 {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+// --------------- FIELDS --------------------------------------------------
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+
+  .label {
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: var(--text-heading-form-label); // <<< USE CSS VARIABLE HERE
+    font-size: 1rem;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--input-focus-border); // <<< USE CSS VARIABLE HERE
+    outline: none;
+  }
+}
+
+.form-group>.label,
+.form-group>label {
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+
+//Hide the native calendar icon for the date picker 
+/* Date inputs often have a large intrinsic min-width */
+.input[type="date"],
+input[type="date"] {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+// Microsoft Edge (might need -ms- prefix for older versions, or just use -webkit if that works)
+// Edge typically responds to -webkit- prefixes for this particular pseudo-element.
+
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-secondary); // <<< USE CSS VARIABLE HERE (or a specific --checkbox-accent)
+  cursor: pointer;
+}
+
+.checkbox-wrapper label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  cursor: pointer;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-left: auto;
+  flex-wrap: nowrap;
+
+  @include mixins.atMaxMedium {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+
+  &__wrap {
+    flex-wrap: wrap;
+  }
+
+  .inline-form {
+    display: inline-flex;
+  }
+}
+
+.page-actions [aria-disabled="true"] {
+  opacity: .45;
+  pointer-events: none;
+}
+
+// ------------- Form Cards ------------------------------------------------------
+.form-card {
+  max-width: 1040px;
+  margin: 2rem auto;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: var(--card-bg-default, var(--background-1));
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  //box-shadow: var(--card-shadow);
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.2), 0 4px 20px 0 rgba(0, 0, 0, 0.19);
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding-bottom: .75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--background-1);
+  }
+
+  &__title {
+    margin: 0 0 .75rem;
+    font-weight: 800;
+    color: var(--text-heading);
+  }
+
+  &__sub {
+    color: var(--text-muted, #64748b);
+    margin: 0;
+  }
+
+  label,
+  .label {
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text-heading);
+
+  }
+
+  .row {
+    display: grid;
+    gap: 16px;
+
+    @include mixins.atTablet {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .col {
+    display: grid;
+    gap: 16px;
+  }
+
+
+
+  .form-group {
+    display: flex;
+    /* critical */
+    gap: 16px 24px;
+
+
+    .label {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      text-transform: none;
+      letter-spacing: .1px;
+    }
+
+    .input {
+      padding: 8px;
+      display: block;
+      border: none;
+      border-bottom: 1px solid var(--input-border, var(--border-light));
+      width: 100%;
+    }
+
+
+    .textarea,
+    .select {
+      width: 100%;
+      background: transparent;
+      color: var(--input-text);
+      border: none;
+      border-bottom: 1px solid var(--input-border, var(--border-light));
+      padding: .65rem .25rem .55rem;
+      font: 500 .96rem/1.35 var(--font-family-base, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
+      transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+      border-radius: 0;
+      /* keep flat */
+    }
+
+    .textarea {
+      min-height: 3.25rem;
+      resize: vertical;
+    }
+
+    /* fields */
+    .form-group .error {
+      color: #b42318;
+    }
+
+    .form-group.has-error .input,
+    .form-group.has-error .textarea,
+    .form-group.has-error .select {
+      border-color: #b42318;
+    }
+
+    .row-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+  }
+
+  /* allow children to shrink within grids */
+  .form-card,
+  .form-card * {
+    min-width: 0;
+  }
+
+  /* inputs/selects never exceed container */
+  .input,
+  .select,
+  .textarea {
+    max-width: 100%;
+  }
+
+  /* break long words/URLs if any slip in */
+  .form-card {
+    overflow-wrap: anywhere;
+  }
+
+  /* --------- INPUTS ------------------------------------------------------------ */
+  .form-card input[type="text"],
+  .form-card input[type="number"],
+  .form-card input[type="date"],
+  .form-card select,
+  .form-card textarea {
+    width: 100%;
+    font: 500 .96rem/1.35 var(--font-family-base, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
+    color: var(--input-text);
+    background: var(--input-background);
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
+    /* no pills */
+    padding: .7rem .8rem;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  }
+
+  /* Placeholders */
+  input,
+  textarea {
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-bottom: 2px solid var(--input-focus-border, var(--brand-secondary));
+    box-shadow: 0 2px 0 0 var(--input-focus-border, var(--brand-secondary));
+  }
+
+  /* Focus State */
+  /* Focus state */
+  .form-card input:focus,
+  .form-card select:focus,
+  .form-card textarea:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-focus-border) 24%, transparent);
+  }
+
+  /* Disabled/readonly (if used) */
+  .form-card input[disabled],
+  .form-card select[disabled],
+  .form-card textarea[disabled] {
+    opacity: .75;
+    cursor: not-allowed;
+  }
+
+
+
+
+  // --------------- Color Picker --------------------------------------------------
+  .color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem .65rem;
+  }
+
+  .color-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+  }
+
+  .color-radio input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: auto;
+    height: auto;
+  }
+
+  .swatch {
+    --size: 22px;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 8px;
+    background: var(--sw);
+    border: 1px solid rgba(0, 0, 0, .08);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .45);
+
+  }
+
+  .color-radio input:checked+.swatch {
+    outline: 2px solid var(--brand-secondary);
+    outline-offset: 2px;
+  }
+
+
+  // REQUIRED AND ERROR States ----------------------------------------
+  .required::after {
+    content: " *";
+    color: #d33;
+    margin-left: .25rem;
+  }
+
+  .field-error {
+    border-color: #d33 !important;
+  }
+
+  .help-error {
+    color: #d33;
+    font-size: .85rem;
+    margin-top: .35rem;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+  }
+
+
+
+  .two-up {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+
+    @include mixins.atMedium {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .sidebar {
+    position: sticky;
+    top: calc(var(--header-heght, 56px) + 12px);
+  }
+
+  /* side panel cards */
+  .sidebar .card {
+    border: 1px solid var(--oh-border, rgba(13, 16, 32, .12));
+    border-radius: 12px;
+    padding: 14px;
+    background: #fff;
+  }
+
+  .sidebar .card.danger {
+    background: #fff5f5;
+    border-color: #ffd3d3;
+  }
+
+  .card__title {
+    font-size: .95rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+
+  .stack.gap-8 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn--block {
+    width: 100%;
+    text-align: center;
+  }
+
+
+}
+
+// --------------- Form Actions --------------------------------------------------
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: .6rem;
+  justify-content: flex-end;
+  padding-top: .25rem;
+
+
+}
+
+.savebar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(13, 16, 32, .12);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, .12);
+}
+
+.savebar.is-hidden {
+  display: none;
+}
+
+.savebar__actions {
+  display: flex;
+  gap: 8px;
+}

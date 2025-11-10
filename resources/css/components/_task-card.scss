@@ -1,0 +1,304 @@
+// scss/components/_tasks.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.project-group {
+  // This class is also defined in _project-base.scss.
+  // Ensure correct import order and specificity, or consolidate.
+  // Assuming _project-base.scss handles the main project-group styles.
+  // This file should only contain task-related overrides if necessary.
+
+  .phase-title {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.25rem 0.75rem;
+    font-size: clamp(1.5rem, 0.765vw + 0.955rem, 2rem);
+    font-weight: 500;
+    border-radius: var(--border-radius-small, 4px); // Use CSS variable
+    border-left: 4px solid currentColor; // currentColor works dynamically
+    color: currentColor; // Color will be set by the phase-color CSS variable from _phase-colors.scss
+  }
+}
+
+// Task list responsive display
+.task-table-desktop {
+  display: none; // Mobile first: hidden by default
+
+  @include mixins.atTablet {
+    display: table; // Show on tablet and up
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    width: 100%;
+  }
+
+  .table-task-list {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 1rem;
+    background-color: var(--table-bg); // Use CSS variable
+
+    th {
+      font-weight: 400 !important;
+      padding: 10px;
+      text-align: left;
+      color: var(--text-heading-table); // Use CSS variable
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--table-row-border); // Use CSS variable
+      vertical-align: top;
+      color: var(--text-body); // Default text color for table cells
+    }
+
+    .task-title {
+      font-weight: 600;
+      color: var(--text-heading); // <<< USE CSS VARIABLE HERE (or --text-heading-2)
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+
+    }
+
+    .task-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      form .btn,
+      .button,
+      .btn {
+        min-width: 120px;
+        text-align: center;
+        font-size: .8rem;
+        // Colors for these buttons should come from _buttons.scss using CSS vars
+      }
+
+      .btn-complete {
+        min-width: 120px;
+        // Color for this button should come from _buttons.scss using CSS vars
+      }
+
+      .action-icon {
+        background: none;
+        border: none;
+        color: var(--icon-primary-action); // <<< USE CSS VARIABLE HERE
+        font-size: 1.25rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: color 0.2s;
+
+        &:hover {
+          filter: brightness(110%); // Use filter for dynamic hover
+        }
+
+        i {
+          pointer-events: none;
+        }
+      }
+    }
+  }
+}
+
+.action-icon.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+
+  &:hover {
+    color: inherit; // Inherit from parent, so it doesn't change on hover
+  }
+}
+
+.status-label {
+  font-size: .8rem;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-small, 4px); // Use CSS variable
+  display: inline-block;
+  min-width: 120px;
+  text-align: center;
+
+  &.completed {
+    background-color: var(--status-completed-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--status-completed-text); // <<< USE CSS VARIABLE HERE
+  }
+
+  &.open {
+    background-color: var(--status-open-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--status-open-text); // <<< USE CSS VARIABLE HERE
+  }
+}
+
+//Mobile style for Client View
+.task-cards-mobile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+
+  @include mixins.atTablet {
+    display: none; // Hide on tablet and up
+  }
+
+  .task-card {
+    flex: 1 1 100%; // Full width on mobile
+    display: flex;
+    flex-direction: row; // Layout for mobile task card
+    justify-content: space-evenly;
+    border-left: 4px solid var(--task-card-border-left); // <<< USE CSS VARIABLE HERE
+    border-radius: var(--border-radius-card, 8px); // Use CSS variable
+    padding: 1.2rem;
+    background-color: var(--card-bg-default); // Default background for task card
+    min-height: 240px;
+    box-shadow: var(--card-shadow-light); // Use CSS variable for light shadow
+
+    @include mixins.atTablet {
+      flex: 1 1 calc(50% - 1rem); // Example for tablet, if it ever shows up
+    }
+
+    .task-header {
+      margin-bottom: 0.75rem;
+      border-right: 5px solid var(--task-header-border-right); // <<< USE CSS VARIABLE HERE
+      flex: 1 1 calc(50% - 1rem);
+
+      .task-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-heading); // <<< USE CSS VARIABLE HERE (or --text-heading-2)
+        margin-bottom: 0.3rem;
+      }
+    }
+
+    .task-meta,
+    .task-info,
+    form label,
+    .task-card.no-tasks {
+      color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+    }
+
+    .task-meta {
+      display: flex;
+      flex-direction: column;
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+
+      span {
+        display: inline-block;
+        margin-top: 0.25rem;
+        margin-bottom: .25rem;
+        font-weight: 600;
+        font-size: 1.4rem;
+        max-width: 130px;
+        padding: 5px;
+      }
+    }
+
+    .task-info {
+      font-size: 1.4rem; // 16px for better legibility
+      line-height: 1.5; // Comfortable spacing
+      margin-bottom: 1rem;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.25rem;
+      flex: 1 1 calc(50% - 1rem);
+      justify-content: flex-end;
+
+      .action-icon {
+        position: relative;
+        color: var(--icon-primary-action); // <<< USE CSS VARIABLE HERE
+        font-size: 3rem;
+        cursor: pointer;
+        border: none;
+
+        &:hover {
+          filter: brightness(90%); // Use filter for dynamic hover
+        }
+
+        &.disabled {
+          opacity: 0.4;
+          pointer-events: none;
+          border: none;
+        }
+      }
+    }
+  }
+
+  form label {
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="checkbox"] {
+    transform: scale(1.2);
+    margin-right: 0.5rem;
+    accent-color: var(--checkbox-accent); // Use CSS variable
+  }
+
+  .task-card.no-tasks {
+    background: var(--card-bg-default); // Use CSS variable
+    font-size: 1.4rem;
+    padding: 1rem;
+    border-radius: var(--border-radius-card-small, 6px); // Use CSS variable
+    font-style: italic;
+    justify-content: center;
+    align-items: center;
+    text-align: right;
+    color: var(--text-muted); // Use CSS variable
+  }
+
+  div.no-tasks-text {
+    margin-left: 15px;
+    font-size: 2rem;
+  }
+
+  i {
+    font-size: 2rem;
+  }
+}
+
+.accordion-toggle {
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  font-weight: bold;
+  gap: .5rem;
+  width: 100%;
+  color: var(--text-heading); // Default color for accordion toggle
+
+  @include mixins.atTablet {
+    display: none !important;
+  }
+}
+
+// Default hidden for mobile-specific elements
+.accordion-content {
+  display: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-content.visible {
+  display: block !important;
+  max-height: 2000px; // or adjust depending on expected content
+}
+
+.accordion-toggle.open .accordion-icon {
+  transform: rotate(180deg);
+}

@@ -1,0 +1,221 @@
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+@import './marketing.css'; 
+@import './dashboard.css';
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ---------- THEME TOKENS ---------- */
+/* Light (default) */
+@layer base {
+  :root {
+    /* Brand (RGB values for opacity support) */
+    --brand-primary: 39 56 104;   /* #273868 */
+  --brand-secondary: 95 180 168;/* #5FB4A8 */
+  --brand-accent: 234 125 81;   /* #EA7D51 */
+
+  --page-bg: 245 243 239;       /* #F5F3EF */
+  --card-bg: 255 255 255;       /* #FFFFFF */
+  --card-accent-bg: 246 247 249;/* subtle panel, adjust if you like */
+
+  --text-base: 51 51 51;        /* #333333 */
+  --text-subtle: 138 149 168;   /* from your ink.500 */
+
+  --border-default: 208 214 223;
+  --status-success: 95 180 168; /* tie success to teal */
+
+    /* Effects */
+    --card-shadow: 0 8px 20px rgba(0,0,0,.06);
+    --card-shadow-light: 0 4px 12px rgba(0,0,0,.04);
+
+    --border-radius-card: 12px;
+    --border-radius-card-small: 8px;
+    --border-radius-small: 6px;
+  }
+
+  /* Dark overrides (activated by .dark on <html>) */
+  .dark {
+  --brand-primary: 151 169 216; /* #97A9D8 */
+  --brand-secondary: 75 160 148;/* #4BA094 */
+  --brand-accent: 172 64 21;    /* #AC4015 */
+
+  --page-bg: 16 14 10;          /* #100E0A */
+  --card-bg: 8 21 53;           /* #081535 */
+  --card-accent-bg: 18 24 38;   /* darker panel */
+
+  --text-base: 204 204 204;     /* #CCCCCC */
+  --text-subtle: 163 177 209;   /* calm cool gray */
+
+  --border-default: 48 61 87;   /* darker border */
+  --status-success: 75 160 148; /* teal tone in dark */
+
+    --card-shadow: 0 10px 30px rgba(0,0,0,.35);
+    --card-shadow-light: 0 6px 18px rgba(0,0,0,.25);
+  }
+}
+
+/* ---- Components (recreate your SCSS classes using Tailwind @apply) ---- */
+@layer components {
+    /* Brand gradient avatar */
+  .avatar-brand {
+    @apply w-12 h-12 rounded-full grid place-items-center font-bold text-black;
+    background-image: linear-gradient(to bottom right,
+      rgb(var(--brand-primary)),
+      rgb(var(--brand-secondary))
+    );
+    box-shadow: 0 10px 18px -10px rgba(46, 93, 149, .35);
+  }
+
+  /* Buttons you referenced */
+  .btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition; }
+  .btn-add { @apply bg-indigo-600 text-white hover:bg-indigo-700; }
+  .btn--ghost { @apply bg-transparent border border-slate-300 text-slate-700 hover:bg-slate-50; }
+  .btn--sm { @apply text-sm px-3 py-1.5; }
+  .btn--primary { @apply bg-indigo-600 text-white hover:bg-indigo-700; }
+
+  .container-4-col { @apply flex items-center justify-between gap-3 flex-wrap; }
+
+  /* Toolbar + chips */
+  .section-head .board-toolbar { @apply grid gap-2 my-3; }
+  @screen md { .section-head .board-toolbar { @apply grid-cols-[280px_auto_1fr_auto] items-center; } }
+
+  .chips { @apply flex flex-wrap gap-1.5; }
+ .chip { @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold border; }
+.chip--muted {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold border;
+  border-color: rgb(var(--border-default));
+  color: rgb(var(--text-subtle));
+  background: rgb(var(--card-accent-bg));
+}
+  .chip--status-active {
+    @apply border-transparent text-green-700 bg-green-200 dark:text-green-600 dark:bg-green-600/15;
+  }
+  .chip--status-inactive {
+    @apply border-transparent text-status-danger bg-status-danger/10 dark:bg-status-danger/20;
+  }
+.chip--login {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold;
+  color: rgb(var(--brand-primary));
+  background: color-mix(in oklab, rgb(var(--brand-primary)) 20%, transparent);
+  border: 1px solid color-mix(in oklab, rgb(var(--brand-primary)) 45%, rgb(var(--border-default)));
+}
+  .chip.is-active { @apply bg-indigo-50 border-indigo-200 text-indigo-800; }
+
+  .select, .input, .btn { @apply h-[38px] leading-[38px]; }
+  .input { @apply px-3; }
+
+  /* Kanban board */
+  .kanban-board { @apply grid grid-cols-1 gap-4; }
+  @screen md { .kanban-board { @apply grid-cols-3 gap-5 items-start; } }
+  /* horizontal scroll on “max tablet” — approximate with sm/md if needed */
+  @media (max-width: 900px) {
+    .kanban-board { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  }
+
+  .kanban-column {
+    @apply flex-1 p-4 rounded-[var(--border-radius-card-small)] shadow-[var(--card-shadow-light)];
+    background: var(--kanban-column-bg);
+  }
+  @media (max-width: 900px) {
+    .kanban-column { min-width: 86vw; scroll-snap-align: start; }
+  }
+  .kanban-column h3 {
+  @apply relative pr-7;
+  background-color: var(--background-1);
+}
+  .kanban-column h4 { color: var(--text-heading); }
+
+  .kanban-phase { @apply rounded-md p-2; background: var(--surface-1, #fff); }
+  .kanban-phase__head { @apply flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md; }
+  .kanban-phase__list { @apply grid gap-2; }
+  .badge { @apply px-2 py-0.5 rounded-md; background: var(--pill-bg); color: var(--pill-text); }
+
+  /* Task Card */
+  .kanban-task {
+    @apply relative flex flex-col gap-2 rounded-xl border border-slate-200/80 px-4 py-3;
+    background: var(--card-bg, #fff);
+    color: var(--card-fg, #111827);
+  }
+
+  /* Pseudo strip using Tailwind’s arbitrary variants */
+  .kanban-task::before {
+    content: "";
+    position: absolute; inset: 0 auto 0 0; width: 6px; border-radius: 12px 0 0 12px;
+    background: var(--proj-color, #94a3b8);
+  }
+
+  .kanban-task__meta { @apply flex flex-wrap items-center gap-1.5 text-xs leading-4 pl-0.5 text-slate-700/80; }
+  .kanban-task__body { @apply grid gap-1 pl-0.5; }
+  .kanban-task .small { @apply text-[12px] text-slate-700/70 m-0; }
+
+.proj-chip {
+  @apply inline-flex items-center gap-1.5 font-semibold rounded-full px-2 py-0.5;
+  background: color-mix(in oklab, var(--proj-color, #94a3b8) 18%, transparent);
+}
+  .proj-chip .dot { @apply inline-block rounded-full; width: 8px; height: 8px; background: var(--proj-color, #94a3b8); }
+
+  .role-chip, .phase-chip { @apply px-1.5 py-0.5 rounded-lg; background: rgba(17,24,39,.04); }
+  .role-chip { @apply text-[12px] border border-slate-900/10 text-slate-600; }
+
+  .internal-task .role-chip { background: rgba(2,6,23,.04); border-color: rgba(2,6,23,.08); color: #475569; }
+  .client-task .role-chip {
+    background: color-mix(in oklab, var(--proj-color, #60a5fa) 20%, white);
+    border-color: color-mix(in oklab, var(--proj-color, #60a5fa) 45%, #e2e8f0);
+    color: #0f172a;
+  }
+
+  .underline-effect-2 { @apply font-light uppercase tracking-wider relative text-[var(--text-body)]; }
+  .underline-effect-2::before {
+    content: ""; position: absolute; bottom: -5px; width: 0; height: 3px; background: var(--background-1); transition: .3s; left: 50%;
+  }
+  .underline-effect-2:hover::before { width: 100%; left: 0; }
+
+  .kanban-action {
+    @apply flex gap-1.5 mt-4 px-3 pb-3 pt-2 rounded-b-[var(--border-radius-card-small)] justify-end items-center w-full;
+    background: var(--kanban-action-bg); color: var(--text-body);
+  }
+  .kanban-action .icon {
+    @apply grid place-items-center w-[30px] h-[30px] rounded-lg border border-slate-900/10 text-slate-600 bg-slate-900/5 transition;
+  }
+  .kanban-action .icon:hover { @apply bg-slate-900/10; }
+  .kanban-action .icon i { @apply text-xl leading-none; }
+
+  /* Tooltip */
+  .tooltip { @apply relative inline-block; }
+  .tooltip .tooltiptext {
+    visibility: hidden; opacity: 0; pointer-events: none; transition: opacity .2s ease-in-out;
+    position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+    @apply text-xs rounded px-2 py-1 z-10;
+    background: var(--tooltip-bg); color: var(--tooltip-text);
+  }
+  .tooltip .tooltiptext::after {
+    content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid;
+    border-color: var(--tooltip-arrow-color) transparent transparent transparent;
+  }
+  .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+  /* Chips / Badges / Labels re-used */
+  .status-label { @apply inline-block text-center font-bold text-sm px-3 py-1.5 min-w-[120px] rounded-[var(--border-radius-small)]; }
+  .status-label.completed { background: var(--status-completed-bg); color: var(--status-completed-text); }
+  .status-label.open { background: var(--status-open-bg); color: var(--status-open-text); }
+
+ .kanban-key {
+  @apply flex items-center flex-wrap gap-2 my-4 w-[90%] mx-auto;
+  color: var(--text-body);
+}
+  .color-key { @apply flex flex-wrap gap-x-4 gap-y-2 list-none p-0 m-0; }
+  .color-key li { @apply flex items-center text-sm; }
+  .color-key .color-box { @apply inline-block w-4 h-4 mr-1.5 rounded; border: 1px solid var(--color-box-border); }
+}
+
+/* ---- Utilities (one-off helpers if you need them) ----------------------- */
+@layer utilities {
+  .oh-padding-20 { @apply p-5; }
+  .is-empty h3::after {
+    content: "";
+    /* You can adjust the empty counter styling here or convert to Tailwind if needed */
+  }
+}

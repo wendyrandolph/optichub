@@ -1,0 +1,104 @@
+// scss/components/_icons.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+// --- Action Icons (e.g., in tables, lists) ---
+.theme-dark {
+
+  .fa-circle-info,
+  .fa-pen-to-square,
+  .fa-trash,
+  .fa-square-check,
+  .fa-key {
+    color: var(--icon-action-default); // <<< USE CSS VARIABLE HERE
+    text-shadow: var(--icon-action-shadow); // <<< USE CSS VARIABLE HERE
+
+    &:hover {
+      color: var(--icon-action-hover); // <<< USE CSS VARIABLE HERE
+    }
+  }
+}
+
+.theme-light {
+
+  .fa-circle-info,
+  .fa-pen-to-square,
+  .fa-trash,
+  .fa-square-check,
+  .fa-key {
+    color: var(--icon-action-default); // <<< USE CSS VARIABLE HERE
+
+    &:hover {
+      color: var(--icon-action-hover); // <<< USE CSS VARIABLE HERE
+    }
+  }
+}
+
+// --- Sidebar Icons ---
+.fa-clock,
+.fa-calendar-alt,
+.fa-building,
+.fa-address-book,
+.fa-folder-open,
+.fa-tasks,
+.fa-chart-line,
+.fa-envelope,
+.fa-gauge-high,
+.fa-lightbulb,
+.fa-file-alt,
+.fa-user-shield,
+.fa-file-invoice,
+.fa-list-alt {
+  color: var(--icon-sidebar-default); // <<< USE CSS VARIABLE HERE
+
+  &:hover {
+    color: var(--icon-sidebar-hover); // <<< USE CSS VARIABLE HERE
+  }
+}
+
+// --- Primary Action Icons (e.g., add, play, save) ---
+.fa-circle-play,
+.fa-pencil,
+.fa-comments,
+.fa-square-check,
+.fa-box-archive,
+.fa-square-plus,
+.fa-circle-dollar-to-slot,
+.fa-plus {
+  color: var(--icon-primary-action); // <<< USE CSS VARIABLE HERE
+
+  &:hover {
+    filter: brightness(110%); // Use filter for dynamic hover on CSS var
+    // Or define a specific --icon-primary-action-hover CSS variable
+  }
+}
+
+.fa-regular.fa-square-check {
+  color: var(--icon-action-default); // <<< USE CSS VARIABLE HERE
+  font-size: 1.3rem;
+
+  &:hover {
+    filter: brightness(90%); // Use filter for dynamic hover on CSS var
+    // Or define a specific --icon-secondary-action-hover CSS variable
+  }
+}
+
+.fa-user-plus,
+.fa-user-check {
+  color: var(--icon-sidebar-default);
+}
+
+/* Other Font Awesome icons (commented out in your original, but if used, apply CSS vars)
+.fa-arrow-down, .fa-arrow-left, .fa-bars, .fa-bolt, .fa-calendar-day, .fa-caret-down,
+.fa-check-circle, .fa-check-double, .fa-chevron-down, .fa-comments, .fa-dollar-sign,
+.fa-download, .fa-external-link-alt, .fa-eye, .fa-filter, .fa-gauge, .fa-image,
+.fa-key, .fa-pencil-alt, .fa-regular, .fa-search, .fa-sign-out-alt, .fa-solid,
+.fa-thumbs-up, .fa-trash, .fa-upload {
+  // Apply appropriate CSS variables here based on their context
+  // e.g., color: var(--icon-default);
+}
+*/

@@ -1,0 +1,76 @@
+// scss/components/_leadcards.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.lead-card,
+.lead-card-2 {
+  padding: 20px;
+  border-radius: var(--border-radius-card, 10px); // Use CSS variable for border-radius
+  width: 100%;
+  max-width: 300px;
+  box-shadow: var(--card-shadow); // Use CSS variable for shadow
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  font-size: 1.2rem;
+
+  @include mixins.atTablet {
+    width: 50%; // This might conflict with flex-wrap if not adjusted for gaps
+  }
+
+
+}
+
+.lead-card {
+  background-color: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+  border: 1px solid var(--border-light); // <<< USE CSS VARIABLE HERE
+}
+
+.lead-card-2 {
+  background-color: var(--card-bg-accent); // <<< USE CSS VARIABLE HERE (e.g., Timberwolf)
+  border: 1px solid var(--table-border); // <<< USE CSS VARIABLE HERE
+}
+
+.lead-card h2,
+.lead-card-2 h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.35rem;
+  color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+}
+
+.lead-card h3,
+.lead-card-2 h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.15rem;
+  color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+}
+
+.lead-card p,
+.lead-card-2 p {
+  margin: 0.25rem 0;
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-size: 0.95rem;
+}
+
+.card-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cards-container {
+    flex-direction: column;
+    align-items: center;
+  }
+}

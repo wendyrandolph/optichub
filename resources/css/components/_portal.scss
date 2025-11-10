@@ -1,0 +1,843 @@
+/*
+  Optic Hub Client Portal — Brand Styling Patch
+  Scope with .oh-portal (or your existing .client-project) on a top-level container to avoid collisions.
+  Keep markup changes minimal: add small utility classes from this file where needed.
+*/
+
+:root {
+  --oh-green: #00b050;
+  --oh-green-600: #07a24c;
+  --oh-green-700: #068a41;
+  --oh-teal: #00c0b3;
+  --oh-blue: #1b77ff;
+  --oh-bg: #f6f8fb;
+  --oh-panel: #ffffff;
+  --oh-muted: #6b7280;
+  /* gray-500 */
+  --oh-muted-700: #374151;
+  /* gray-700 */
+  --oh-border: #e5e7eb;
+  /* gray-200 */
+  --oh-radius: 14px;
+  --oh-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+/* ---------- 1) Page Title Banner ---------- */
+.oh-portal .oh-page-banner,
+.client-project .oh-page-banner,
+.client-project .proj-header {
+  background: linear-gradient(135deg, rgba(0, 176, 80, .1), rgba(0, 192, 179, .08));
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  padding: clamp(16px, calc(10px + 2vw), 28px);
+  margin: 16px 0 24px;
+  box-shadow: var(--oh-shadow);
+}
+
+.client-project .proj-header h1 {
+  margin: 8px 0 6px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.client-project .link-back {
+  color: var(--oh-green-700);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.client-project .link-back:hover {
+  text-decoration: underline;
+}
+
+/* Summary pills under H1 */
+.client-project .oh-summary {
+  display: flex;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--oh-muted);
+}
+
+.client-project .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  border: 1px solid var(--oh-border);
+  font-size: 12px;
+  color: var(--oh-muted-700);
+}
+
+.client-project .pill.phase {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: var(--oh-green-700);
+}
+
+.client-project .pill.done strong {
+  color: var(--oh-green-700);
+}
+
+.client-project .updated {
+  font-size: 12px;
+}
+
+/* ---------- 2) Cards (task tiles, panels) ---------- */
+.oh-portal .oh-card,
+.client-project .card,
+.client-project .panel,
+.client-project .proj-section,
+.client-project .panels {
+  background: var(--oh-panel);
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  box-shadow: var(--oh-shadow);
+}
+
+.oh-portal .oh-card {
+  padding: 18px;
+}
+
+.client-project .proj-section {
+  padding: 16px;
+}
+
+.client-project .panel {
+  padding: 16px;
+}
+
+.client-project .cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.client-project .card {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.client-project .card-title {
+  font-weight: 700;
+}
+
+.client-project .card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--oh-muted);
+}
+
+.client-project .card-meta .pill {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.client-project .card-meta .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.client-project .card-desc {
+  color: var(--oh-muted-700);
+}
+
+.client-project .card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Layout grid & aside */
+.client-project .oh-grid {
+  display: grid;
+  grid-template-columns: 1.5fr .9fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .client-project .oh-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.client-project .grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 780px) {
+  .client-project .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tabs */
+.client-project .tabbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.client-project .tab {
+  border: 1px solid var(--oh-border);
+  background: #fff;
+  color: var(--oh-muted-700);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.client-project .tab.is-active {
+  background: var(--oh-green);
+  color: #fff;
+  border-color: transparent;
+}
+
+.client-project .panels {
+  margin-top: 12px;
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+}
+
+.client-project .panel {
+  display: none;
+}
+
+.client-project .panel.is-active {
+  display: block;
+}
+
+/* Roadmap */
+.client-project .oh-roadmap {
+  display: grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.client-project .oh-roadmap .rail {
+  height: 2px;
+  background: #e5e7eb;
+}
+
+.client-project .oh-roadmap .node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.client-project .oh-roadmap .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #e5e7eb inset;
+}
+
+.client-project .oh-roadmap .node.active .dot {
+  background: #fef3c7;
+  box-shadow: 0 0 0 2px #fde68a inset;
+}
+
+.client-project .oh-roadmap .node.done .dot {
+  background: #dcfce7;
+  box-shadow: 0 0 0 2px #86efac inset;
+}
+
+.client-project .oh-roadmap .label {
+  width: 160px;
+}
+
+.client-project .oh-roadmap .label .name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.client-project .oh-roadmap .label .bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.client-project .oh-roadmap .label .bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--oh-green), var(--oh-teal));
+}
+
+/* ---------- 3) Buttons ---------- */
+.oh-portal .oh-btn,
+.client-project .btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  transition: transform .04s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.oh-portal .oh-btn:active,
+.client-project .btn:active {
+  transform: translateY(1px);
+}
+
+.oh-portal .oh-btn.primary,
+.client-project .btn.btn-primary {
+  background: var(--oh-green);
+  color: white;
+  box-shadow: 0 6px 14px rgba(0, 176, 80, .25);
+}
+
+.oh-portal .oh-btn.primary:hover,
+.client-project .btn.btn-primary:hover {
+  background: var(--oh-green-600);
+}
+
+.oh-portal .oh-btn.secondary,
+.client-project .btn.btn-secondary {
+  background: #e6f7ef;
+  color: var(--oh-green-700);
+  border: 1px solid #b9efd3;
+}
+
+.oh-portal .oh-btn.ghost,
+.client-project .btn.btn-ghost {
+  background: transparent;
+  color: var(--oh-muted-700);
+  border: 1px solid var(--oh-border);
+}
+
+/* ---------- 4) Progress / Status ---------- */
+.oh-portal .oh-progress,
+.client-project .oh-progress {
+  background: #eef2f7;
+  border-radius: 999px;
+  height: 10px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.oh-portal .oh-progress>span,
+.client-project .oh-progress>span,
+.client-project .oh-progress>div {
+  /* support your inner <div> */
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--value, auto);
+  background: linear-gradient(90deg, var(--oh-green), var(--oh-teal));
+}
+
+/* Status bar counters */
+.client-project .oh-statusbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.client-project .oh-statusbar .stat {
+  background: var(--oh-panel);
+  border: 1px solid var(--oh-border);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.client-project .oh-statusbar .k {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--oh-green-700);
+}
+
+.client-project .oh-statusbar .l {
+  color: var(--oh-muted);
+  font-size: 12px;
+}
+
+.client-project .oh-statusbar .bad {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.client-project .oh-statusbar .warn {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.client-project .oh-statusbar .info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+/* Status pills */
+.oh-portal .oh-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.oh-portal .oh-status.due {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.oh-portal .oh-status.ok {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+/* ---------- 5) Activity feed & lists ---------- */
+.oh-portal .oh-list,
+.client-project .list {
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  overflow: hidden;
+  background: var(--oh-panel);
+}
+
+.oh-portal .oh-list .oh-row,
+.client-project .list .list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.oh-portal .oh-list .oh-row:nth-child(odd),
+.client-project .list .list-row:nth-child(odd) {
+  background: #fafbff;
+}
+
+.client-project .list .row-title {
+  font-weight: 600;
+}
+
+.client-project .muted,
+.oh-portal .oh-list .oh-row .oh-time {
+  color: var(--oh-muted);
+  font-size: 12px;
+}
+
+.client-project .empty {
+  padding: 16px;
+  color: var(--oh-muted);
+}
+
+/* ---------- 6) File upload zone ---------- */
+.oh-portal .oh-dropzone,
+.client-project .drop {
+  border: 2px dashed #bfead3;
+  border-radius: var(--oh-radius);
+  background: #f6fffb;
+  padding: 18px;
+  text-align: center;
+  color: var(--oh-muted-700);
+}
+
+.client-project .drop strong {
+  color: var(--oh-green-700);
+}
+
+.client-project .drop .link {
+  color: var(--oh-blue);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.client-project .oh-drop__select {
+  margin-bottom: 10px;
+  border: 1px solid var(--oh-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.oh-portal .oh-dropzone {
+  border: 2px dashed #bfead3;
+  border-radius: var(--oh-radius);
+  background: #f6fffb;
+  padding: 18px;
+  text-align: center;
+  color: var(--oh-muted-700);
+}
+
+.oh-portal .oh-dropzone:hover {
+  background: #f0fdf4;
+}
+
+.oh-portal .oh-dropzone strong {
+  color: var(--oh-green-700);
+}
+
+/* ---------- 7) Tables (approvals, files) ---------- */
+.oh-portal table.oh-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--oh-panel);
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  overflow: hidden;
+}
+
+.oh-portal .oh-table th,
+.oh-portal .oh-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--oh-border);
+}
+
+.oh-portal .oh-table th {
+  background: #f8fafc;
+  color: var(--oh-muted-700);
+  font-weight: 700;
+}
+
+.oh-portal .oh-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ---------- 8) Empty states ---------- */
+.oh-portal .oh-empty {
+  padding: 24px;
+  border: 1px dashed var(--oh-border);
+  border-radius: var(--oh-radius);
+  background: #fcfcfe;
+  color: var(--oh-muted);
+}
+
+.oh-portal .oh-empty .oh-cta {
+  margin-top: 8px;
+}
+
+/* ---------- 9) Utility spacing & layout helpers ---------- */
+.oh-portal .oh-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.oh-portal .oh-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.oh-portal .oh-col {
+  display: grid;
+  gap: 10px;
+}
+
+.oh-portal .oh-section {
+  background: var(--oh-bg);
+  border-radius: var(--oh-radius);
+  padding: 16px;
+  border: 1px solid var(--oh-border);
+}
+
+/* ---------- 10) Top nav polish (optional, if you can add a class) ---------- */
+.oh-portal .oh-topnav {
+  background: #0b1220;
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.oh-portal .oh-topnav a {
+  color: #dbeafe;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.oh-portal .oh-topnav a.active,
+.oh-portal .oh-topnav a:hover {
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ---------- 11) Small icon badges for sections ---------- */
+.oh-portal .oh-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-weight: 800;
+}
+
+.oh-portal .oh-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(0, 176, 80, .15), rgba(0, 192, 179, .12));
+  color: var(--oh-green-700);
+}
+
+/* ---------- 12) Light animation on actionable cards ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .oh-portal .oh-card.hoverable {
+    transition: box-shadow .2s ease, transform .12s ease;
+  }
+
+  .oh-portal .oh-card.hoverable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(16, 24, 40, .10);
+  }
+}
+
+/* =======================================================
+   Optic Hub — Visual Refinements (v2)
+   Toggleable themes + density + polish tuned to .client-project
+   ======================================================= */
+
+/* ---------- A) Optional Theme Variants ---------- */
+.client-project.theme-vibrant {
+  --oh-green: #00c164;
+  --oh-green-600: #00ab57;
+  --oh-green-700: #058a45;
+  --oh-teal: #00d1c4;
+  --oh-blue: #1473ff;
+  --oh-shadow: 0 10px 28px rgba(0, 0, 0, .08);
+}
+
+.client-project.theme-minimal {
+  --oh-shadow: none;
+  --oh-panel: #ffffff;
+  --oh-bg: #f8fafc;
+}
+
+/* ---------- B) Density Controls ---------- */
+.client-project[data-density="cozy"] .proj-section,
+.client-project[data-density="cozy"] .panel,
+.client-project[data-density="cozy"] .card,
+.client-project[data-density="cozy"] .list .list-row {
+  padding: 14px;
+}
+
+.client-project[data-density="compact"] .proj-section,
+.client-project[data-density="compact"] .panel,
+.client-project[data-density="compact"] .card,
+.client-project[data-density="compact"] .list .list-row {
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.client-project[data-density="compact"] .cards {
+  gap: 10px;
+}
+
+/* ---------- C) Header Layout Polish ---------- */
+.client-project .proj-header {
+  display: grid;
+  gap: 8px;
+}
+
+@media(min-width:900px) {
+  .client-project .proj-header {
+    grid-template-columns: 1fr;
+  }
+
+  .client-project .oh-statusbar {
+    margin-top: 4px;
+  }
+}
+
+.client-project .proj-header .oh-progress {
+  height: 12px;
+}
+
+/* ---------- D) Sticky Aside ---------- */
+.client-project .oh-aside {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
+/* ---------- E) Tabs: subtle elevation + focus ring ---------- */
+.client-project .tabbar {
+  background: linear-gradient(180deg, #ffffff, #f9fafb);
+  padding: 8px;
+  border: 1px solid var(--oh-border);
+  border-radius: 12px;
+  box-shadow: var(--oh-shadow);
+}
+
+.client-project .tab {
+  position: relative;
+}
+
+.client-project .tab:focus-visible {
+  outline: 2px solid var(--oh-blue);
+  outline-offset: 2px;
+}
+
+/* ---------- F) Card Accents by status (opt-in via data attributes) ---------- */
+.client-project .card[data-status="overdue"] {
+  border-color: #fecaca;
+  box-shadow: 0 0 0 3px #fee2e2 inset;
+}
+
+.client-project .card[data-status="due-soon"] {
+  border-color: #fde68a;
+  box-shadow: 0 0 0 3px #fef3c7 inset;
+}
+
+.client-project .card[data-status="ok"] {
+  border-color: #a7f3d0;
+}
+
+/* ---------- G) Approvals row actions align + wrap ---------- */
+.client-project .row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- H) Roadmap: clearer type scale ---------- */
+.client-project .oh-roadmap .label .name {
+  font-size: 14px;
+  letter-spacing: -.005em;
+}
+
+.client-project .oh-roadmap .label .bar {
+  height: 8px;
+}
+
+/* ---------- I) Empty state polish ---------- */
+.client-project .empty {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px dashed var(--oh-border);
+  border-radius: 12px;
+}
+
+/* ---------- J) Micro-interactions ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .client-project .btn.btn-primary {
+    transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+  }
+
+  .client-project .btn.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 176, 80, .28);
+  }
+
+  .client-project .card {
+    transition: box-shadow .18s ease, transform .12s ease;
+  }
+
+  .client-project .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(16, 24, 40, .10);
+  }
+}
+
+/* ---------- K) Typography scale within portal ---------- */
+.client-project h1 {
+  font-size: clamp(22px, calc(18px + 1.5vw), 34px);
+}
+
+.client-project h2 {
+  font-size: clamp(18px, calc(16px + .8vw), 24px);
+}
+
+.client-project h3 {
+  font-size: clamp(16px, calc(15px + .5vw), 18px);
+}
+
+.client-project .muted {
+  color: var(--oh-muted);
+}
+
+/* ---------- L) Progress bar aria-friendly width var ---------- */
+.client-project .oh-progress {
+  position: relative;
+}
+
+.client-project .oh-progress[aria-valuenow]>div {
+  width: calc(attr(aria-valuenow percentage));
+}
+
+/* Fallback for browsers without attr() in width */
+@supports not (width: calc(attr(aria-valuenow percentage))) {
+  .client-project .oh-progress>div {
+    width: var(--value, auto);
+  }
+}
+
+
+/* =======================================================
+   Minimal Theme Overrides — remove colored backgrounds/gradients
+   Apply by adding .theme-minimal to .client-project
+   ======================================================= */
+.client-project.theme-minimal .proj-header,
+.client-project.theme-minimal .oh-page-banner {
+  background: #ffffff;
+  box-shadow: none;
+  border: 1px solid var(--oh-border);
+}
+
+.client-project.theme-minimal .tabbar {
+  background: #ffffff;
+  box-shadow: none;
+  border: 1px solid var(--oh-border);
+}
+
+.client-project.theme-minimal .empty {
+  background: #ffffff;
+  border: 1px dashed var(--oh-border);
+}
+
+.client-project.theme-minimal .list .list-row:nth-child(odd) {
+  background: #ffffff;
+}
+
+.client-project.theme-minimal .oh-roadmap .rail {
+  background: #e5e7eb;
+}
+
+.client-project.theme-minimal .oh-roadmap .node .dot {
+  box-shadow: none;
+  border-color: #e5e7eb;
+}
+
+.client-project.theme-minimal .drop {
+  background: #ffffff;
+  border-color: var(--oh-border);
+}
+
+.client-project.theme-minimal .oh-statusbar .stat {
+  background: #ffffff;
+}
+
+.client-project.theme-minimal .proj-section,
+.client-project.theme-minimal .panel,
+.client-project.theme-minimal .card {
+  box-shadow: none;
+}

@@ -1,0 +1,70 @@
+// scss/components/_login-card.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.login-main {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--page-bg); // <<< USE CSS VARIABLE HERE (main page background)
+}
+
+.login-card {
+  margin: 2rem auto;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  background: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+  border-radius: var(--border-radius-card, 12px); // Use CSS variable
+  box-shadow: var(--card-shadow); // <<< USE CSS VARIABLE HERE
+  text-align: center;
+}
+
+.login-heading {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: var(--brand-secondary); // <<< USE CSS VARIABLE HERE (assuming secondary for login heading)
+}
+
+.input {
+  margin-bottom: 1.5rem;
+}
+
+.input-field {
+  border: none;
+  border-bottom: 2px solid var(--input-border-light); // <<< USE CSS VARIABLE HERE
+  background: transparent;
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+  color: var(--input-text); // Ensure input text color is set
+
+  &:focus {
+    border-bottom-color: var(--input-focus-border); // <<< USE CSS VARIABLE HERE
+    outline: none;
+  }
+}
+
+.input-label {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+  text-align: left;
+}
+
+.alert-error {
+  background-color: var(--flash-error-bg); // <<< USE CSS VARIABLE HERE
+  color: var(--flash-error-text); // <<< USE CSS VARIABLE HERE
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: var(--border-radius-small, 6px); // Use CSS variable
+  text-align: center;
+  font-size: 0.9rem;
+}

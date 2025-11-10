@@ -1,0 +1,1104 @@
+// scss/components/_client-card.scss
+
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+:root {
+  --ctl-h: 38px;
+  --ctl-r: 8px;
+  --container-w: 1200px;
+  --oh-radius: 10px;
+  /* small corner, not pill */
+}
+
+.client-heading {
+  color: var(--text-heading); // Using CSS variable
+  border-bottom: 2px solid var(--border-default); // Using CSS variable
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+
+  @include mixins.atTablet {
+    font-size: 1.75rem;
+  }
+
+}
+
+.client-wrap {
+  background-color: var(--card-bg-default); // Using CSS variable
+  margin-top: 40px;
+  padding: 30px;
+  border-radius: var(--border-radius-card, 12px); // Using CSS variable
+  box-shadow: var(--client-wrap-shadow); // New CSS variable for specific shadow
+  color: var(--text-body); // Using CSS variable
+
+  @include mixins.atTablet {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 50px;
+  }
+
+  .col-1 {
+    width: 100%;
+
+    @include mixins.atTablet {
+      width: 33%;
+    }
+  }
+
+  .col-2 {
+    width: 100%;
+    margin-top: 2rem;
+
+    @include mixins.atTablet {
+      width: calc(67% - 50px);
+      margin-top: 0;
+    }
+  }
+}
+
+// ------------- Layout ------------------------------------------------------------ 
+.cards-layout {
+  gap: 20px;
+  margin-top: 8rem;
+  width: 100%;
+
+  .client-card {
+    width: calc(100% - 5px); // Adjusted for mobile gap
+  }
+}
+
+/* grid of cards */
+.cards-container {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  margin: 0 auto;
+  max-width: var(--container-w);
+}
+
+
+// ----------------- Client Card -------------------------------------------
+.client-card {
+  background: var(--card-bg, #f7f9ff);
+  border: 1px solid rgba(13, 16, 32, .08);
+  border-radius: var(--oh-radius);
+  box-shadow: 0 1px 0 rgba(13, 16, 32, .03);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  justify-content: space-between;
+
+
+  &__head {
+    align-items: center;
+    gap: 8px 10px;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e6eefc;
+      color: #1b3b77;
+      font-weight: 800;
+      flex: 0 0 36px;
+      order: 1;
+    }
+
+    .title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+
+    .client-name {
+      order: 2;
+      flex: 1 1 auto;
+      min-width: 0;
+      /* enables proper wrapping/truncation logic */
+      white-space: normal;
+      /* allow multi-line */
+      overflow-wrap: anywhere;
+      /* break extremely long names */
+      line-height: 1.25;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    &::after {
+      content: "";
+      flex-basis: 100%;
+      order: 2;
+    }
+  }
+
+  &__body {
+    padding: .25rem 1rem .75rem;
+    display: grid;
+    gap: .55rem;
+    color: var(--text-body);
+    margin-top: .55rem;
+
+    .row {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+    }
+
+    i {
+      color: var(--icon-default);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: .25rem;
+    padding: .5rem 1rem .9rem;
+    margin-top: auto;
+    border-top: 1px solid var(--border-light);
+
+
+
+  }
+
+  .badges {
+    display: inline-flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+    margin-right: auto;
+    justify-content: flex-start;
+    margin-left: 15px;
+
+
+    .badge {
+      display: inline-flex;
+      font-size: .75rem;
+      padding: .2rem .45rem;
+      border-radius: 12px;
+      background: var(--background-1);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      min-height: 35px;
+
+      &--ok {
+        background: rgba(120, 209, 71, .12);
+        border-color: rgba(120, 209, 71, .35);
+        color: var(--text-body);
+      }
+
+      &--muted {
+        opacity: .75;
+      }
+
+      &--active {
+        border-color: rgba(120, 209, 71, .35);
+      }
+
+      i {
+        margin-right: 20px;
+      }
+    }
+  }
+
+
+
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--card-bg-default);
+    color: var(--text-body);
+
+    &:hover {
+      background: var(--background-2);
+    }
+  }
+
+  .inline {
+    display: inline;
+  }
+
+  /* Utility */
+  .vh {
+    position: absolute;
+    left: -9999px;
+  }
+
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    height: var(--ctl-h);
+    padding: 0 .9rem;
+    border-radius: var(--ctl-r);
+    border: 1px solid var(--border-light);
+    background: var(--card-bg-default);
+    color: var(--text-body);
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: none;
+    transition: background-color .15s ease, transform .05s ease;
+
+    &:hover {
+      background: var(--background-2);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+
+    i {
+      font-size: .95rem;
+    }
+
+    &--primary {
+      border-color: transparent;
+      background: var(--brand-secondary);
+      color: var(--oh-navy);
+
+      &:hover {
+        filter: brightness(1.05);
+        color: var(--input-text);
+      }
+    }
+
+    &--ghost {
+      border-color: transparent;
+      background: transparent;
+      color: var(--link-color);
+
+      &:hover {
+        text-decoration: underline;
+        background: transparent;
+      }
+    }
+
+    &--brand {
+      border-color: transparent;
+      background: var(--brand-primary);
+      color: var(--text-on-brand-bg, #fff);
+
+      &:hover {
+        filter: brightness(1.05);
+      }
+    }
+  }
+
+
+
+
+  .login-info {
+    border-bottom-left-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+    border-bottom-right-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+    color: var(--text-body); // Using CSS variable
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+
+    .icon-btn,
+    .icon-btn button,
+    .icon-btn-wrapper {
+      display: inline-flex;
+    }
+
+    .icon-btn,
+    .icon-btn button {
+      inline-size: 36px;
+      block-size: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--oh-border, rgba(13, 16, 32, .14));
+      border-radius: 10px;
+      background: #fff;
+      color: #2a3145;
+      transition: background .15s ease, border-color .15s ease;
+
+
+    }
+
+  }
+
+  .icon-btn:hover {
+    background: #f6f7fb;
+  }
+
+  .icon-btn:focus-visible {
+    outline: 2px solid var(--brand-primary, #4f46e5);
+    outline-offset: 2px;
+  }
+
+  /* Tooltip */
+  .has-tip {
+    position: relative;
+  }
+
+  /* bubble */
+  .has-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translate(-50%, 4px);
+    white-space: nowrap;
+    background: #0f172a;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    padding: 6px 8px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(2, 6, 23, 0.18);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 30;
+    transition: opacity .15s ease, transform .15s ease, visibility .15s;
+  }
+
+  /* arrow */
+  .has-tip::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, 6px);
+    border: 6px solid transparent;
+    border-top-color: #0f172a;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 29;
+    transition: opacity .15s ease, transform .15s ease, visibility .15s;
+  }
+
+  /* show on hover/focus */
+  .has-tip:hover::after,
+  .has-tip:focus-visible::after,
+  .has-tip:hover::before,
+  .has-tip:focus-visible::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+  }
+
+  /* Optional: alternate placements (use data attributes) */
+  .has-tip[data-tip-pos="right"]::after {
+    left: calc(100% + 8px);
+    bottom: 50%;
+    transform: translate(4px, 50%);
+  }
+
+  .has-tip[data-tip-pos="right"]::before {
+    left: 100%;
+    bottom: 50%;
+    transform: translate(-6px, 50%);
+    border: 6px solid transparent;
+    border-left-color: #0f172a;
+  }
+
+  .has-tip[data-tip-pos="left"]::after {
+    left: auto;
+    right: calc(100% + 8px);
+    bottom: 50%;
+    transform: translate(-4px, 50%);
+  }
+
+  .has-tip[data-tip-pos="left"]::before {
+    left: auto;
+    right: 100%;
+    bottom: 50%;
+    transform: translate(6px, 50%);
+    border: 6px solid transparent;
+    border-right-color: #0f172a;
+  }
+
+  /* Don’t show tooltips on touch devices (taps open menus instead) */
+  @media (pointer: coarse) {
+
+    .has-tip::after,
+    .has-tip::before {
+      display: none !important;
+    }
+  }
+}
+
+
+
+.action-buttons .icon-btn:hover,
+.action-buttons .icon-btn button:hover {
+  background: #f3f6fb;
+}
+
+.action-buttons form {
+  display: contents;
+}
+
+/* keep layout for delete form */
+.action-buttons,
+.login-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding-top: .75rem;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: .75rem;
+  background-color: var(--action-buttons-bg); // Using CSS variable
+  border-bottom: 1px solid var(--border-light); // Using CSS variable
+  border-top: 1px solid var(--border-light); // Using CSS variable
+
+  .tooltiptext {
+    font-size: .75rem;
+  }
+}
+
+.action-buttons:hover {
+  background-color: var(--card-bg-default); // Using CSS variable
+}
+
+
+.project-status {
+  background-color: var(--card-bg-default); // Using CSS variable
+  border: 1px solid var(--border-light); // Using CSS variable
+  border-left: 4px solid var(--border-default); // Using CSS variable
+  margin-top: 40px;
+  padding: 25px;
+  border-radius: var(--border-radius-card, 10px); // Using CSS variable
+  box-shadow: var(--project-status-shadow); // New CSS variable for specific shadow
+  color: var(--text-body); // Using CSS variable
+
+  h3 {
+    color: var(--brand-primary); // Using CSS variable
+    margin-bottom: 12px;
+  }
+
+  ul {
+    padding-left: 1.2rem;
+    margin-bottom: 20px;
+
+    li {
+      line-height: 1.6;
+    }
+  }
+}
+
+.phase-list,
+.task-list {
+  list-style: none;
+  padding-left: 1rem;
+
+  li {
+    padding: 4px 0;
+    font-size: 0.95rem;
+  }
+}
+
+.task-list {
+  background-color: var(--table-row-alt-bg); // Using CSS variable (assuming this is an alt background)
+  padding: 15px;
+  border-radius: var(--border-radius-card-small, 8px); // Using CSS variable
+  border-left: 4px solid var(--brand-secondary); // Using CSS variable
+
+  li {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+}
+
+.task-phase-group {
+  margin-bottom: 30px;
+}
+
+.task-phase-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  color: var(--text-body); // Using CSS variable
+}
+
+.status-box {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  font-size: 18px;
+  color: var(--text-body); // Using CSS variable
+}
+
+.task-phases {
+  ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  li {
+    padding: 4px 0;
+    font-size: 0.95rem;
+  }
+
+  h4 {
+    color: var(--text-heading); // Using CSS variable
+    margin-top: 1rem;
+  }
+}
+
+.project-details {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  border-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+  font-size: 0.95rem;
+  box-shadow: var(--project-details-shadow); // New CSS variable for specific shadow
+  color: var(--text-body); // Using CSS variable
+
+  .progress-notes {
+    margin-top: 1rem;
+
+    .progress-box {
+      border: 1px solid var(--border-light); // Using CSS variable
+      border-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+      padding: 0.5rem;
+      background: var(--background-1); // Using CSS variable
+      min-height: 80px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      width: calc(80% - 20px);
+      color: var(--text-body); // Using CSS variable
+    }
+  }
+
+  p {
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+  }
+
+  .action-buttons {
+    border-top-right-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+    border-top-left-radius: var(--border-radius-card-small, 5px); // Using CSS variable
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
+#agreementModal {
+  .modal-content {
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 30px;
+    border-radius: var(--border-radius-card, 8px); // Using CSS variable
+    background: var(--background-1); // Using CSS variable
+    color: var(--text-body); // Using CSS variable
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+
+      .form-columns {
+        display: grid;
+        grid-template-columns: 1fr 5px 1fr;
+        gap: 30px;
+      }
+
+      .form-column {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-right: 15px;
+
+        label {
+          font-weight: bold;
+          margin-bottom: 4px;
+          color: var(--text-heading-form-label); // Using CSS variable
+        }
+
+        input,
+        select,
+        textarea {
+          padding: 8px;
+          font-size: 14px;
+          border: 1px solid var(--input-border-light); // Using CSS variable
+          border-radius: var(--border-radius-input, 4px); // Using CSS variable
+          background-color: var(--input-background); // Using CSS variable
+          color: var(--input-text); // Using CSS variable
+        }
+
+        textarea {
+          resize: vertical;
+        }
+      }
+
+      .middle {
+        height: 100%;
+        width: 100%;
+        background-color: var(--brand-primary); // Using CSS variable
+      }
+
+      h4 {
+        margin-top: 0;
+        font-size: 16px;
+        padding-top: 10px;
+        margin-bottom: 10px;
+        color: var(--text-heading); // Using CSS variable
+      }
+
+      .btn {
+        margin-top: 20px;
+        align-self: flex-start;
+        // Button styles come from _buttons.scss via CSS variables
+      }
+    }
+  }
+}
+
+.payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+  color: var(--text-body); // Using CSS variable
+
+  th,
+  td {
+    border: 1px solid var(--table-border); // Using CSS variable
+    padding: 8px 10px;
+    text-align: left;
+  }
+
+  th {
+    background-color: var(--table-head-bg); // Using CSS variable
+    color: var(--text-heading-table); // Using CSS variable
+  }
+
+  tr:nth-child(even) {
+    background-color: var(--table-row-alt-bg); // Using CSS variable
+  }
+}
+
+.project-block {
+  background-color: var(--background-1); // Using CSS variable
+  border-left: 4px solid var(--project-block-border-left); // Using CSS variable
+  border: 1px solid var(--border-light); // Using CSS variable
+  border-radius: var(--border-radius-card-small, 8px); // Using CSS variable
+  padding: 20px;
+  margin-bottom: 50px;
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 1000px;
+  transition: all 0.2s ease;
+  box-shadow: var(--project-block-shadow); // New CSS variable for specific shadow
+  color: var(--text-body); // Using CSS variable
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-heading); // Using CSS variable
+    font-size: 2rem;
+
+    @include mixins.atTablet {
+      font-size: 1.5rem;
+    }
+
+    @include mixins.atLaptop {
+      font-size: 1.2rem;
+    }
+
+  }
+
+  .task-phases,
+  .project-details {
+    margin-bottom: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+    color: var(--text-body); // Using CSS variable
+
+    th,
+    td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--table-row-border); // Using CSS variable
+    }
+
+    th {
+      background-color: var(--table-head-bg); // Using CSS variable
+      text-align: left;
+      color: var(--text-heading-table); // Using CSS variable
+    }
+  }
+
+  .project-header-grid {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.payment-history {
+  border-top: 2px solid var(--border-light); // Using CSS variable
+  border-bottom: 2px solid var(--border-light); // Using CSS variable
+  color: var(--text-body); // Using CSS variable
+
+  p {
+    padding-left: 20px;
+  }
+}
+
+.payment-history-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+
+
+
+
+// ------------------  Client View Page -------------------------------------------- 
+.client-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  /* name/meta | actions */
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+
+  /* keep your card padding vibe */
+  @include mixins.atMaxTablet {
+    grid-template-columns: 1fr;
+    gap: 8px;
+
+  }
+
+
+  &__title {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__name {
+    font: 800 clamp(20px, 2.2vw, 28px)/1.2 var(--font-sans, ui-sans-serif);
+    color: var(--ink-1, #0f172a);
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+
+
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+
+    &avatar {
+      &.avatar--xl {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--background-2);
+        font-weight: 700;
+        color: var(--brand-primary)
+      }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+
+    .btn {
+      height: 36px;
+    }
+
+    @include mixins.atMaxTablet {
+      justify-content: flex-start;
+    }
+  }
+}
+
+.client-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+
+
+  @include mixins.atMaxTablet {
+    grid-template-columns: 1fr 1fr;
+
+  }
+
+  .kpi {
+    background: var(--surface-1, #f8fafc);
+    border: 1px solid var(--oh-border, rgba(13, 16, 32, .12));
+    border-radius: 10px;
+    padding: 10px 12px;
+
+    .value {
+      font: 700 18px/1.2 var(--font-sans);
+      color: #0f172a;
+    }
+
+    .label {
+      font: 600 12px/1.1 var(--font-sans);
+      color: #64748b;
+    }
+
+    .is-empty {
+      color: #94a3b8;
+    }
+
+
+  }
+}
+
+.client-layout {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+
+  @include mixins.atTablet {
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  }
+
+  .client-sidebar {
+    position: sticky;
+    top: calc(var(--header-height, 56px) + .75rem);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    @include mixins.atTablet {
+      width: 340px;
+    }
+
+    .client-sidebar .card {
+      margin-bottom: 1rem;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: .35rem .75rem;
+    }
+
+    .details dt {
+      color: var(--text-muted);
+    }
+
+
+    .note-add textarea {
+      width: 100%;
+      resize: vertical;
+      border-radius: 10px;
+      padding: 5px 10px;
+    }
+
+    .note-add .btn {
+      margin-top: .5rem
+    }
+
+    .files-drop {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: .75rem;
+      color: var(--text-muted);
+      text-align: center
+    }
+
+    .files-drop.is-drag {
+      background: color-mix(in oklab, var(--brand-primary), #fff 94%);
+      border-color: var(--brand-primary)
+    }
+
+
+
+  }
+
+  .client-main {
+    grid-row: 1;
+
+    @include mixins.atTablet {
+      grid-column: 2;
+    }
+
+
+
+    .client-section {
+      margin-top: 20px;
+      gap: 5rem;
+      border-radius: 8px;
+
+      @include mixins.atTablet {
+
+        flex-direction: row;
+      }
+
+      &.client-card {
+        width: 100%;
+        max-width: 33%;
+        border-radius: 12px;
+        margin-top: 20px;
+        box-shadow: var(--card-shadow);
+
+      }
+    }
+
+
+
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    .progress {
+      height: 8px;
+      background: var(--border-soft);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress>span {
+      display: block;
+      height: 100%;
+      background: var(--brand-primary);
+    }
+
+    .tabs__nav {
+      display: flex;
+      gap: .5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: .5rem;
+    }
+
+    .tabs__nav button {
+      padding: .5rem .75rem;
+      border-radius: 10px;
+    }
+
+    .tabs__nav button.is-active {
+      background: var(--background-2);
+    }
+
+    .tabs__panel {
+      display: none;
+    }
+
+    .tabs__panel.is-active {
+      display: block;
+    }
+
+    .aging li {
+      display: flex;
+      justify-content: space-between;
+    }
+
+  }
+
+  // ------------------------ Chips ---------------------------------------------- 
+  /* Chips go on the next line and can wrap */
+  .chip {
+    order: 3;
+    flex: 0 0 auto;
+    margin-top: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    border-radius: 999px;
+    padding: 6px 8px;
+    line-height: 1;
+    border: 1px solid rgba(13, 16, 32, .08);
+    white-space: nowrap;
+
+    &--status.active {
+      background: #eaf9f1;
+      color: #136a3a;
+      border-color: #cfeede;
+    }
+
+    &--status.archived {
+      background: #f2f3f5;
+      color: #6b7280;
+    }
+
+    &--login {
+      background: #eef7ff;
+      color: #0b63c7;
+      border-color: #d8e8ff;
+    }
+
+    &--muted {
+      background: #f7f8fb;
+      color: #6b7280;
+    }
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2rem;
+
+}

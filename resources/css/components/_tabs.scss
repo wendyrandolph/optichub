@@ -1,0 +1,150 @@
+// scss/partials/_tabs.scss
+
+// No @import for _color-palette.scss or theme files here.
+// Only import non-color-related mixins or structural variables if needed.
+@use '../core/mixins' as mixins; // Enables responsive mixins like atLaptop
+
+.tab-navigation {
+  display: none;
+
+  @include mixins.atLaptop {
+    position: fixed;
+    width: 100%;
+    display: block;
+    margin-bottom: 20px;
+    background-color: var(--sidebar-bg); // CSS variable for nav background
+    border-bottom: 1px solid var(--border-color); // CSS variable for border
+    padding: 0 15px;
+    z-index: 1000;
+  }
+}
+
+.nav-tabs {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin-bottom: -1px;
+}
+
+.nav-link {
+  display: block;
+  padding: 10px 15px;
+  color: var(--sidebar-link-text); // CSS variable for link color
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-top-left-radius: var(--border-radius-small, 5px); // Use your general border-radius variable
+  border-top-right-radius: var(--border-radius-small, 5px);
+  transition: all 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+  color: var(--brand-secondary); // CSS variable for hover link color
+  text-decoration: none;
+}
+
+.nav-link.active {
+  color: var(--active-text-color); // CSS variable for active text
+  background-color: var(--background-1); // Assuming this is your main page background color
+  border-color: var(--border-default);
+  height: 2.4rem;
+
+}
+
+/* Custom Dropdown Styling */
+.dropdown-custom {
+  position: relative;
+}
+
+.dropdown-toggle-custom {
+  display: block;
+  padding: 10px 15px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-top-left-radius: var(--border-radius-small, 5px);
+  border-top-right-radius: var(--border-radius-small, 5px);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.dropdown-toggle-custom:hover {
+  display: block;
+  color: var(--brand-secondary);
+}
+
+.dropdown-toggle-custom.active {
+  color: var(--active-text-color);
+  background-color: var(--background-1);
+  border-color: var(--border-color);
+  border-bottom-color: var(--background-1);
+  font-weight: bold;
+}
+
+.dropdown-toggle-custom i {
+  margin-left: 5px;
+  font-size: 0.8em;
+  transition: transform 0.2s ease-in-out;
+}
+
+.dropdown-custom.show .dropdown-toggle-custom i {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu-custom {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: var(--z-index-dropdown, 1000); // Use a z-index variable if you have one
+  float: left;
+  min-width: 160px;
+  padding: 5px 0;
+  margin: 2px 0 0;
+  font-size: 1rem;
+  color: var(--text-body); // Use CSS variable for text color (e.g., from your task-view)
+  text-align: left;
+  list-style: none;
+  background-color: var(--background-1); // Main background color for dropdown
+  background-clip: padding-box;
+  border: 1px solid var(--border-color); // Border color
+  border-radius: var(--border-radius-small, 0.25rem);
+  box-shadow: var(--card-shadow); // Use your general card shadow variable
+
+  // --- Transition Properties ---
+  opacity: 0; // Start completely transparent
+  transform: translateY(-50px); // Start slightly above its final position
+  pointer-events: none; // Prevent interaction when hidden
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out; // Smooth transition
+}
+
+.dropdown-custom.show .dropdown-menu-custom {
+  opacity: 1; // Fully visible
+  transform: translateY(0); // Slide to its final position
+  pointer-events: auto; // Allow interaction when visible
+}
+
+.dropdown-menu-custom li {
+  list-style: none;
+}
+
+.dropdown-item-custom {
+  display: block;
+  padding: 8px 15px;
+  clear: both;
+  font-weight: 400;
+  color: var(--text-body); // Item text color
+  text-align: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border: 0;
+}
+
+.dropdown-item-custom:hover,
+.dropdown-item-custom.active {
+  color: var(--active-text-color); // Active item text color
+  text-decoration: none;
+  background-color: var(--hover-bg); // Hover item background
+}

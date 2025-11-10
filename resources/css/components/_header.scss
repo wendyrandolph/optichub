@@ -1,0 +1,271 @@
+@use '../core/mixins' as mixins;
+/* ---- Header + nav/drawer visibility ---- */
+.site-header {
+  --hdr-bg: var(--header-background, var(--background-1));
+  --hdr-ink: var(--logo-text-color, var(--text-on-brand-bg)); // => white
+  --hdr-ink-muted: color-mix(in srgb, var(--hdr-ink) 72%, transparent);
+  --hdr-hover-bg: color-mix(in srgb, var(--hdr-ink) 8%, transparent);
+  --hdr-border: var(--border-default);
+
+  background: var(--hdr-bg);
+  border-bottom: 1px solid var(--hdr-border);
+
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  height: var(--header-height);
+  backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: var(--header-shadow);
+  transition: background-color .3s ease, box-shadow .3s ease;
+
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 72px;
+    max-width: 90%;
+    margin: 0 auto;
+    padding: 0 20px;
+
+    .nav-left {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+
+      @include mixins.atTablet {
+        width: 33%;
+      }
+    }
+
+    .mk-ctas .btn {
+      padding: .45rem .8rem;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+  }
+
+  /* Mobile-first: show hamburger, hide top-nav */
+  .sidebar-trigger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: 8px;
+    border: 1px solid var(--hdr-border);
+    border-radius: 10px;
+    background: var(--page-bg);
+    color: var(--hdr-ink);
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+  }
+
+  .sidebar-trigger:hover,
+  .sidebar-trigger:focus-visible {
+    background: var(--hdr-hover-bg);
+  }
+
+  &[data-surface="app"] .sidebar-trigger {
+    display: inline-flex;
+  }
+
+  .mk-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-color: var(--hdr-border);
+    border-radius: 10px;
+    background: var(--page-bg);
+  }
+
+  .mk-toggle__bar {
+    width: 20px;
+    height: 2px;
+    background: var(--hdr-ink);
+    border-radius: 2px;
+  }
+
+  .mk-nav a {
+    color: var(--hdr-ink);
+    text-decoration: none;
+    border-radius: 10px;
+    padding: 8px 10px;
+
+    &:hover {
+      background: var(--hdr-hover-bg);
+    }
+  }
+
+  .mk-nav,
+  .mk-ctas {
+    display: none;
+  }
+
+  .mk-ctas .btn--primary {
+    background-color: var(--oh-btn-primary-bg);
+    color: var(--oh-btn-primary-text);
+    border-color: transparent;
+    background-image: none;
+  }
+
+  .mk-ctas .btn--ghost {
+    background: transparent;
+    color: var(--hdr-ink);
+    border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  }
+
+  /* Drawer + overlay: hidden by default */
+  .mk-drawer {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: 280px;
+    max-width: 86vw;
+    height: calc(100vh - var(--header-height));
+    background: var(--page-bg, #fff);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    z-index: 1000;
+  }
+
+  .mk-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 8, 23, .45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 999;
+  }
+
+  /* ✅ Use &.menu-open so it compiles correctly */
+  &.menu-open {
+    .mk-drawer {
+      transform: translateX(0);
+    }
+
+    .mk-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .mk-nav--drawer,
+  .mk-ctas--drawer {
+    display: grid;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .mk-nav--drawer a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    color: #2a3145;
+    text-decoration: none;
+
+    &:hover {
+      background: #f0f3fb;
+    }
+  }
+
+  /* Desktop ≥960px: show top nav, hide drawer/overlay */
+  @media (min-width: 960px) {
+    .mk-toggle {
+      display: none !important;
+    }
+
+    .sidebar-trigger {
+      display: inline-flex;
+    }
+
+    .mk-drawer,
+    .mk-overlay {
+      display: none !important;
+    }
+
+    .mk-nav,
+    .mk-ctas {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mk-nav a {
+      padding: 8px 10px;
+      color: var(--hdr-ink);
+      text-decoration: none;
+      border-radius: 10px;
+    }
+
+    .mk-nav a:hover {
+      background: #f0f3fb;
+    }
+  }
+
+  /* Prefers reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+
+    .mk-drawer,
+    .mk-overlay {
+      transition: none !important;
+    }
+  }
+
+  .brand-wordmark {
+    font-weight: 900;
+    font-size: clamp(1rem, calc(.9rem + 1vw), 1.5rem);
+    letter-spacing: .02em;
+    color: var(--brand-primary);
+
+    .optic {
+      color: var(--oh-navy);
+      font-weight: 900;
+    }
+
+    .hub {
+      color: var(--green-ink);
+    }
+  }
+
+  &[data-surface="marketing"] {
+    --hdr-bg: var(--page-bg);
+    --hdr-ink: var(--text-heading);
+    --hdr-hover-bg: var(--background-2);
+    --hdr-border: var(--border-default);
+  }
+
+  &.is-contrast {
+    --hdr-bg: transparent;
+    --hdr-border: transparent;
+    --hdr-ink: var(--text-on-brand-bg);
+    --hdr-hover-bg: color-mix(in srgb, var(--page-bg) 14%, transparent);
+    backdrop-filter: blur(10px) saturate(140%);
+  }
+
+}
+
+.theme-dark .site-header {
+  --hdr-ink: var(--logo-text-color, var(--text-on-brand-bg));
+  /* typically white */
+  --hdr-hover-bg: color-mix(in srgb, var(--hdr-ink) 14%, transparent);
+}
+
+/* Dark-theme nudge specifically for Marketing surface */
+.theme-dark .site-header[data-surface="marketing"] {
+  --hdr-bg: var(--background-1);
+  --hdr-ink: var(--text-heading);
+  --hdr-hover-bg: var(--background-2);
+  --hdr-border: var(--border-default);
+}
+
+/* Active/current link (works for both surfaces) */
+.site-header .mk-nav a[aria-current="page"] {
+  background: var(--hdr-hover-bg);
+  font-weight: 700;
+}

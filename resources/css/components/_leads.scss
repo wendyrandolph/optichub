@@ -1,0 +1,70 @@
+// scss/components/_leads.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+
+.lead-details {
+  margin: 40px auto;
+  max-width: 800px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+
+  @include mixins.atTablet {
+    flex-direction: row;
+  }
+
+  label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-heading-form-label); // <<< USE CSS VARIABLE HERE
+  }
+
+  select,
+  textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--input-border); // <<< USE CSS VARIABLE HERE
+    border-radius: var(--border-radius-input, 6px); // Use CSS variable
+    font-size: 16px;
+    margin-bottom: 20px;
+    background-color: var(--input-background); // Add background
+    color: var(--input-text); // Add text color
+  }
+
+  // This is a specific .btn-add for lead-details, consider if it should use
+  // the general .btn-add from _buttons.scss or be distinct.
+  // If distinct, define specific CSS variables for it.
+  // If it should follow the general .btn-add, remove this block and apply .btn-add class in HTML.
+  .btn-add {
+    background-color: var(--brand-primary); // <<< USE CSS VARIABLE HERE
+    color: var(--text-on-brand-bg); // White text on brand primary
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--border-radius-btn, 6px); // Use CSS variable
+    font-weight: bold;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(110%); // Use filter for dynamic hover
+      // Or define a specific --btn-add-hover-bg CSS variable
+      // background-color: var(--btn-add-hover-bg);
+    }
+  }
+
+  .activity-timeline {
+    font-size: 15px;
+    color: var(--text-body); // <<< USE CSS VARIABLE HERE
+
+    .no-activity {
+      font-style: italic;
+      color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+    }
+  }
+}

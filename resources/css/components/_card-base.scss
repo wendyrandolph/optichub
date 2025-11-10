@@ -1,0 +1,259 @@
+// scss/components/_card-base.scss
+// Structure utilities only. No color tokens defined here.
+@use '../core/mixins' as mixins;
+@use '../core/breakpoints' as breakpoints;
+
+// ---------------------------------------------------------------------------
+// Generic card primitives
+// ---------------------------------------------------------------------------
+
+.cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+
+  // >= 768
+  @include mixins.atMedium {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  // >= 992
+  @include mixins.atTablet {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  // >= 1366
+  @include mixins.atLarge {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.card {
+  --card-pad: 16px;
+  padding: var(--card-pad);
+  border-radius: 14px;
+
+  //surfaces 
+  background: var(--card-bg-default);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--card-shadow);
+  display: grid;
+  gap: .5rem;
+  transition: box-shadow .2s ease, transform .1s ease;
+
+
+  &:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0); // Keeps press subtle
+  }
+
+  /* Accessible focus ring (works everywhere) */
+  &:focus-within {
+    outline: 3px solid var(--brand-secondary);
+    outline-offset: 2px;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--brand-primary) 32%, transparent),
+      var(--card-shadow);
+  }
+
+  /* Nicer focus when color-mix is available */
+  @supports (color: color-mix(in srgb, black, white)) {
+    &:focus-within {
+      outline: 0;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-secondary) 30%, transparent),
+        var(--card-shadow, 0 1px 3px rgba(0, 0, 0, .05));
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+  }
+
+  &__title {
+    font-weight: 700;
+    color: var(--text-heading);
+  }
+
+  &__meta {
+    color: var(--text-muted);
+    font-size: .9rem;
+  }
+
+  &__body {
+    color: var(--text-body);
+  }
+
+  &__actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: .35rem;
+  }
+
+  &--glass {
+    background: var(--card-bg-accent);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--card-shadow);
+
+    .eyebrow {
+      color: var(--text-heading);
+    }
+  }
+
+  &--hoverable:hover {
+    transform: translateY(-1px);
+  }
+
+  &--cozy {
+    --card-pad: 14px;
+  }
+
+  &--compact {
+    --card-pad: 12px;
+    font-size: .95rem;
+  }
+
+  /* Brand-accent edge (subtle identity without a heavy fill) */
+  &--accent {
+    border-color: color-mix(in srgb, var(--brand-primary) 28%, var(--border-default));
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--brand-primary) 14%, transparent),
+      var(--card-shadow);
+  }
+
+  /* Soft highlight when a card is “selected” */
+  .card.is-selected {
+    border-color: color-mix(in srgb, var(--brand-secondary) 40%, var(--border-default));
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--brand-secondary) 30%, transparent),
+      var(--card-shadow);
+  }
+
+  /* Icon tile pattern used in feature/use-case cards */
+  .tile-icon {
+    inline-size: 44px;
+    block-size: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: color-mix(in srgb, var(--brand-primary) 16%, var(--section-tint-bg));
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 38%, transparent);
+    color: var(--brand-primary);
+
+    >svg,
+    .fa {
+      inline-size: 22px;
+      block-size: 22px;
+      color: currentColor;
+    }
+
+    // Alternate accent (green)
+    &--accent {
+      background: color-mix(in srgb, var(--brand-secondary) 18%, var(--section-tint-bg));
+      border-color: color-mix(in srgb, var(--brand-secondary) 42%, transparent);
+      color: var(--brand-secondary);
+    }
+  }
+
+}
+
+
+
+
+
+
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .5rem;
+  color: var(--text-heading);
+}
+
+.card-footer {
+  margin-top: 1rem;
+  color: var(--text-body);
+}
+
+/* Dashboard card (tokenized) */
+.dashboard-card {
+  border: none;
+  padding: 16px;
+  width: 200px;
+  background: var(--card-bg-default);
+
+  &:hover {
+    box-shadow: var(--card-shadow-hover);
+  }
+
+  @include mixins.atLaptop {
+    width: 100%;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scheme variants — use theme vars, never raw hex
+// ---------------------------------------------------------------------------
+
+/* Dark / brand block with readable text */
+.cws-dark {
+  background: var(--card-bg-dark-variant);
+  color: var(--text-on-brand-bg);
+  border-radius: var(--border-radius-card-small, 14px);
+  border: 1px solid var(--border-default);
+
+  @supports (color: color-mix(in srgb, black, white)) {
+    border-color: color-mix(in srgb, var(--border-default) 60%, transparent);
+  }
+}
+
+/* Mid tint */
+.cws-mid {
+  background: var(--card-bg-mid-variant);
+  color: var(--text-on-brand-bg);
+  border-radius: var(--border-radius-card-small, 14px);
+  border: 1px solid var(--border-default);
+
+  @supports (color: color-mix(in srgb, black, white)) {
+    border-color: color-mix(in srgb, var(--border-default) 50%, transparent);
+  }
+}
+
+/* Light tint */
+.cws-light {
+  background: var(--card-bg-light-variant);
+  color: var(--text-body);
+  border-radius: var(--border-radius-card-small, 14px);
+  border: 1px solid var(--border-default);
+
+  .fa-chart-line {
+    color: var(--icon-default);
+  }
+}
+
+/* Simple dashboard row */
+.cws-db-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  font-size: 24px;
+  color: var(--text-body);
+}
+
+/* Legacy elevation helper */
+.cws-card-4 {
+  box-shadow: var(--card-shadow);
+}
+
+.cws-card-4:hover {
+  box-shadow: var(--card-shadow-hover);
+}

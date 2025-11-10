@@ -1,0 +1,123 @@
+
+/* resources/css/marketing.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Map your legacy classes to Tailwind utilities */
+/* resources/css/dashboard.css
+   Optic Hub — Admin Dashboard styles
+   - No @tailwind directives here (partial)
+   - Uses your CSS variables + Tailwind @apply
+*/
+
+@layer components {
+  /* ---------- Shell / Layout ---------- */
+/* ---------- Buttons (Dashboard toolbar) ---------- */
+.oh-btn {
+  @apply inline-flex items-center justify-center h-9 px-3 rounded-lg text-sm font-medium transition;
+}
+.oh-btn--ghost {
+  @apply border border-optic-border bg-surface-card/70 text-optic-text
+         hover:bg-white/10 hover:border-optic-border;
+  color: rgb(var(--text-base));
+}
+.dark .oh-btn--ghost {
+  @apply hover:bg-white/5;
+}
+
+  /* Section heading label */
+  .oh-section-title {
+    @apply text-[11px] font-semibold tracking-wider uppercase mb-2;
+    color: rgb(var(--text-subtle));
+  } 
+  .oh-report-list > li {
+    @apply rounded-lg border border-[rgb(var(--border-default))] bg-[rgb(var(--card-accent-bg))] px-3 py-2 text-[rgb(var(--text-base))];
+  }
+  /* Toolbar/panel strip (e.g., quick actions) */
+  .oh-panel {
+    @apply rounded-card border px-3 py-2;
+    background: rgb(var(--card-accent-bg) / 0.85);
+    border-color: rgb(var(--border-default));
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .oh-panel__actions { @apply flex flex-wrap items-center gap-2; }
+
+  /* Standard card */
+  .oh-card {
+    @apply rounded-xl border p-4 shadow-card;
+    background: rgb(var(--card-bg));
+    border-color: rgb(var(--border-default));
+    transition: box-shadow .15s ease, transform .15s ease;
+  }
+  .oh-card:hover { @apply shadow-card; transform: translateY(-1px); }
+
+  /* Muted helper chip/badge */
+  .oh-chip-muted {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium;
+    color: rgb(var(--text-subtle));
+    background: rgb(var(--card-accent-bg));
+    border: 1px solid rgb(var(--border-default));
+  }
+
+  /* ---------- KPI Tiles ---------- */
+
+  /* Base KPI tile */
+  .oh-kpi {
+    @apply relative overflow-hidden rounded-card border p-4 shadow-card;
+    background: rgb(var(--card-bg));
+    border-color: rgb(var(--border-default));
+  }
+
+  /* Left accent bar (color comes from --kpi-accent) */
+  .oh-kpi::before {
+    content: "";
+    position: absolute; inset: 0 auto 0 0;
+    width: 4px; border-radius: var(--border-radius-card) 0 0 var(--border-radius-card);
+    background: var(--kpi-accent, rgb(var(--brand-secondary)));
+  }
+
+  .oh-kpi__top { @apply flex items-center justify-between gap-3; }
+  .oh-kpi__label { @apply text-xs uppercase tracking-wide; color: rgb(var(--text-subtle)); }
+  .oh-kpi__icon  { @apply text-sm; color: color-mix(in oklab, rgb(var(--text-subtle)) 85%, transparent); }
+  .oh-kpi__value { @apply mt-1 text-3xl font-semibold; color: rgb(var(--text-base)); }
+
+  /* KPI color variants (set --kpi-accent) */
+  .oh-kpi--brand     { --kpi-accent: rgb(var(--brand-primary)); }
+  .oh-kpi--secondary { --kpi-accent: rgb(var(--brand-secondary)); }
+  .oh-kpi--accent    { --kpi-accent: rgb(var(--brand-accent)); }
+
+  /* ---------- Sidebar Active State ---------- */
+
+  /* Add .is-active to your current nav item link */
+  .oh-nav-item { @apply relative flex items-center gap-2 rounded-lg px-3 py-2; }
+  .oh-nav-item:hover { background: rgba(255,255,255,.05); }
+
+  .oh-nav-item.is-active {
+    background: color-mix(in oklab, rgb(var(--brand-secondary)) 12%, transparent);
+  }
+  .oh-nav-item.is-active::before {
+    content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px; border-radius: 999px;
+    background: rgb(var(--brand-secondary));
+  }
+  .oh-nav-item.is-active .oh-nav-label {
+    color: rgb(var(--brand-secondary));
+  }
+
+  /* ---------- Helpful Grids ---------- */
+
+  /* KPI row: 1 → 2 → 3 → 6 cols as space grows */
+  .oh-grid-kpis { @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6; }
+
+  /* Standard card grid */
+  .oh-grid-cards { @apply grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3; }
+}
+
+@layer utilities {
+  /* Small helper for icon dots in chips or legends */
+  .oh-dot {
+    @apply inline-block rounded-full align-middle;
+    width: 8px; height: 8px; background: currentColor;
+  }
+}

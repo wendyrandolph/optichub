@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
+
+class MarketingContactNotification extends Notification implements ShouldQueue
+{
+  use Queueable;
+
+  // These variables hold the data submitted from the contact form
+  public $fromName;
+  public $fromEmail;
+  public $topic;
+  public $message;
+  public $submissionDetails;
+
+  /**
+   * Create a new notification instance.
+   * Maps the form data to the notification properties.
+   */
+  public function __construct(string $fromName, string $fromEmail, string $topic, string $message, array $submissionDetails)
+  {
+    $this->fromName = $fromName;
+    $this->fromEmail = $fromEmail;
+    $this->topic = $topic;
+    $this->message = $message;
+
+    // Includes time, IP, and user agent from the old helper
+    $this->submissionDetails = $submissionDetails;
+  }
+
+  /**
+   * Get the notification's delivery channels.
+   * We'll use the 'mail' channel for the internal alert.
+   */
+  public function via(object $notifiable): array
+  {
+    return ['mail'];
+  }
+
+  /**
+   * Get the mail representation of the notification.
+   * This uses Laravel's basic Markdown formatting for a clean internal alert.
+   */
+  public function toMail(object $notifiable): MailMessage
+  {
+    // Default subject based on your old helper logic
+    $subjectTopic = trim($this->topic) ?: 'General';
+
+    $mail = (new MailMessage)
+      ->subject('New Contact Submission: ' . $subjectTopic)
+      ->greeting('New Inquiry Received')
+      ->line('A new contact form submission has been received for the topic: **' . $subjectTopic . '**')
+      ->line('---')
+      ->line("**From:** {$this->fromName} <{$this->fromEmail}>")
+      ->line('---')
+      ->line('**Message Body:**')
+      ->line($this->message)
+      ->line('---')
+      ->action('Reply to Client', 'mailto:' . $this->fromEmail);
+
+    // Append submission details (IP, Agent, Time)
+    $mail->line('**Submission Details:**');
+    foreach ($this->submissionDetails as $key => $value) {
+      $mail->line("- **{$key}:** {$value}");
+    }
+
+    return $mail;
+  }
+
+  /**
+   * Get the array representation of the notification.
+   * (Optional: for database notifications)
+   */
+  public function toArray(object $notifiable): array
+  {
+    return [
+      'subject' => 'New Contact Submission: ' . trim($this->topic),
+      'email' => $this->fromEmail,
+    ];
+  }
+}

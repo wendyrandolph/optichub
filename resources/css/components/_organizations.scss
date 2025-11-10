@@ -1,0 +1,170 @@
+// scss/components/_layout.scss
+@use '../theme/_color-palette';
+@use '../core/mixins' as mixins;
+@use '../core/breakpoints' as breakpoints;
+
+/* ---------------------------------------------
+   Global layout tokens (single source of truth)
+--------------------------------------------- */
+
+.table-opportunities .table-organizations {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  thead th {
+    top: calc(var(--header-height) + var(--subheader-height));
+    z-index: 1;
+    background: var(--table-head-bg);
+    box-shadow: 0 1px 0 var(--table-border);
+  }
+}
+
+@media (max-width: 720px) {
+  .table-opportunities thead {
+    display: none;
+  }
+
+  .table-opportunities tbody tr {
+    display: grid;
+    grid-template-areas:
+      "name  name"
+      "status status"
+      "org   client"
+      "start end"
+      "actions actions";
+    grid-template-columns: 1fr 1fr;
+    gap: .5rem .75rem;
+    margin-bottom: .75rem;
+    padding: .8rem;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: var(--card-bg-default);
+  }
+
+  .table-opportunities tbody td {
+    display: block;
+    padding: .15rem 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .table-opportunities tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .75rem;
+    line-height: 1.2;
+    color: var(--text-muted);
+    margin-bottom: .15rem;
+  }
+
+  /* Actions row spans full width */
+  .table-opportunities .action-column {
+    grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+  }
+
+  .table-opportunities tbody td[data-label="Project Name"] {
+    grid-area: name;
+  }
+
+  .table-opportunities tbody td[data-label="Status"] {
+    grid-area: status;
+  }
+
+  .table-opportunities tbody td[data-label="Organization"] {
+    grid-area: org;
+  }
+
+  .table-opportunities tbody td[data-label="Client"] {
+    grid-area: client;
+  }
+
+  .table-opportunities tbody td[data-label^="Start"] {
+    grid-area: start;
+  }
+
+  .table-opportunities tbody td[data-label^="End"] {
+    grid-area: end;
+  }
+
+  .table-opportunities tbody td[data-label="Actions"] {
+    grid-area: actions;
+  }
+
+  .table-opportunities tbody td[data-label="Project Name"] {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  .table-opportunities tbody td[data-label="Project Name"]::before {
+    display: none;
+  }
+
+  /* Status as a badge; hide its label (badge speaks for itself) */
+  .table-opportunities tbody td[data-label="Status"]::before {
+    display: none;
+  }
+
+  .table-opportunities .stage {
+    display: inline-block;
+    font-size: .8rem;
+    padding: .15rem .5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--background-1);
+    color: var(--text-body);
+  }
+
+  .table-opportunities .stage.open {
+    border-color: rgba(120, 209, 71, .35);
+    background: rgba(120, 209, 71, .10);
+  }
+
+  .table-opportunities .stage.closed {
+    border-color: rgba(99, 115, 129, .35);
+    background: rgba(99, 115, 129, .10);
+  }
+
+  /* Actions row: tidy buttons inline */
+  .table-opportunities .action-column {
+    display: flex;
+    gap: .25rem;
+    margin-top: .2rem;
+  }
+
+  .table-opportunities .action-column a.tooltip,
+  .table-opportunities .action-column button.tooltip {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--card-bg-default);
+  }
+}
+
+//----------------------------------------- Optional utilities --------------------------------------------- */
+.is-compact {
+  --compact-pad: .5rem;
+
+  .container {
+    padding: var(--compact-pad);
+  }
+
+  .section {
+    margin: .5rem 0;
+  }
+}
+
+.visually-hidden {
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 0 !important;
+  border: 0 !important;
+  height: 1px !important;
+  width: 1px !important;
+  overflow: hidden;
+  white-space: nowrap;
+}

@@ -1,0 +1,271 @@
+// scss/components/_modal.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.modal {
+  position: fixed;
+  z-index: 1000;
+  width: 100%;
+  inset: 0;
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.5)); // <<< USE CSS VARIABLE HERE
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  &.hidden {
+    display: none;
+  }
+
+  .form-wrapper {
+    background-color: var(--card-bg-accent);
+    align-items: start;
+  }
+}
+
+.modal-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-evenly;
+}
+
+.modal-content {
+  align-items: center;
+  background-color: var(--card-bg-default); // <<< USE CSS VARIABLE HERE (or a specific --modal-bg)
+  width: 100%;
+  padding: 2rem;
+  border-radius: var(--border-radius-card, 8px); // Use CSS variable
+  box-shadow: var(--modal-shadow); // <<< USE CSS VARIABLE HERE
+  position: relative;
+  color: var(--text-body); // Default text color for modal content
+
+  @include mixins.atTablet {
+    flex-direction: row;
+    width: 80%;
+    max-width: 900px;
+  }
+
+  h2 {
+    margin-top: 0;
+    color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+  }
+
+  .form-group {
+    flex-grow: 1;
+  }
+
+  input,
+  textarea {
+    font-family: var(--font-family-base); // <<< USE CSS VARIABLE HERE for font-family
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid var(--input-border); // <<< USE CSS VARIABLE HERE
+    border-radius: var(--border-radius-input, 4px); // Use CSS variable
+    background-color: var(--input-background); // Add background
+    color: var(--input-text); // Add text color
+
+    &:focus {
+      outline: none;
+      border-color: var(--input-focus-border); // <<< USE CSS VARIABLE HERE
+    }
+  }
+}
+
+.close {
+  // position: absolute;
+  // right: 1rem;
+  // top: 1rem;
+  font-size: 1.5rem;
+  color: var(--text-muted); // <<< USE CSS VARIABLE HERE (muted color for close icon)
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-body); // Hover to main text color for stronger contrast
+  }
+
+  @include mixins.atLaptop {
+    top: 1.75rem;
+    right: 2.3rem;
+  }
+}
+
+/* ==== Optic Hub — Edit Modal Branding ==== */
+#editModal {
+  --oh-primary: #0E2135;
+  /* Optic blue (logo “Optic”) */
+  --oh-accent: #62AC39;
+  /* Optic green (logo “Hub”)   */
+  --oh-bg: var(--card-bg-default, #ffffff);
+  --oh-text: var(--text-body, #0f172a);
+  --oh-muted: #64748b;
+}
+
+#editModal {
+  display: none !important;
+}
+
+#editModal.is-open {
+  display: grid !important;
+  z-index: 1000;
+}
+
+#editModal.hidden {
+  display: none !important;
+}
+
+#editModal.modal {
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, .45);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+#editModal .form-wrapper {
+  width: min(640px, 92vw);
+  background: var(--oh-bg);
+  color: var(--oh-text);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, .25);
+  padding: 20px 20px 16px;
+  position: relative;
+  animation: oh-pop .16s ease-out;
+  z-index: 1;
+}
+
+/* thin brand bar across the top */
+#editModal .oh-brandbar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--oh-primary), var(--oh-accent));
+  border-radius: 10px 10px 0 0;
+  margin: -20px -20px 12px;
+}
+
+/* close button */
+#editModal .close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--oh-muted);
+  transition: background .15s ease, color .15s ease;
+  z-index: 2;
+  cursor: pointer;
+}
+
+#editModal .close:hover {
+  background: rgba(2, 6, 23, .06);
+  color: #0f172a;
+}
+
+/* heading with brand gradient text */
+#editModal .form-heading {
+  margin: 8px 0 14px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--oh-primary), var(--oh-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* layout + labels */
+#editModal .form-container {
+  display: grid;
+  gap: 12px;
+}
+
+#editModal .form-group {
+  display: grid;
+  gap: 6px;
+}
+
+#editModal .form-group label {
+  font-size: 12px;
+  color: var(--oh-muted);
+}
+
+/* fields */
+#editModal input[type="text"],
+#editModal input[type="date"],
+#editModal textarea,
+#editModal select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(2, 6, 23, .12);
+  background: #fff;
+  color: var(--oh-text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+#editModal textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+#editModal input:focus,
+#editModal textarea:focus,
+#editModal select:focus {
+  outline: none;
+  border-color: var(--oh-accent);
+  box-shadow: 0 0 0 3px rgba(98, 172, 57, .2);
+}
+
+/* assign picker groups */
+#editModal .assign-select {
+  background: rgba(2, 6, 23, .03);
+  border: 1px dashed rgba(2, 6, 23, .08);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* primary button */
+#editModal .btn.btn-save {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--oh-primary), var(--oh-accent));
+  box-shadow: 0 8px 18px rgba(14, 33, 53, .25);
+  transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
+}
+
+#editModal .btn.btn-save:hover {
+  filter: brightness(1.03);
+}
+
+#editModal .btn.btn-save:active {
+  transform: translateY(1px);
+}
+
+/* subtle entrance */
+@keyframes oh-pop {
+  from {
+    transform: translateY(4px) scale(.98);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* keep your existing .modal.hidden { display:none; } */

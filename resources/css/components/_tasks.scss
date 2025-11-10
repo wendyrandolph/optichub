@@ -1,0 +1,605 @@
+// scss/components/_task-view.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here. Some test file 
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.task-view {
+  background: var(--background-1); // <<< USE CSS VARIABLE HERE
+  padding: 2rem;
+  border-radius: var(--border-radius-card, 10px); // Use CSS variable
+  max-width: 800px;
+  margin: 2rem auto;
+  box-shadow: var(--card-shadow); // Default shadow for light theme
+
+  .task-meta-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    color: var(--text-body); // Default text color for meta box
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .task-description-box,
+  .task-upload-box,
+  .task-form-link,
+  .task-feedback-image {
+    margin-bottom: 1.5rem;
+    color: var(--text-body); // Default text color for these boxes
+
+    h3,
+    a {
+      color: var(--brand-primary); // <<< USE CSS VARIABLE HERE
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    a {
+      text-decoration: underline;
+      font-weight: 500;
+    }
+  }
+
+  .task-buttons {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .task-complete-message {
+    font-style: italic;
+    color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+  }
+}
+
+// ---------------- Tooltip --------------------------------------------------- 
+.tooltip {
+  position: relative;
+  display: inline-block;
+
+  .tooltiptext {
+    visibility: hidden;
+    background-color: var(--tooltip-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--tooltip-text); // <<< USE CSS VARIABLE HERE
+    text-align: center;
+    border-radius: var(--border-radius-small, 4px); // Use CSS variable
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%; // Show above
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--tooltip-arrow-color) transparent transparent transparent; // <<< USE CSS VARIABLE HERE
+    }
+  }
+
+  &:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+
+// ----------- Phase Title Progress ----------------------------------------------------------------- 
+.phase-title-with-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+
+  .phase-title-text {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-heading); // <<< USE CSS VARIABLE HERE (headings-1 equivalent)
+  }
+
+  .phase-progress {
+    width: 33%;
+  }
+
+  .phase-progress-bar {
+    flex-grow: 1;
+    height: 10px;
+    background: var(--progress-bar-bg); // <<< USE CSS VARIABLE HERE
+    margin-left: 1rem;
+    border-radius: var(--border-radius-small, 5px); // Use CSS variable
+    overflow: hidden;
+    max-width: 300px;
+
+    .progress-fill {
+      height: 100%;
+      background-color: var(--status-success); // <<< USE CSS VARIABLE HERE
+      transition: width 0.4s ease-in-out;
+    }
+  }
+}
+
+// -------------- Board Toolbar ---------------------------------------------- 
+.section-head {
+  .board-toolbar {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    margin: 10px 0 12px;
+  }
+
+  .board-toolbar .chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    border: 1px solid rgba(13, 16, 32, .14);
+    background: #fff;
+    border-radius: 999px;
+    padding: 6px 10px;
+  }
+
+  .chip.is-active {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+  }
+
+  .select,
+  .input,
+  .btn {
+    height: 38px;
+    line-height: 38px;
+  }
+
+  .input {
+    padding: 0 12px;
+  }
+
+
+  @media (min-width: 760px) {
+    .board-toolbar {
+      grid-template-columns: 280px auto 1fr auto;
+      align-items: center;
+    }
+
+    #taskSearch {
+      height: 38px;
+    }
+  }
+}
+
+
+// ---------------- Kanban Board ------------------------------------------------
+.kanban-board {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+  /* mobile-first */
+
+  @include mixins.atTablet {
+    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: flex-start;
+  }
+
+  @include mixins.atMaxTablet {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .kanban-column {
+    flex: 1;
+    padding: 1rem;
+    border-radius: var(--border-radius-card-small, 8px); // Use CSS variable
+    background-color: var(--kanban-column-bg); // <<< USE CSS VARIABLE HERE
+    box-shadow: var(--card-shadow-light); // Add a subtle shadow
+    margin-bottom: 1.5rem; // Space between columns on mobile
+
+    @include mixins.atMaxMedium {
+      min-width: 70vw;
+    }
+
+    @include mixins.atTablet {
+      margin-bottom: 0; // No margin on desktop
+    }
+
+    @include mixins.atMaxTablet {
+      min-width: 86vw;
+      scroll-snap-align: start;
+    }
+
+    h3 {
+      position: relative;
+      top: 0;
+      background: var(--background-1);
+      z-index: 1;
+      padding-right: 28px;
+
+      &:after {
+        content: attr(data-count);
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 999px;
+        font: 600 12px/1 system-ui, sans-serif;
+        background: #eef2ff;
+        color: #3730a3;
+        border: 1px solid #c7d2fe;
+      }
+    }
+
+    h4 {
+      color: var(--text-heading); // <<< USE CSS VARIABLE HERE
+    }
+
+    .is-empty {
+      h3 {
+        &::after {
+          background: #f1f5f9; // <<< USE CSS VARIABLE HERE 
+          color: #64748b; // <<< USE CSS VARIABLE HERE 
+          border-color: #e2e8f0;
+        }
+      }
+    }
+  }
+}
+
+.kanban-task {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card-bg, #fff);
+  color: var(--card-fg, #111827);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 12px;
+  padding: 14px 14px 10px 16px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    border-radius: 12px 0 0 12px;
+    background: var(--proj-color, #94a3b8);
+  }
+
+  .small {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(17, 24, 39, .65);
+  }
+
+
+
+  // -------------- Role Chip / Phase Chip Base Style --------------------------------------------- 
+  .role-chip,
+  .phase-chip {
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(17, 24, 39, .04);
+  }
+
+  .role-chip {
+    font-size: 12px;
+    line-height: 1.2;
+    color: #334155;
+    border: 1px solid rgba(15, 23, 42, .08);
+  }
+
+  .phase-chip:has(:where) {
+    font-size: .75rem;
+    color: var(--pill-text);
+
+    &:where(:not(:empty))::first-letter {
+      text-transform: uppercase;
+    }
+  }
+
+  .internal-task {
+    border-left-style: solid; // Explicitly solid for internal tasks
+
+    .role-chip {
+      background: rgba(2, 6, 23, .04);
+      border-color: rgba(2, 6, 23, .08);
+      color: #475569;
+    }
+  }
+
+  .client-task {
+    border-inline-start-style: dashed; // Distinguish client tasks with a dashed border
+
+    // Optionally, you could use a slightly different background or text color hint
+    // background-color: var(--client-task-bg-color); // Example if you want a distinct background
+    // color: var(--client-task-text-color); // Example for distinct text
+    .role-chip {
+      /* subtle highlight using your project color variable */
+      background: color-mix(in oklab, var(--proj-color, #60a5fa) 20%, white);
+      border-color: color-mix(in oklab, var(--proj-color, #60a5fa) 45%, #e2e8f0);
+      color: #0f172a;
+    }
+
+    &:before {
+      -webkit-mask: repeating-linear-gradient(to bottom, #000 0 10px, transparent 10px 16px);
+      mask: repeating-linear-gradient(to bottom, #000 0 10px, transparent 10px 16px);
+    }
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: rgba(17, 24, 39, .7);
+    padding-left: 2px;
+    /* offset from color strip */
+  }
+
+  &__body {
+    display: grid;
+    gap: 4px;
+    padding-left: 2px;
+
+    .small {
+      margin: 0;
+      font-size: 12px;
+      color: rgba(17, 24, 39, .65);
+    }
+  }
+
+  .proj-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+    background: color-mix(in oklab, var(--proj-color, #94a3b8) 18%, transparent);
+    color: inherit;
+
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--proj-color, #94a3b8);
+    }
+
+  }
+
+  .kanban-strong strong {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    text-decoration: none;
+    margin-bottom: 15px;
+    position: relative;
+    color: var(--text-body); // Default text color
+  }
+
+  .underline-effect-2 {
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+    position: relative;
+    text-decoration: none;
+    color: var(--text-body); // Default text color
+  }
+
+  .underline-effect-2::before {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    width: 0;
+    height: 3px;
+    background-color: var(--background-1); // <<< USE CSS VARIABLE HERE
+    transition: .3s;
+    left: 50%;
+  }
+
+  .underline-effect-2:hover::before {
+    width: 100%;
+    left: 0;
+  }
+
+  .color-badge {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    border-radius: var(--border-radius-xsmall, 2px); // Use CSS variable
+  }
+}
+
+.kanban-phase {
+  background: var(--surface-1);
+  border-radius: (--oh-radius);
+  padding: .25rem .5rem .5rem;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      border-radius: 8px;
+    }
+  }
+
+  &__list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .badge {
+    background: var(--pill-bg);
+    color: var(--pill-text);
+    padding: 2px 8px;
+    border-radius: 8px;
+  }
+
+
+  .icon {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: inherit;
+  }
+}
+
+.kanban-phase.collapsed .kanban-phase__list {
+  display: none;
+}
+
+.kanban-action {
+  display: flex;
+  gap: 6px;
+  padding: .5rem .75rem .75rem;
+  background-color: var(--kanban-action-bg);
+  width: 100%;
+  border-bottom-left-radius: var(--border-radius-card-small, 6px);
+  border-bottom-right-radius: var(--border-radius-card-small, 6px);
+  margin-top: 1rem;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  color: var(--text-body); // Default text color
+
+  // Target the buttons and links directly within kanban-action
+  a,
+  button {
+    background: none; // Ensure no default button background
+    border: none; // Ensure no default button border
+    padding: 0.5rem; // Add padding for click/tap target size
+    cursor: pointer;
+    display: flex; // Use flex to easily center icon if needed
+    align-items: center;
+    justify-content: center;
+    color: var(--icon-action-default); // Use a specific icon color variable
+    transition: color 0.2s ease; // Smooth transition for hover
+
+    &:hover {
+      color: var(--icon-action-hover); // Use a specific icon hover color variable
+    }
+
+    // Target the Font Awesome icon specifically
+    i {
+      font-size: 1.5rem; // Increased icon size
+      line-height: 1; // Ensure line height doesn't add extra space
+    }
+
+    // Styles for the tooltip text (ensure it doesn't interfere with icon sizing)
+    .tooltiptext {
+      font-size: 0.75rem; // Keep tooltip text small
+      // ... other tooltip text styles ...
+    }
+  }
+
+  .icon {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    color: #475569;
+    background: rgba(2, 6, 23, .04);
+    border-radius: 8px;
+    border: 1px solid rgba(2, 6, 23, .06);
+    transition: background .15s ease, transform .05s ease;
+
+    &:hover {
+      background: rgba(2, 6, 23, .07);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+  }
+}
+
+
+.kanban-key {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 1rem auto;
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  width: 90%;
+}
+
+.color-key {
+  display: flex;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  .color-box {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 6px;
+    border-radius: 3px;
+    border: 1px solid var(--color-box-border); // <<< USE CSS VARIABLE HERE
+  }
+
+  @include mixins.atMaxMedium {
+    margin-bottom: 6px;
+  }
+}
+
+.task-highlight {
+  outline: 3px solid var(--task-highlight-color); // <<< USE CSS VARIABLE HERE
+  outline-offset: 2px;
+  transition: outline .3s ease;
+}
+
+mark {
+  background: #fff3bf;
+  color: inherit;
+  padding: 0 .1em;
+  border-radius: 3px;
+}

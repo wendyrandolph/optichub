@@ -1,0 +1,79 @@
+// scss/components/_search-bar.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+.search-filter-row {
+  margin-bottom: 1.5rem;
+
+  .search-filter-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    // This width might need to be dynamic or responsive, calc(30% - 50px) is fixed.
+    // Consider using flex-grow or responsive widths instead.
+    width: 100%; // Default to full width on mobile
+    flex-wrap: wrap; // Allow items to wrap
+
+    @include mixins.atTablet {
+      width: calc(30% - 50px); // Apply specific width on tablet+
+      flex-wrap: nowrap;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex-grow: 1; // Allow search input to grow
+
+      input[type="text"] {
+        padding-left: 2rem;
+        padding-right: 1rem;
+        height: 2.5rem;
+        border: 1px solid var(--input-border); // <<< USE CSS VARIABLE HERE
+        border-radius: var(--border-radius-input, 4px); // Use CSS variable
+        font-size: 1rem;
+        min-width: 220px;
+        background-color: var(--input-background); // Add background
+        color: var(--input-text); // Add text color
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 0.75rem;
+        color: var(--icon-muted); // <<< USE CSS VARIABLE HERE
+        font-size: 1rem;
+        pointer-events: none;
+      }
+    }
+
+    select {
+      height: 2.5rem;
+      padding: 0 1rem;
+      border: 1px solid var(--input-border); // <<< USE CSS VARIABLE HERE
+      border-radius: var(--border-radius-input, 4px); // Use CSS variable
+      font-size: 1rem;
+      background-color: var(--input-background); // Add background
+      color: var(--input-text); // Add text color
+    }
+
+    .btn-filter {
+      height: 2.5rem;
+      padding: 0 1.2rem;
+      background: var(--btn-primary-bg); // <<< USE CSS VARIABLE HERE
+      color: var(--btn-primary-text); // <<< USE CSS VARIABLE HERE
+      border: none;
+      border-radius: var(--border-radius-btn, 4px); // Use CSS variable
+      font-size: 1rem;
+      width: 120px;
+      cursor: pointer;
+
+      &:hover {
+        filter: brightness(110%); // Use filter for dynamic hover
+      }
+    }
+  }
+}

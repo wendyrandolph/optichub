@@ -1,0 +1,86 @@
+
+/* resources/css/marketing.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Map your legacy classes to Tailwind utilities */
+@layer components {
+ .marketing .section { @apply py-16; }
+  .marketing .section--white { @apply bg-white; }
+  .marketing .section--aperture { @apply bg-gradient-to-b from-indigo-50 to-white; }
+  .marketing .section--brand { @apply bg-indigo-50; }
+
+  .marketing .container { @apply max-w-6xl mx-auto px-6; }
+  .marketing .container--narrow { @apply max-w-3xl; }
+
+  .marketing .h2 { @apply text-3xl md:text-4xl font-bold text-blue-900; }
+  .marketing .h3 { @apply text-2xl md:text-3xl font-bold text-gray-900; }
+  .marketing .h4 { @apply text-xl font-semibold text-gray-900; }
+  .marketing .copy { @apply text-gray-600 leading-relaxed; }
+
+  .marketing .eyebrow { @apply uppercase tracking-wide text-xs text-indigo-600 font-semibold; }
+  .marketing .lead { @apply text-lg md:text-xl; }
+  .marketing .meta { @apply text-sm text-gray-500; }
+
+  .marketing .btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold transition shadow-sm; }
+  .marketing .btn--primary { @apply bg-indigo-600 text-white hover:bg-indigo-500; }
+  .marketing .btn--ghost { @apply border border-gray-300 text-gray-700 hover:bg-gray-50; }
+  .marketing .btn--glow { @apply ring-2 ring-indigo-300; }
+  .marketing .btn-row { @apply mt-4 flex gap-3 flex-wrap; }
+
+  .marketing .card { @apply rounded-2xl bg-white shadow-md p-6; }
+  .marketing .card--glass { @apply bg-white/60 backdrop-blur shadow; }
+  .marketing .card--pricing { @apply text-center; }
+  .marketing .cards { @apply grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8; }
+
+  .section--about-hero { @apply bg-gradient-to-b from-indigo-50 to-white; }
+
+  .scripture { @apply italic text-gray-700 border-l-4 border-indigo-200 pl-4 mt-4; }
+  .scripture > span { @apply block text-sm text-gray-500 mt-1 not-italic; }
+
+  .founder-note__inner { @apply grid gap-8 md:grid-cols-2 items-center; }
+  .founder-note__text { @apply space-y-4; }
+  .founder-note__image img { @apply rounded-2xl shadow; }
+
+  .clean { @apply list-disc pl-5 text-gray-700 space-y-1; }
+
+  .feature-subnav { @apply sticky top-0 z-30 bg-white/70 backdrop-blur border-b; }
+  .feature-subnav__row { @apply flex gap-4 h-12 items-center overflow-x-auto; }
+  .feature-subnav a { @apply text-sm text-gray-600 hover:text-indigo-600 whitespace-nowrap; }
+
+  .grid-2 { @apply grid gap-8 md:grid-cols-2 items-start; }
+  .feature-deep__visual .screenshot { @apply rounded-2xl overflow-hidden shadow; }
+  .feature-deep__content .checklist { @apply list-disc pl-5 text-gray-700 space-y-1; }
+
+  .feature { @apply grid grid-cols-[auto_1fr] gap-4 items-start; }
+  .feature__icon { @apply w-12 h-12 rounded-xl bg-gray-100 text-indigo-600 flex items-center justify-center text-2xl; }
+  .feature__icon--accent { @apply bg-indigo-100 text-indigo-700; }
+  .feature__body { @apply space-y-2; }
+
+  .form { @apply max-w-3xl mx-auto; }
+  .form--card { @apply bg-white shadow-md rounded-2xl p-6; }
+  .field { @apply space-y-1; }
+  .field > label { @apply block text-sm font-medium text-gray-700; }
+  .field > input, .field > select, .field > textarea { @apply w-full; } /* @tailwindcss/forms styles them */
+
+  .usecases { @apply grid md:grid-cols-2 lg:grid-cols-3 gap-6; }
+  .usecase { @apply relative overflow-hidden; }
+  .usecase__link { @apply absolute inset-0; }
+  .usecase__badge, .usecase .usecase__badge { @apply inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700; }
+
+  .timeline { @apply grid gap-4 md:grid-cols-2; }
+  .timeline__step { @apply flex items-start gap-3; }
+  .timeline__dot { @apply w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold; }
+  .timeline__card { @apply mt-1; }
+
+  .badge { @apply inline-block rounded-full bg-gray-100 text-gray-700 px-2.5 py-1 text-xs font-medium; }
+  .link { @apply text-indigo-600 hover:text-indigo-700 underline underline-offset-4; }
+  .link--tiny { @apply text-sm; }
+
+  .oh-hero { @apply relative overflow-hidden py-20; }
+  .oh-hero__inner { @apply max-w-3xl mx-auto px-6 text-center; }
+  .oh-hero--aperture { @apply bg-gradient-to-b from-indigo-50 to-white; }
+  .grad-text { @apply bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent; }
+  .quote { @apply text-lg text-gray-700 italic; }
+  .quote__meta { @apply block text-sm text-gray-500 mt-2; }
+}

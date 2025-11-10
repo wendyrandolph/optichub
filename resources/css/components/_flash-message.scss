@@ -1,0 +1,71 @@
+// scss/components/_flash-message.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+/* Fixed container under the header */
+.flash-stack {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  pointer-events: none;
+  /* allow clicks through gaps */
+}
+
+/* Allow interactions on the actual messages */
+.flash-stack .flash-message {
+  pointer-events: auto;
+  margin: 0;
+  /* remove old bottom margin since we use gap now */
+  box-shadow: var(--card-shadow-light);
+  animation: flash-slide 200ms ease-out;
+}
+
+@keyframes flash-slide {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.flash-message {
+  // …base styles
+
+  &.flash-success {
+    background-color: var(--flash-success-bg);
+    border-left: 5px solid var(--flash-success-border);
+    color: var(--flash-success-text);
+  }
+
+  &.flash-error {
+    background-color: var(--flash-error-bg);
+    border-left: 5px solid var(--flash-error-border);
+    color: var(--flash-error-text);
+  }
+
+  &.flash-info {
+    background-color: var(--flash-info-bg);
+    border-left: 5px solid var(--flash-info-border);
+    color: var(--flash-info-text);
+  }
+
+  &.flash-warning {
+    background-color: var(--flash-warning-bg);
+    border-left: 5px solid var(--flash-warning-border);
+    color: var(--flash-warning-text);
+  }
+}

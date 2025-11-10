@@ -1,0 +1,213 @@
+<?php
+// ✅ Ensure helper functions are defined only once
+if (!function_exists('lds_get_conference_data')) {
+  function lds_get_conference_data()
+  {
+    $current_id = get_the_ID();
+    $parent_id = wp_get_post_parent_id($current_id) ?: $current_id;
+
+    $conference_name = get_the_title($parent_id);
+    $conference_slug = sanitize_title($conference_name);
+    $clean_slug = trim(str_replace(["conference", "regional"], "", $conference_slug), "-");
+
+
+    $presenters_page_slug = $clean_slug . "-presenters";
+    $place_name_slug = strtolower($clean_slug);
+
+    $category = get_term_by("slug", $clean_slug . "-workshops", "category");
+    if (!$category) {
+      return ['error' => "No workshop category found for this conference."];
+    }
+
+    $args = [
+      "post_type" => "presenter",
+      "tax_query" => [[
+        "taxonomy" => "category",
+        "field" => "term_id",
+        "terms" => $category->term_id,
+      ]],
+      "orderby" => "title",
+      "order" => "ASC",
+      "posts_per_page" => -1,
+    ];
+
+    $myposts1 = get_posts($args);
+
+    return [
+      'current_id' => $current_id,
+      'parent_id' => $parent_id,
+      'conference_name' => $conference_name,
+      'conference_slug' => $conference_slug,
+      'clean_slug' => $clean_slug,
+      'presenters_page_slug' => $presenters_page_slug,
+      'place_name_slug' => $place_name_slug,
+      'category_id' => $category->term_id,
+      'posts' => $myposts1,
+    ];
+  }
+}
+
+if (!function_exists('lds_render_workshop_layout')) {
+  function lds_render_workshop_layout($workshop_number, $header_class, $show_helper_note = false)
+  {
+    $data = lds_get_conference_data();
+    if (!empty($data['error'])) {
+      return "<p>" . esc_html($data['error']) . "</p>";
+    }
+
+    $myposts1             = $data['posts'];
+    $conference_slug      = $data['conference_slug'];
+    $presenters_page_slug = $data['presenters_page_slug'];
+    $parent_id            = $data['parent_id'];
+    $clean_slug           = $data['clean_slug'];
+
+    $times_group = get_field('conferences_times', $parent_id);
+    $workshop_time = '';
+    if ($times_group && is_array($times_group) && isset($times_group[0])) {
+      $workshop_times = $times_group[0];
+      $time_key = 'workshop_' . $workshop_number . '_time';
+      if (!empty($workshop_times[$time_key])) {
+        $workshop_time = $workshop_times[$time_key];
+      }
+    }
+
+    ob_start();
+    echo "<div class='{$header_class} workshop_header'>";
+    if (!empty($workshop_time)) {
+      echo "<h6><strong>{$workshop_time} - Workshop {$workshop_number}</strong></h6>";
+    }
+    if ($show_helper_note) {
+      echo "<p class='tbd-note'>
+                    The exact lineup for this session is still being finalized.<br>
+                    Check back for updates as presenters are confirmed.
+                </p>";
+    }
+    echo "</div>";
+
+    echo "<div class='workshop_{$workshop_number}'>
+                <div class='workshop-grid'>";
+
+    $found_any = false;
+
+    foreach ($myposts1 as $post) {
+      $presenter_id = $post->ID;
+      $acf_group = get_field('speakers', $presenter_id);
+
+      if (!empty($acf_group) && isset($acf_group['workshops'])) {
+        foreach ($acf_group['workshops'] as $workshop) {
+          $which_workshop = $workshop["which_workshop"] ?? [];
+
+          // ✅ Skip Resource Sessions card (used later instead)
+          if ((int)$workshop_number === 4 && strtolower(get_the_title($presenter_id)) === 'resource sessions') {
+            continue;
+          }
+
+          if (in_array($workshop_number, $which_workshop)) {
+            $found_any = true;
+
+            $presenter_slug = get_post_field("post_name", $presenter_id);
+            $conference_presenters_url = site_url("/conference/" . $conference_slug . "/" . $presenters_page_slug . "/#" . $presenter_slug);
+
+            echo "<div class='workshop-entry'>";
+
+            $image = get_field('presenter_image', $presenter_id);
+            $image_url = $image['sizes']['medium'] ?? $image['url'] ?? '';
+            if ($image_url) {
+              echo "<img src='" . esc_url($image_url) . "' alt='" . esc_attr(get_the_title($presenter_id)) . "' class='presenter-photo'>";
+            }
+
+            echo "<div class='presenter_Disp'>
+                                <a href='" . esc_url($conference_presenters_url) . "'>" . esc_html(get_the_title($presenter_id)) . "</a>";
+
+            $team_teaching = get_field('team_teaching', $presenter_id);
+            if (!empty($team_teaching)) {
+              echo " with ";
+              $teaching_names = [];
+              foreach ($team_teaching as $related_presenter_post) {
+                $related_presenter_url = site_url("/conference/" . $conference_slug . "/" . $presenters_page_slug . "/#" . $related_presenter_post->post_name);
+                $teaching_names[] = "<a href='" . esc_url($related_presenter_url) . "'>" . esc_html($related_presenter_post->post_title) . "</a>";
+              }
+              echo implode(', ', $teaching_names);
+            }
+
+            echo "</div>"; // close presenter_Disp
+
+            echo "<div class='title_Disp'>" . esc_html($workshop["workshop_title"]) . "</div>";
+
+            if (!empty($workshop["room"]) && $workshop["room"] !== "TBD") {
+              echo "<div class='room_Disp'>" . esc_html($workshop["room"]) . "</div>";
+            }
+
+            echo "</div>"; // close workshop-entry
+          }
+        }
+      }
+    }
+
+    // ✅ Resource Sessions block for Workshop 4 of Young Parenting ONLY
+    if ((int)$workshop_number === 4 && $clean_slug === 'young-widows-widowers-parenting') {
+      foreach ($myposts1 as $post) {
+        $presenter_id = $post->ID;
+        $is_resource = get_field('is_resource_container', $presenter_id);
+
+        if ($is_resource) {
+          $resource_sessions = get_field('resource_presentations', $presenter_id);
+
+          if ($resource_sessions) {
+            $found_any = true;
+            echo "<div class='resource-indicator'>";
+            echo "<h5> Resource Sessions</h5>";
+            echo "<p>Explore practical, hands-on stations offering help with parenting, finances, grief support, and more. Come and go as needed during this session.</p>";
+            echo "</div>";
+
+            // 🔁 Mini sessions
+            foreach ($resource_sessions as $session) {
+
+              $related_presenter = $session['related_presenter'] ?? null;
+              $presenter_name    = $session['presenter_name'] ?? '';
+              $presenter_image   = $session['presenter_image'] ?? '';
+              $mini_title        = $session['mini_title'] ?? '';
+              $mini_description  = $session['mini_description'] ?? '';
+
+
+              echo '<div class="workshop-entry">';
+
+              if ($related_presenter) {
+                $presenter = is_array($related_presenter) ? $related_presenter[0] : $related_presenter;
+                $name = get_the_title($presenter);
+                $image = get_field('presenter_image', $presenter->ID);
+                $image_url = $image['sizes']['medium'] ?? $image['url'];
+              } elseif ($presenter_name) {
+                $name = $presenter_name;
+                $image_url = is_array($presenter_image) ? $presenter_image['sizes']['medium'] ?? $presenter_image['url'] : $presenter_image;
+              } else {
+                $name = 'TBA';
+                $image_url = '';
+              }
+
+              if ($image_url) {
+                echo "<img src='" . esc_url($image_url) . "' alt='" . esc_attr($name) . "' class='presenter-photo'>";
+              }
+
+              echo "<div class='presenter_Disp'>" . esc_html($name) . "</div>";
+
+              if (!empty($mini_title)) {
+                echo "<div class='title_Disp'>" . esc_html($mini_title) . "</div>";
+              }
+
+              if (!empty($mini_description)) {
+                echo "<div class='room_Disp'>" . esc_html($mini_description) . "</div>";
+              }
+            }
+            echo '</div>'; // end .workshop-entry
+            echo '</div>'; // end .workshop-grid
+          }
+        }
+      }
+    }
+
+    echo "</div></div>";
+
+    return $found_any ? ob_get_clean() : '';
+  }
+}

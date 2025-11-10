@@ -1,0 +1,85 @@
+// scss/components/phase-colors.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../theme/_color-palette'; // For SASS variables like spacing, z-index
+@use '../core/mixins' as mixins; // For SASS mixins
+@use '../core/breakpoints' as breakpoints; // For responsive breakpoints
+
+// --- Project Phase Colors (Fixed, non-customizable) ---
+// These colors define distinct phases and should remain consistent across tenants.
+// Define these as CSS variables in style.scss's :root and .theme-dark blocks.
+
+.phase-onboarding {
+  --phase-color: var(--phase-onboarding-color); // <<< USE CSS VARIABLE HERE
+}
+
+.phase-summary .phase-onboarding strong {
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-weight: bold;
+}
+
+.phase-onboarding .task-header-row {
+  background: var(--phase-onboarding-color); // <<< USE CSS VARIABLE HERE
+  color: var(--text-on-brand-bg); // White text on dark phase color
+}
+
+// Layout and Design
+.phase-layout-and-design {
+  --phase-color: var(--phase-layout-color); // <<< USE CSS VARIABLE HERE
+}
+
+.phase-summary .phase-layout-and-design strong {
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-weight: bold;
+}
+
+.phase-layout-and-design .task-header-row {
+  background: var(--phase-layout-color); // <<< USE CSS VARIABLE HERE
+  color: var(--text-on-brand-bg); // White text on dark phase color
+}
+
+// Development
+.phase-development {
+  --phase-color: var(--phase-development-color); // <<< USE CSS VARIABLE HERE
+}
+
+.phase-summary .phase-development strong {
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-weight: bold;
+}
+
+.phase-development .task-header-row {
+  background: var(--phase-development-color); // <<< USE CSS VARIABLE HERE
+  color: var(--text-on-brand-bg); // White text on dark phase color
+}
+
+// Edits and Revisions
+.phase-edits-and-revisions {
+  --phase-color: var(--phase-edits-color); // <<< USE CSS VARIABLE HERE
+}
+
+.phase-summary .phase-edits-and-revisions strong {
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-weight: bold;
+}
+
+.phase-edits-and-revisions .task-header-row {
+  background: var(--phase-edits-color); // <<< USE CSS VARIABLE HERE
+  color: var(--text-on-brand-bg); // White text on dark phase color
+}
+
+// Launch and Delivery
+.phase-launch-and-delivery {
+  --phase-color: var(--phase-launch-color); // <<< USE CSS VARIABLE HERE
+}
+
+.phase-summary .phase-launch-and-delivery strong {
+  color: var(--text-body); // <<< USE CSS VARIABLE HERE
+  font-weight: bold;
+}
+
+.phase-launch-and-delivery .task-header-row {
+  background: var(--phase-launch-color); // <<< USE CSS VARIABLE HERE
+  color: var(--text-on-brand-bg); // White text on dark phase color
+}

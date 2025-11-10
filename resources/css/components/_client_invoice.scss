@@ -1,0 +1,248 @@
+// scss/components/_client_invoice.scss
+
+// Import SASS variables and mixins needed for structural styles.
+// DO NOT use theme maps or define theme classes here.
+@use '../core/mixins' as mixins; // For SASS mixins like breakpoints
+@use '../theme/_color-palette'; // SASS variables like spacing, z-index
+@use '../core/breakpoints' as breakpoints; // SASS variables like spacing, z-index
+
+.invoice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  margin-left: 1rem;
+  margin-right: 1rem;
+
+  @include mixins.atTablet {
+    flex-direction: row;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .card {
+    // Assuming .card is defined in _card-base.scss, this will apply overrides.
+    // Ensure this specific .card within .invoice-card is intended to be smaller.
+    max-width: 80%; // This will be relative to .invoice-card's width
+    padding: 0.75rem;
+    // Background, border, shadow should come from _card-base.scss via CSS variables
+    // If this card needs a specific background/border/shadow, define new CSS variables for it.
+
+    @include mixins.atTablet {
+      width: calc(50% - 20px);
+    }
+  }
+
+  .status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    border-radius: var(--border-radius-pill, 12px); // Use CSS variable for pill radius
+    text-transform: uppercase;
+    white-space: nowrap; // Prevent text from wrapping
+
+    @include mixins.atTablet {
+      font-size: .75rem;
+    }
+  }
+
+  .status-pill.paid {
+    background-color: var(--status-pill-paid-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--status-pill-paid-text); // <<< USE CSS VARIABLE HERE
+  }
+
+  .status-pill.unpaid {
+    background-color: var(--status-pill-unpaid-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--status-pill-unpaid-text); // <<< USE CSS VARIABLE HERE
+  }
+
+  .invoice-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    color: var(--text-body); // Default text color for invoice row
+  }
+
+  .b-bot {
+    border-bottom: 3px solid var(--brand-secondary); // <<< USE CSS VARIABLE HERE
+    padding-bottom: .5rem;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    color: var(--text-heading); // Ensure heading color
+  }
+
+  .invoice-info {
+    flex: 1;
+    font-size: 1.5rem;
+    line-height: 1.5;
+    color: var(--text-body); // Default text color
+
+    @include mixins.atTablet {
+      font-size: 1rem;
+      width: calc(50% - 20px);
+      height: calc(90% - 50px);
+      border-right: 3px solid var(--brand-primary); // <<< USE CSS VARIABLE HERE
+    }
+  }
+
+  .invoice-actions {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 180px;
+    padding: 1rem;
+    gap: 1rem;
+  }
+}
+
+.phase-section {
+  margin-top: 20px;
+  border-top: 1px solid var(--border-light); // <<< USE CSS VARIABLE HERE
+  padding-top: 15px;
+}
+
+.phase-section h3 {
+  font-size: 16px;
+  color: var(--phase-edits-color); // <<< USE CSS VARIABLE HERE (from _phase-colors.scss)
+  margin-bottom: 10px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+}
+
+.task-list li {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-light); // <<< USE CSS VARIABLE HERE
+  color: var(--text-body); // Default text color for list items
+}
+
+.task-title {
+  font-weight: 600;
+  color: var(--text-body); // Default text color, or specific --task-title-color
+}
+
+.task-meta {
+  font-size: 13px;
+  color: var(--text-muted); // <<< USE CSS VARIABLE HERE
+}
+
+.task-status {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.task-status.open {
+  color: var(--status-open-text); // <<< USE CSS VARIABLE HERE (from _projects.scss)
+}
+
+.task-status.completed {
+  color: var(--status-completed-text); // <<< USE CSS VARIABLE HERE (from _projects.scss)
+}
+
+.task-status.pending {
+  color: var(--status-warning); // <<< USE CSS VARIABLE HERE (assuming warning for pending)
+}
+
+.no-tasks {
+  font-size: 14px;
+  color: var(--text-muted); // Use CSS variable for muted text
+  font-style: italic;
+  padding: 1rem;
+}
+
+// View Single Invoice
+.view-invoice {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid var(--border-default); // <<< USE CSS VARIABLE HERE
+  border-radius: var(--border-radius-card, 12px); // Use CSS variable
+  background: var(--card-bg-default); // <<< USE CSS VARIABLE HERE
+  color: var(--text-body); // Default text color for invoice view
+
+  h1,
+  h3 {
+    color: var(--brand-primary); // <<< USE CSS VARIABLE HERE (or specific --invoice-heading-color)
+  }
+
+  p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: var(--text-body); // Default text color
+  }
+
+  .invoice-header {
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--invoice-header-border); // <<< USE CSS VARIABLE HERE
+    margin-bottom: 20px;
+  }
+
+  .section {
+    margin-bottom: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background-color: var(--table-bg); // Use CSS variable
+  }
+
+  th {
+    background-color: var(--table-head-bg); // <<< USE CSS VARIABLE HERE
+    color: var(--text-heading-table); // <<< USE CSS VARIABLE HERE
+    padding: 8px;
+    font-size: 13px;
+    text-align: left; // Ensure alignment
+  }
+
+  td {
+    border: 1px solid var(--table-border); // <<< USE CSS VARIABLE HERE
+    padding: 8px;
+    font-size: 13px;
+    color: var(--text-body); // Default text color
+  }
+
+  .total {
+    text-align: right;
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 10px;
+    color: var(--text-heading); // Ensure total stands out
+  }
+
+  .logo {
+    float: right;
+    max-width: 150px;
+    margin-bottom: 10px;
+    // If this logo is dynamic, you might need a CSS variable for its URL or a placeholder.
+  }
+
+  .alert {
+    color: var(--status-danger); // <<< USE CSS VARIABLE HERE
+    margin-top: 15px;
+    text-align: center;
+  }
+
+  .view-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.centered h1 {
+  padding-left: 1.5rem;
+  width: 80%;
+  max-width: 1000px;
+  // Color should be handled by the general h1 rule in _typography.scss
+}
