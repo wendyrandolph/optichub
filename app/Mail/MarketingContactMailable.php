@@ -45,7 +45,7 @@ class MarketingContactMailable extends Mailable implements ShouldQueue
     // Set the recipient (your team's email) and subject
     return new Envelope(
       // Use your primary support/sales email as the TO address
-      to: new Address(config('mail.marketing_recipient.address', 'info@yourdomain.com'), 'Optic Hub Team'),
+      to: new Address(config('mail.marketing_recipient.address', 'info@yourdomain.com'), 'Renlo Team'),
 
       // Set the subject line dynamically
       subject: "New Contact Form Submission: {$this->contactTopic}",

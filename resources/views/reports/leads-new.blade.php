@@ -16,7 +16,7 @@
                 <p class="text-sm text-text-subtle">{{ $summary['count'] ?? 0 }} leads in range</p>
             </div>
             <form class="flex gap-2" method="GET"
-                action="{{ route('tenant.admin.reports.leads.new', ['tenant' => $tenantParam]) }}">
+                action="{{ route('tenant.reports.leads.new', ['tenant' => $tenantParam]) }}">
                 <select name="range" class="oh-select">
                     @foreach (['wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30'] as $k => $v)
                         <option value="{{ $k }}" @selected(($filters['range'] ?? 'wtd') === $k)>{{ $v }}</option>

@@ -17,16 +17,21 @@ class DatabaseSeeder extends Seeder
 
         // Add your custom seeders here
         // $this->call(UserSeeder::class);
-        $this->call([
-            TenantOneSampleSeeder::class,
-        ]);
+        $this->call(TenantOneSampleSeeder::class);
         $this->call(TeamMemberSeeder::class);
-
         $this->call(TenantGatewaySeeder::class);
         $this->call(EmailSeeder::class);
+
         $this->call(ProjectSeeder::class);
         $this->call(ProjectPhaseSeeder::class);
         $this->call(TaskSeeder::class);
+
         $this->call(LeadSeeder::class);
+        $this->call(PipelineSeeder::class);
+        $this->call(InvoiceSeeder::class);
+        $this->call(ClientDemoProjectsSeeder::class);
+        $this->call([
+            OpportunitySeeder::class,
+        ]);
     }
 }

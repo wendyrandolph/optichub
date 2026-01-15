@@ -20,7 +20,7 @@ class TaskUpload extends Model
 
   protected $fillable = [
     'task_id',
-    'client_id', // Assuming this foreign key exists
+    'contact_id', // Assuming this foreign key exists
     'file_name',
     'file_path',
     'uploaded_by_user_id',
@@ -61,7 +61,7 @@ class TaskUpload extends Model
   public static function getByClient(int $clientId)
   {
     // 1. Filter by the specific client ID
-    return static::where('client_id', $clientId)
+    return static::where('contact_id', $clientId)
       // 2. Crucial Security Step: Use whereHas to ensure the client
       // exists AND belongs to the current tenant (via Client's HasTenantScope).
       ->whereHas('client')

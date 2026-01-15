@@ -28,7 +28,7 @@ class UserFactory extends Factory
             'password'   => static::$password ??= Hash::make('password123'),
             'role'       => 'employee', // default role
             'is_beta' => false,
-            'client_id'  => null,
+            'contact_id'  => null,
             'must_change_password' => false,
             //'remember_token' => Str::random(10),
         ];
@@ -56,7 +56,7 @@ class UserFactory extends Factory
     {
         return $this->state(fn() => [
             'role' => 'client',
-            'client_id' => $client->id,
+            'contact_id' => $client->id,
             'tenant_id' => $client->tenant_id,
         ]);
     }

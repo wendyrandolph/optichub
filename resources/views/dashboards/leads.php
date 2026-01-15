@@ -22,37 +22,55 @@ require_once base_path('app/helpers/CSRF.php');
 ?>
 <div class="container">
   <div class="dashboard-grid">
+    <div class="dashboard-card oh-tile cws-dark" style="--tile-accent: rgb(var(--brand-primary));">
+      <span class="oh-tile__bar" aria-hidden="true"></span>
 
-    <div class=" dashboard-card cws-dark">
       <div class="cws-db-row">
-        <i class="fas fa-user-check" aria-hidden="true"></i>
+        <span class="oh-tile__icon">
+          <i class="fas fa-user-check" aria-hidden="true"></i>
+        </span>
+
         <p class="dashboard-number">
           <?php echo htmlspecialchars($clientCount); ?>
         </p>
       </div>
-      <p class="db-card-header">Total Clients</p>
 
+      <p class="db-card-header">Total Clients</p>
     </div>
 
-    <div class="dashboard-card cws-mid">
+    <div class="dashboard-card oh-tile cws-mid" style="--tile-accent: rgb(var(--status-success));">
+      <span class="oh-tile__bar" aria-hidden="true"></span>
+
       <div class="cws-db-row">
-        <i class="fas fa-user-plus" aria-hidden="true"></i>
-        <p class="dashboard-number ">
+        <span class="oh-tile__icon">
+          <i class="fas fa-user-plus" aria-hidden="true"></i>
+        </span>
+
+        <p class="dashboard-number">
           <?php echo htmlspecialchars($leadCount); ?>
         </p>
       </div>
+
       <p class="db-card-header">Total Leads</p>
     </div>
 
-    <div class="dashboard-card cws-light">
+    <div class="dashboard-card oh-tile cws-light" style="--tile-accent: rgb(var(--brand-accent));">
+      <span class="oh-tile__bar" aria-hidden="true"></span>
+
       <div class="cws-db-row">
-        <i class="fas fa-chart-line" aria-hidden="true"></i>
+        <span class="oh-tile__icon">
+          <i class="fas fa-chart-line" aria-hidden="true"></i>
+        </span>
+
         <p class="dashboard-number">
           <?php echo htmlspecialchars($newLeadsThisWeek); ?>
         </p>
       </div>
+
       <p class="db-card-header">New Leads This Week</p>
     </div>
+
+
   </div>
 </div>
 <!-- Quick Actions -->

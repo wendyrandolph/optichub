@@ -28,19 +28,24 @@ class TimeEntry extends Model
     'task_id',
     'date',
     'hours',
+    'hourly_rate',
     'start_time',
     'end_time',
     'description',
+    'notes',
     'billable',
+    'billed_at',
     'invoice_id',
   ];
 
   protected $casts = [
     'date' => 'date',
-    'hours' => 'float',
+    'hours' => 'decimal:2',
+    'hourly_rate' => 'decimal:2',
     'start_time' => 'datetime',
     'end_time' => 'datetime',
     'billable' => 'boolean',
+    'billed_at' => 'datetime',
   ];
 
   // --- RELATIONSHIPS ---
@@ -69,6 +74,28 @@ class TimeEntry extends Model
     return $this->belongsTo(Task::class);
   }
 
+  public function invoice(): BelongsTo
+  {
+    return $this->belongsTo(Invoice::class);
+  }
+
+  // --- Accessors ---
+  public function getBillingStatusAttribute(): string
+  {
+    if ($this->billable === false) {
+      return 'non_billable';
+    }
+    if (!is_null($this->invoice_id) || !is_null($this->billed_at)) {
+      return 'billed';
+    }
+    return 'unbilled';
+  }
+
+  public function getIsBilledAttribute(): bool
+  {
+    return $this->billing_status === 'billed';
+  }
+
   // --- SCOPES ---
 
   /**
@@ -77,6 +104,21 @@ class TimeEntry extends Model
   public function scopeBillable(Builder $query): Builder
   {
     return $query->where('billable', true);
+  }
+
+  public function scopeUnbilled(Builder $query): Builder
+  {
+    return $query->where('billable', true)
+      ->whereNull('invoice_id')
+      ->whereNull('billed_at');
+  }
+
+  public function scopeBilled(Builder $query): Builder
+  {
+    return $query->where('billable', true)
+      ->where(function ($q) {
+        $q->whereNotNull('invoice_id')->orWhereNotNull('billed_at');
+      });
   }
 
   /**

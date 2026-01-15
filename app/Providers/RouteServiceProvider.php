@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
-  public const HOME = '/dashboard';
+  public const HOME = '/admin/dashboard';
 
   public function boot(): void
   {
@@ -22,6 +22,21 @@ class RouteServiceProvider extends ServiceProvider
 
     RateLimiter::for('api', function (Request $request) {
       return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+    });
+
+    RateLimiter::for('portal-magic-link', function (Request $request) {
+      $email = strtolower((string) $request->input('email', ''));
+      $ipKey = $request->ip();
+      $emailKey = $email !== '' ? $email : 'unknown';
+
+      return [
+        Limit::perMinute(6)->by($ipKey),
+        Limit::perMinute(3)->by($ipKey . '|' . $emailKey),
+      ];
+    });
+
+    RateLimiter::for('lead-inbox', function (Request $request) {
+      return Limit::perMinute(20)->by($request->ip());
     });
 
     Route::aliasMiddleware('tenant', ResolveTenant::class);

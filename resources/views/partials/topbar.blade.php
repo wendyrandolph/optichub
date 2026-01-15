@@ -1,8 +1,8 @@
 <nav class="bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 ring-1 ring-ink-100">
   <div class="container flex items-center justify-between h-14">
     <a href="/home" class="flex items-center gap-2 no-underline">
-      <img src="{{ asset('images/logo.svg') }}" alt="Optic Hub Logo" class="h-6 w-6">
-      <span class="font-semibold text-ink-800">Optic Hub</span>
+      <img src="{{ asset('images/renlo.svg') }}" alt="Renlo Logo" class="h-6 w-6">
+      <span class="font-semibold text-ink-800">Renlo</span>
     </a>
     <div class="flex items-center gap-2">
     <form action="{{ route('logout') }}" method="POST">

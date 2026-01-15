@@ -12,7 +12,7 @@
 
         $th = function ($key, $label) use ($sort, $dir, $tenantParam, $range, $method, $status) {
             $next = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.collected', [
+            $url = route('tenant.reports.collected', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $next,
@@ -31,7 +31,7 @@
         };
     @endphp
     {{-- Back to Reports --}}
-    <x-reports.back-button :tenant="$tenant" />
+    <x-reports.back-button :tenant="$tenant" exportType="collected" />
 
 
     {{-- Header / Filters --}}
@@ -43,7 +43,7 @@
                     {{ strtoupper($dateCol ?? 'created_at') }}</p>
             </div>
 
-            <form method="GET" action="{{ route('tenant.admin.reports.collected', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.collected', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <select name="range" class="oh-select">
                     @foreach (['wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30d'] as $k => $lbl)
@@ -67,7 +67,7 @@
 
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.collected', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.collected', ['tenant' => $tenantParam]) }}">Reset</a>
 
 
             </form>

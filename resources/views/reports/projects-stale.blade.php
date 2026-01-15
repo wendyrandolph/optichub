@@ -39,7 +39,7 @@
             $qText,
         ) {
             $next = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.projects_stale', [
+            $url = route('tenant.reports.projects_stale', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $next,
@@ -77,7 +77,7 @@
                 <p class="text-sm text-text-subtle">Projects with no activity for {{ $minDays ?? $days }}+ days</p>
             </div>
 
-            <form method="GET" action="{{ route('tenant.admin.reports.projects_stale', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.projects_stale', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <input type="number" min="1" name="days" value="{{ $days }}" class="oh-select"
                     title="Baseline days">
@@ -103,7 +103,7 @@
 
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.projects_stale', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.projects_stale', ['tenant' => $tenantParam]) }}">Reset</a>
             </form>
         </div>
     </div>
@@ -126,7 +126,7 @@
 
     <div class="oh-card mb-3 flex flex-wrap gap-2">
         @foreach ([14, 30, 60, 90] as $preset)
-            <a href="{{ route('tenant.admin.reports.projects_stale', ['tenant' => $tenantParam, 'days' => $preset]) }}"
+            <a href="{{ route('tenant.reports.projects_stale', ['tenant' => $tenantParam, 'days' => $preset]) }}"
                 class="chip {{ ($days ?? 14) == $preset ? 'chip--status-active' : 'chip--muted' }}">
                 {{ $preset }} days
             </a>

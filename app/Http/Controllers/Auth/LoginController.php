@@ -3,24 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use App\Models\ActivityLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class LoginController extends Controller
 {
-
-    use AuthenticatesUsers;
-
-    /**
-     * Where to redirect users after login.
-     *
-     * @var string
-     */
-    protected $redirectTo = '/dashboard';
-
     /**
      * Create a new controller instance.
      *
@@ -29,7 +21,7 @@ class LoginController extends Controller
     public function __construct()
     {
         $this->middleware('guest')->except('logout');
-        $this->middleware('auth')->only('logout');
+        $this->middleware('auth:admin,client,web')->only('logout');
     }
 
     /**
@@ -37,35 +29,115 @@ class LoginController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function create()
+    public function create(Request $request)
     {
-        return $this->showLoginForm();
+        return view('auth.login');
     }
-
     /**
      * Handle an incoming authentication request.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        return $this->login($request);
-    }
-
-    /**
-     * Determine where to redirect users after login.
-     */
-    protected function redirectTo(): string
-    {
-        $user = Auth::user();
-
-        if ($user && in_array($user->role ?? null, ['provider', 'admin', 'super_admin', 'superadmin'], true)) {
-            return 'admins.dashboard';
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+        $loginContext = $request->input('login_context', 'team');
+        if (! in_array($loginContext, ['team', 'client'], true)) {
+            $loginContext = 'team';
         }
-        //Tenant aware fallback 
-        return route('tenant.home', ['tenant' => $user->tenant_id]);
+
+    // 1) Lookup user (single users table)
+        /** @var \App\Models\User|null $user */
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
+        }
+
+        // 2) Decide guard
+        $role = strtolower((string) $user->role);
+
+        $isPlatformUser =
+            in_array($role, ['provider', 'super_admin', 'superadmin'], true)
+            || ($role === 'admin' && empty($user->tenant_id)); // admin with no tenant = platform/admin console
+
+        $guard = match (true) {
+            $role === 'client' => 'client',
+            $isPlatformUser    => 'admin',
+            // tenant/workspace users
+            default            => 'web',
+        };
+
+        if ($loginContext === 'team' && $guard === 'client') {
+            $request->session()->regenerateToken();
+            return back()
+                ->withErrors(['email' => 'You are signing in to the Client Portal. Use your client email and password.'])
+                ->with('login_context', 'client')
+                ->onlyInput('email');
+        }
+        if ($loginContext === 'client' && $guard !== 'client') {
+            $request->session()->regenerateToken();
+            return back()
+                ->withErrors(['email' => 'You are signing in to Team/Admin. Use your team email and password.'])
+                ->with('login_context', 'team')
+                ->onlyInput('email');
+        }
+
+        // 3) Login
+        Auth::guard($guard)->login($user, $request->boolean('remember'));
+        Auth::shouldUse($guard);
+
+        // 4) Regenerate session (prevents fixation)
+        $request->session()->regenerate();
+
+        // 5) Sidebar context
+        $user->refresh();
+        [$orgType, $userRole] = $this->determineSidebarContext($user);
+        $request->session()->put([
+            'organization_type' => $orgType,
+            'role'              => $userRole,
+        ]);
+
+        // 6) Log activity (tenant users only)
+        if (! empty($user->tenant_id)) {
+            ActivityLog::record(
+                $user->tenant_id,
+                $user->id,
+                $user,
+                'login',
+                'User logged in'
+            );
+        }
+
+        // Clear any stale intended URL to prevent cross-area redirects
+        $request->session()->forget('url.intended');
+
+        // ADMIN area: always land on admin dashboard (providers)
+        if ($guard === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        // CLIENT portal: land on portal dashboard
+        if ($guard === 'client') {
+            if (! empty($user->tenant_id)) {
+                $request->session()->put('tenant_id', $user->tenant_id);
+            }
+            return redirect()->route('portal.dashboard');
+        }
+
+        // TENANT workspace: send to tenant home (workspace-aware)
+        if (! empty($user->tenant_id)) {
+            return redirect()->route('tenant.home', ['tenant' => $user->tenant_id]);
+        }
+
+        // Final fallback
+        return redirect()->to('/dashboard');
     }
+
 
     /**
      * Determine the correct sidebar context (organization type and role)
@@ -135,50 +207,23 @@ class LoginController extends Controller
         return [$orgType, $role];
     }
 
-
     /**
-     * Override the default post-authentication redirect.
-     */
-    protected function authenticated(Request $request, $user)
-    {
-        // CRITICAL: Refresh to ensure relationships are loaded before accessing them.
-        $user->refresh();
-
-        $currentRole = $user->role ?? 'NULL/Unset';
-
-        // --- Set the organization context for the sidebar ---
-        [$orgType, $userRole] = $this->determineSidebarContext($user);
-
-        // Store the necessary UI context in the session
-        // FIX: The organization type must be stored under the key 'organization_type' 
-        // to be retrieved correctly by other controllers.
-        $request->session()->put([
-            'organization_type' => $orgType,
-            'role' => $userRole,
-        ]);
-
-        // GUARANTEED LOG: This will show what the session was set to.
-        Log::info("Context set for user ID {$user->id}. organization_type: {$orgType}, role: {$userRole}");
-
-        // Handle the redirect based on the reliable currentRole
-        if (in_array($currentRole, ['provider', 'admin', 'super_admin', 'superadmin'], true)) {
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->intended($this->redirectTo());
-    }
-
-    /**
-     * Log the user out and send them back to the login screen.
+     * Explicit logout that clears all guards, invalidates session, and regenerates CSRF.
      */
     public function logout(Request $request)
     {
         // Ensure we forget the key we are now using.
         $request->session()->forget(['organization_type', 'role']);
-        $this->guard()->logout();
+
+        foreach (['admin', 'client', 'web'] as $guard) {
+            if (Auth::guard($guard)->check()) {
+                Auth::guard($guard)->logout();
+            }
+        }
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')->with('status', 'Signed out.');
     }
 }

@@ -27,7 +27,7 @@
             $max,
         ) {
             $next = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.forecast', [
+            $url = route('tenant.reports.forecast', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $next,
@@ -50,7 +50,7 @@
         };
     @endphp
 
-    <x-reports.back-button :tenant="$tenant" />
+    <x-reports.back-button :tenant="$tenant" exportType="forecast" />
 
     {{-- Header / Filters --}}
     <div class="oh-card mb-4">
@@ -60,7 +60,7 @@
                 <p class="text-sm text-text-subtle">Expected receipts in the selected window</p>
             </div>
 
-            <form method="GET" action="{{ route('tenant.admin.reports.forecast', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.forecast', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <select name="window" class="oh-select"
                     onchange="this.form.querySelectorAll('[data-custom-range]').forEach(el=>el.classList.toggle('hidden', this.value!=='custom'))">
@@ -93,7 +93,7 @@
 
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.forecast', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.forecast', ['tenant' => $tenantParam]) }}">Reset</a>
 
 
             </form>

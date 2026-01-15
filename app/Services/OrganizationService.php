@@ -32,7 +32,7 @@ class OrganizationService
     return DB::transaction(function () use ($email, $companyName, $options) {
 
       // 3. Create the new Organization (Tenant)
-      $organization = Organization::create([
+      $organization = Tenant::create([
         'name' => $companyName,
         'plan' => $options['plan'],
         'trial_ends_at' => now()->addDays($options['trialDays']),

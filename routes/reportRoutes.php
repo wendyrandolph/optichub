@@ -2,23 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\TeamMemberController;
-use App\Http\Middleware\CheckRole;
 
-
-// Note the order: web -> tenant -> setTenantUrlDefaults -> auth -> checkrole
-Route::middleware([
-  'web',
-  'tenant',
-  'auth',
-  CheckRole::class . ':provider,admin,super_admin,superadmin'
-])
-  ->prefix('{tenant}/admin/reports/')
-  ->as('tenant.admin.reports.')
+// Tenant-scoped reports; routes/web.php already applies /app/{tenant} prefix + auth/web
+Route::prefix('reports')
+  ->as('reports.')
+  ->middleware(['no-trades-reports'])
   ->group(function () {
-    Route::get('/', [\App\Http\Controllers\ReportsController::class, 'index'])->name('index');
-    Route::get('/export', [\App\Http\Controllers\ReportsController::class, 'export'])->name('export');
+    Route::get('/', [ReportsController::class, 'index'])->name('index');
+    Route::get('/export', [ReportsController::class, 'export'])->name('export');
 
     // Finance
     Route::get('/invoices', [ReportsController::class, 'invoices'])->name('invoices');
@@ -34,4 +25,9 @@ Route::middleware([
     // CRM / Email
     Route::get('/leads/new', [ReportsController::class, 'leadsNew'])->name('leads.new');
     Route::get('/emails/activity', [ReportsController::class, 'emailsActivity'])->name('emails.activity');
+
+    // Bottlenecks
+    Route::get('/pipeline-aging', [ReportsController::class, 'pipelineAging'])->name('pipeline_aging');
+    Route::get('/wip', [ReportsController::class, 'wip'])->name('wip');
+    Route::get('/throughput', [ReportsController::class, 'throughput'])->name('throughput');
   });

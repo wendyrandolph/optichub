@@ -4,11 +4,9 @@
 
 @section('content')
     @php
-        // Resolve tenant for links safely
         $tp = request()->route('tenant') ?? (auth()->user()->tenant ?? auth()->user()->tenant_id);
         $tenantId = $tp instanceof \App\Models\Tenant ? $tp->getKey() : (int) $tp;
 
-        // Safe fallbacks from controller
         $metrics = $metrics ?? ['new' => 0, 'convRate' => 0, 'avgDaysToConvert' => 0, 'active' => 0];
         $byStatus = $byStatus ?? ['labels' => [], 'datasets' => []];
         $bySource = $bySource ?? ['labels' => [], 'datasets' => []];
@@ -17,46 +15,45 @@
             'labels' => ['New', 'Contacted', 'Qualified', 'Proposal', 'Won'],
             'datasets' => [['label' => 'Leads', 'data' => [0, 0, 0, 0, 0], 'backgroundColor' => '#2E5D95']],
         ];
-        $recentLeads = $recentLeads ?? collect(); // collection or array
-        $owners = $owners ?? []; // [{id,name}]
-        $sources = $sources ?? []; // ['web','referral',...]
+        $recentLeads = $recentLeads ?? collect();
+        $owners = $owners ?? [];
+        $sources = $sources ?? [];
 
         $range = request('range', 'mtd');
         $owner = request('owner');
         $src = request('source');
     @endphp
 
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {{-- Header --}}
-        <header>
-            <h1 class="text-2xl md:text-3xl font-semibold text-heading">Lead Insights</h1>
-            <p class="mt-1 text-sm text-muted">Track acquisition, conversion, and pipeline health.</p>
-        </header>
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Insights</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-text-base">Lead Insights</h1>
+                <p class="text-sm text-text-subtle mt-1">Track acquisition, conversion, and pipeline health.</p>
+            </div>
+        </div>
 
         {{-- Filter bar --}}
-        <form method="GET"
-            class="bg-white/80 dark:bg-gray-900/60 border border-border-default rounded-xl shadow-card p-3 md:p-4">
+        <form method="GET" class="oh-card border border-border-default/70 shadow-sm rounded-2xl p-4 md:p-5">
             <div class="grid gap-3 md:grid-cols-4">
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     @foreach (['today' => 'Today', 'wtd' => 'WTD', 'mtd' => 'MTD', '30d' => '30D', '90d' => '90D'] as $key => $label)
-                        <a href="{{ request()->fullUrlWithQuery(['range' => $key]) }}"
-                            class="px-2.5 py-1.5 rounded-lg text-sm font-medium
-                         {{ $range === $key ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                            {{ $label }}
-                        </a>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="range" value="{{ $key }}" class="sr-only" @checked($range === $key)>
+                            <span class="oh-btn h-9 px-3 {{ $range === $key ? 'oh-btn--primary' : '' }}">{{ $label }}</span>
+                        </label>
                     @endforeach
                 </div>
 
-                <select name="owner"
-                    class="rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                <select name="owner" class="oh-select h-9 text-sm">
                     <option value="">All owners</option>
                     @foreach ($owners as $o)
                         <option value="{{ $o['id'] }}" @selected($owner == $o['id'])>{{ $o['name'] }}</option>
                     @endforeach
                 </select>
 
-                <select name="source"
-                    class="rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                <select name="source" class="oh-select h-9 text-sm">
                     <option value="">All sources</option>
                     @foreach ($sources as $s)
                         <option value="{{ $s }}" @selected($src === $s)>{{ ucfirst($s) }}</option>
@@ -64,32 +61,34 @@
                 </select>
 
                 <div class="flex gap-2 md:justify-end">
-                    <button
-                        class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Filter</button>
-                    <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId]) }}"
-                        class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
-                        Reset
-                    </a>
+                    <button class="oh-btn oh-btn--primary h-9 px-3">Filter</button>
+                    <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId]) }}" class="oh-btn h-9 px-3">Reset</a>
                 </div>
             </div>
         </form>
 
         {{-- KPI row --}}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <x-kpi-card title="New Leads ({{ strtoupper($range) }})" :value="(int) ($metrics['new'] ?? 0)" icon="fa-user-plus"
-                color-type="primary" href="#" />
-            <x-kpi-card title="Conversion Rate" value="{{ number_format((float) ($metrics['convRate'] ?? 0), 1) }}%"
-                icon="fa-chart-line" color-type="success" href="#" />
-            <x-kpi-card title="Avg. Days to Convert" :value="number_format((float) ($metrics['avgDaysToConvert'] ?? 0), 1)" icon="fa-stopwatch" color-type="info"
-                href="#" />
-            <x-kpi-card title="Active Leads" :value="(int) ($metrics['active'] ?? 0)" icon="fa-filter" color-type="warning" href="#" />
+            <x-insight-kpi-tile title="New Leads ({{ strtoupper($range) }})" icon="fa-user-plus" :stat="(int) ($metrics['new'] ?? 0)" colorType="brand"
+                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
+            <x-insight-kpi-tile title="Conversion Rate" icon="fa-chart-line" :stat="number_format((float) ($metrics['convRate'] ?? 0), 1) . '%'" colorType="success"
+                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
+            <x-insight-kpi-tile title="Avg. Days to Convert" icon="fa-stopwatch" :stat="number_format((float) ($metrics['avgDaysToConvert'] ?? 0), 1)" colorType="info"
+                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
+            <x-insight-kpi-tile title="Active Leads" icon="fa-filter" :stat="(int) ($metrics['active'] ?? 0)" colorType="accent"
+                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
         </div>
+
+        @if (empty($byStatus['labels']) && empty($bySource['labels']) && empty($growth['labels']))
+            <div class="oh-card border border-border-default/70 rounded-2xl p-4 text-sm text-text-subtle">
+                As data is collected and projects and leads moved forward real data visuals will show up here.
+            </div>
+        @endif
 
         {{-- Charts --}}
         <div class="grid gap-6 lg:grid-cols-3">
-            {{-- Status pie --}}
-            <section class="bg-surface-card border border-border-default rounded-xl shadow-card p-4">
-                <h3 class="text-base font-semibold text-heading mb-2">Pipeline by Status</h3>
+            <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-text-base mb-3">Pipeline by Status</h3>
                 <div class="relative h-[300px]">
                     @if (!empty($byStatus['labels']))
                         <canvas id="statusPie"></canvas>
@@ -99,9 +98,8 @@
                 </div>
             </section>
 
-            {{-- Source bar --}}
-            <section class="bg-surface-card border border-border-default rounded-xl shadow-card p-4">
-                <h3 class="text-base font-semibold text-heading mb-2">Lead Sources</h3>
+            <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-text-base mb-3">Lead Sources</h3>
                 <div class="relative h-[300px]">
                     @if (!empty($bySource['labels']))
                         <canvas id="sourceBar"></canvas>
@@ -111,16 +109,14 @@
                 </div>
             </section>
 
-            {{-- Conversion funnel (simple bar) --}}
-            <section class="bg-surface-card border border-border-default rounded-xl shadow-card p-4">
-                <h3 class="text-base font-semibold text-heading mb-2">Conversion Funnel</h3>
+            <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-text-base mb-3">Conversion Funnel</h3>
                 <div class="relative h-[300px]">
                     <canvas id="funnelBar"></canvas>
                 </div>
             </section>
 
-            {{-- Growth line (full width) --}}
-            <section class="lg:col-span-3 bg-surface-card border border-border-default rounded-xl shadow-card p-4">
+            <section class="oh-card lg:col-span-3 border border-border-default rounded-2xl shadow-card p-4">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-base font-semibold text-heading">New Leads Over Time</h3>
                 </div>
@@ -135,17 +131,16 @@
         </div>
 
         {{-- Recent leads --}}
-        <section class="bg-surface-card border border-border-default rounded-xl shadow-card p-4">
+        <section class="oh-card bg-surface-card border border-border-default rounded-2xl shadow-card p-4">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-base font-semibold text-heading">Recent Leads</h3>
-                <a href="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}"
-                    class="text-blue-600 hover:text-blue-700 text-sm font-medium">View all →</a>
+                <a href="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}" class="oh-btn">View all</a>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead class="text-left text-muted">
-                        <tr>
+                    <thead class="text-left bg-[rgb(var(--surface-muted)/.55)]">
+                        <tr class="text-[11px] uppercase tracking-wide font-semibold text-text-subtle border-b border-border-default/60">
                             <th class="py-2 pr-4">Lead</th>
                             <th class="py-2 pr-4">Owner</th>
                             <th class="py-2 pr-4">Source</th>
@@ -154,173 +149,51 @@
                             <th class="py-2"></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-border-default">
+                    <tbody class="divide-y" style="--tw-divide-color: rgb(var(--border) / .35);">
                         @forelse ($recentLeads as $lead)
                             @php
                                 $id = data_get($lead, 'id');
-                                $name =
-                                    trim(
-                                        (data_get($lead, 'first_name') ?? '') .
-                                            ' ' .
-                                            (data_get($lead, 'last_name') ?? ''),
-                                    ) ?:
-                                    data_get($lead, 'email') ?? 'Unknown';
+                                $name = trim((data_get($lead, 'first_name') ?? '') . ' ' . (data_get($lead, 'last_name') ?? '')) ?: (data_get($lead, 'email') ?? 'Unknown');
                                 $ownerN = data_get($lead, 'owner_name', '—');
-                                $status = ucfirst((string) data_get($lead, 'status', 'new'));
+                                $statusVal = strtolower((string) data_get($lead, 'status', 'new'));
+                                $sourceVal = strtolower((string) data_get($lead, 'source', '—'));
+                                $status = ucfirst((string) data_get($lead, 'status', 'New'));
                                 $source = ucfirst((string) data_get($lead, 'source', '—'));
-                                $created =
-                                    optional(
-                                        data_get($lead, 'created_at')
-                                            ? \Carbon\Carbon::parse(data_get($lead, 'created_at'))
-                                            : null,
-                                    )?->format('M j, Y') ?? '—';
-
-                                $badge = match (strtolower($status)) {
-                                    'won', 'client', 'converted' => 'bg-green-100 text-green-700 border-green-200',
-                                    'lost' => 'bg-red-100 text-red-700 border-red-200',
-                                    'qualified', 'interested' => 'bg-purple-100 text-purple-700 border-purple-200',
-                                    default => 'bg-blue-100 text-blue-700 border-blue-200',
+                                $created = optional(data_get($lead, 'created_at') ? \Carbon\Carbon::parse(data_get($lead, 'created_at')) : null)?->format('M j, Y') ?? '—';
+                                $statusPillClass = match (true) {
+                                    str_contains($statusVal, 'won') || str_contains($statusVal, 'client') || str_contains($statusVal, 'converted') => 'oh-pill oh-pill--success',
+                                    str_contains($statusVal, 'lost') || str_contains($statusVal, 'closed') => 'oh-pill oh-pill--danger',
+                                    str_contains($statusVal, 'qualified') || str_contains($statusVal, 'interested') => 'oh-pill oh-pill--info',
+                                    str_contains($statusVal, 'contact') => 'oh-pill oh-pill--warning',
+                                    default => 'oh-pill',
+                                };
+                                $sourcePillClass = match ($sourceVal) {
+                                    'referral' => 'oh-pill oh-pill--success',
+                                    'ads' => 'oh-pill oh-pill--warning',
+                                    'web' => 'oh-pill oh-pill--info',
+                                    default => 'oh-pill',
                                 };
                             @endphp
-                            <tr>
+                            <tr class="hover:bg-surface-accent/40 transition-colors">
                                 <td class="py-2 pr-4 font-medium text-heading">{{ $name }}</td>
-                                <td class="py-2 pr-4 text-muted">{{ $ownerN }}</td>
-                                <td class="py-2 pr-4 text-muted">{{ $source }}</td>
-                                <td class="py-2 pr-4">
-                                    <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded-full border text-xs {{ $badge }}">{{ $status }}</span>
-                                </td>
-                                <td class="py-2 pr-4 text-muted">{{ $created }}</td>
-                                <td class="py-2">
-                                    <a href="{{ route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]) }}"
-                                        class="text-blue-600 hover:text-blue-700">Open</a>
+                                <td class="py-2 pr-4 text-text-subtle">{{ $ownerN }}</td>
+                                <td class="py-3 pr-4"><span class="{{ $sourcePillClass }}">{{ $source }}</span></td>
+                                <td class="py-3 pr-4"><span class="{{ $statusPillClass }}">{{ $status }}</span></td>
+                                <td class="py-2 pr-4 text-text-subtle">{{ $created }}</td>
+                                <td class="py-2 text-right">
+                                    <a href="{{ route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]) }}" class="oh-icon-btn" title="View">
+                                        <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                    </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="py-6 text-center text-muted">No recent leads.</td>
+                                <td colspan="6" class="py-4 text-center text-text-subtle">No recent leads.</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </section>
-
-        {{-- Hidden payloads for charts --}}
-        <div id="li-data" data-status='@json($byStatus)' data-source='@json($bySource)'
-            data-growth='@json($growth)' data-funnel='@json($funnel)' class="hidden"></div>
     </div>
 @endsection
-
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        (() => {
-            const root = document.getElementById('li-data');
-            if (!root) return;
-
-            const get = key => {
-                try {
-                    return JSON.parse(root.getAttribute(key) || '{}');
-                } catch {
-                    return {};
-                }
-            };
-
-            const status = get('data-status');
-            const source = get('data-source');
-            const growth = get('data-growth');
-            const funnel = get('data-funnel');
-
-            const inkGrid = 'rgba(148,163,184,.18)';
-
-            const base = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom'
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: inkGrid
-                        },
-                        ticks: {
-                            color: '#64748b'
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: inkGrid
-                        },
-                        ticks: {
-                            color: '#64748b'
-                        }
-                    }
-                }
-            };
-
-            const mk = (id, type, data, opt = {}) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                return new Chart(el.getContext('2d'), {
-                    type,
-                    data,
-                    options: {
-                        ...base,
-                        ...opt
-                    }
-                });
-            };
-
-            if (status?.labels?.length) {
-                mk('statusPie', 'pie', status, {
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    },
-                    scales: {}
-                });
-            }
-            if (source?.labels?.length) {
-                mk('sourceBar', 'bar', source);
-            }
-            if (growth?.labels?.length) {
-                mk('growthLine', 'line', growth, {
-                    elements: {
-                        line: {
-                            tension: .35
-                        }
-                    }
-                });
-            }
-            // funnel as simple left-to-right bars (descending)
-            if (funnel?.labels?.length) {
-                mk('funnelBar', 'bar', funnel, {
-                    indexAxis: 'y',
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                color: inkGrid
-                            }
-                        },
-                        y: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                });
-            }
-        })();
-    </script>
-@endpush

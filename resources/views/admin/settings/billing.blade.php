@@ -1,36 +1,87 @@
 @extends('layouts.app')
 @section('title', 'Billing')
+
 @section('content')
-    @php($tenantId = auth()->user()->tenant_id ?? null)
+    @php
+        $tenantId = auth()->user()->tenant_id ?? null;
+        $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : null;
+    @endphp
 
-    <div class="container mx-auto p-6">
-        <h1 class="text-2xl font-semibold mb-2">Billing</h1>
-        <p class="text-gray-600 mb-6">Manage your plan and payment settings.</p>
-
-        <div class="grid gap-6 md:grid-cols-2">
-            <div class="p-4 rounded-xl border">
-                <h2 class="font-medium mb-2">Current Plan</h2>
-                <p class="text-gray-600 text-sm">You’re on a trial or current plan.</p>
-                <a class="btn btn--brand mt-3" href="{{ route('tenant.settings.billing.upgrade', ['tenant' => $tenantId]) }}">
-                    Upgrade
-                </a>
-            </div>
-
-            <div class="p-4 rounded-xl border">
-                <h2 class="font-medium mb-2">Payment Provider</h2>
-                <p class="text-gray-600 text-sm">
-                    Configure Stripe / Authorize.net in
-                    <a class="text-blue-600 underline"
-                        href="{{ route('tenant.settings.api.index', ['tenant' => $tenantId]) }}">API Keys</a>.
-                </p>
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {{-- Header --}}
+        <div class="flex flex-col gap-2">
+            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Settings</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h1 class="text-2xl font-semibold text-text-base">Subscription Billing</h1>
+                    <p class="text-sm text-text-subtle mt-1">Manage your plan, payments, and subscription invoices.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a class="oh-btn" href="{{ route('tenant.settings.index', ['tenant' => $tenantId]) }}">Back</a>
+                </div>
             </div>
         </div>
 
-        <div class="mt-8">
-            <h2 class="font-medium mb-2">Invoices & History</h2>
-            <a class="btn btn--ghost" href="{{ route('tenant.invoices.index', ['tenant' => $tenantId]) }}">
-                View Invoices
-            </a>
+        {{-- Cards --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{-- Current Plan --}}
+            <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Current plan</h2>
+                        <p class="text-sm text-text-subtle">You’re on a trial or current plan.</p>
+                    </div>
+                    <span class="oh-pill oh-pill--info">Active</span>
+                </div>
+                <div class="flex items-center justify-end pt-2">
+                    <a class="oh-btn oh-btn--primary"
+                        href="{{ route('tenant.settings.billing-upgrade', ['tenant' => $tenantId]) }}">
+                        Upgrade
+                    </a>
+                </div>
+            </div>
+
+            {{-- Payment Provider --}}
+            <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-2">
+                <h2 class="text-sm font-semibold text-text-base">Payment provider</h2>
+                <p class="text-sm text-text-subtle">
+                    Configure Stripe / Authorize.net via your API Keys.
+                </p>
+                <a class="oh-btn" href="{{ route('tenant.settings.api.index', ['tenant' => $tenantId]) }}">Go to API Keys</a>
+            </div>
+        </div>
+
+        {{-- Invoices & History --}}
+        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-2">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-text-base">Invoices & history</h2>
+                    <p class="text-sm text-text-subtle">Billing records for your Renlo subscription.</p>
+                </div>
+                <a class="oh-btn" href="{{ route('tenant.subscription.invoices.index', ['tenant' => $tenantId]) }}">
+                    View subscription invoices
+                </a>
+            </div>
+        </div>
+
+        {{-- Invoice Preferences --}}
+        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-3">
+            <div>
+                <h2 class="text-sm font-semibold text-text-base">Invoice preferences</h2>
+                <p class="text-sm text-text-subtle">Control payment behavior for client invoices.</p>
+            </div>
+            <form method="POST" action="{{ route('tenant.settings.billing.update', ['tenant' => $tenantId]) }}"
+                class="flex items-center justify-between gap-3">
+                @csrf
+                @method('PUT')
+                <label class="inline-flex items-center gap-2 text-sm text-text-base">
+                    <input type="checkbox" name="allow_partial_payments" value="1"
+                        class="rounded border-[rgb(var(--border-default))] text-[rgb(var(--brand-primary))]"
+                        @checked($tenant?->allow_partial_payments ?? true)>
+                    Allow partial payments
+                </label>
+                <button type="submit" class="oh-btn oh-btn--primary">Save</button>
+            </form>
         </div>
     </div>
 @endsection

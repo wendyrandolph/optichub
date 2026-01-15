@@ -45,7 +45,7 @@
       </div>
     <?php endif; ?>
 
-    <h2 class="h2">Welcome to Optic Hub</h2>
+    <h2 class="h2">Welcome to Renlo</h2>
     <p class="copy">Quick next steps to get value fast.</p>
 
     <div class="cards" style="margin-top:12px">
@@ -53,7 +53,7 @@
         <div class="feature__icon"></div>
         <div class="feature__body">
           <h3 class="h4">Connect your website form</h3>
-          <p class="copy">Use your API key to send new inquiries straight into Optic Hub.</p>
+          <p class="copy">Use your API key to send new inquiries straight into Renlo.</p>
           <a class="btn btn--ghost" href="/settings/api">View API Keys</a>
         </div>
       </article>

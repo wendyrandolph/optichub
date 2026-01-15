@@ -3,17 +3,22 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class NewsletterController extends Controller
 {
   public function subscribe(Request $request)
   {
     $data = $request->validate([
-      'email' => ['required', 'email', 'max:255'],
+      'email' => ['required', 'email'],
     ]);
 
-    // Stub: save to DB/service later.
-    // For now, pretend it worked:
-    return back()->with('success', 'Thanks! You’re on the list.');
+    // Example: save locally or forward to Mailchimp, etc.
+    // \App\Models\Subscriber::create($data);
+    // or: app(\App\Services\NewsletterService::class)->subscribe($data['email']);
+
+    Log::info("New newsletter subscription: {$data['email']}");
+
+    return back()->with('status', 'Thanks for subscribing! Check your inbox.');
   }
 }

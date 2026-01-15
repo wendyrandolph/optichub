@@ -17,12 +17,14 @@
 
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {{-- Back / Title --}}
-        <div class="flex items-center justify-between mb-6">
-            <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}"
-                class="inline-flex items-center h-9 px-3 rounded-lg bg-surface-card/60 hover:bg-surface-card/90 text-text-base text-sm">
-                <i class="fa-solid fa-arrow-left mr-2 text-xs"></i> Back to Email Log
-            </a>
-            <h1 class="text-xl font-semibold text-text-base">Compose Email</h1>
+        <div class="flex items-start justify-between mb-6">
+            <div class="space-y-1">
+                <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}"
+                    class="oh-link-underline inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
+                    <i class="fa-solid fa-arrow-left mr-2 text-xs"></i> Back to Email Log
+                </a>
+                <h1 class="text-xl font-semibold text-text-base">Compose Email</h1>
+            </div>
         </div>
 
         {{-- Flash / Errors --}}

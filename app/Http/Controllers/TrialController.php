@@ -2,75 +2,79 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StartTrialRequest;
-use App\Services\OrganizationService;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use App\Models\User;
+use App\Models\Tenant;
+use App\Services\TenantProvisioner;
 
 class TrialController extends Controller
 {
-  /**
-   * @var OrganizationService
-   */
-  protected $organizationService;
-
-  /**
-   * Use dependency injection to get the OrganizationService.
-   */
-  public function __construct(OrganizationService $organizationService)
-  {
-    $this->organizationService = $organizationService;
-  }
-
-  /**
-   * Show the trial signup form view.
-   */
   public function showTrialForm()
   {
-    return view('auth.trial-signup');
+    return view('marketing.trial');
   }
 
-  /**
-   * Handles the submission of the trial form, creates organization and user.
-   *
-   * @param StartTrialRequest $request Handles validation and rate limiting
-   * @return RedirectResponse
-   */
-  public function start(StartTrialRequest $request): RedirectResponse
+  public function start(Request $request)
   {
-    try {
-      $data = $request->validated();
+    $data = $request->validate([
+      'company_name' => ['required', 'string', 'max:255'],
+      'first_name' => ['required', 'string', 'max:255'],
+      'last_name' => ['required', 'string', 'max:255'],
+      'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+      'password' => ['required', 'min:8'],
+      'username' => ['nullable', 'string', 'max:50', 'unique:users,username'],
+      'workspace_type' => ['nullable', 'in:creative,trades'],
+    ]);
 
-      // The OrganizationService handles the transactional creation of the
-      // organization, the initial user, and the setup token.
-      $result = $this->organizationService->startTrial(
-        $data['email'],
-        $data['company']
-      );
+    // 1) Create tenant
+    $tenant = Tenant::create([
+      'name' => $data['company_name'],
+      'subscription_status' => 'trialing',
+      'trial_ends_at' => now()->addDays(14),
+      'primary_color' => '#1C2E70',
+      'secondary_color' => '#8FAF9A',
+      'accent_color' => '#9A8FBF',
+      'workspace_type' => $data['workspace_type'] ?? 'creative',
+    ]);
 
-      // Log successful trial creation
-      Log::info("New trial started.", [
-        'org_id' => $result['organization_id'],
-        'user_id' => $result['user_id'],
-        'email' => $data['email'],
-      ]);
-
-      // Redirect the user to the secure onboarding flow (set password)
-      // The token is used to authenticate the user for this one-time action.
-      return redirect()->route('onboarding.setup-password', [
-        'token' => $result['token']
-      ])->with('success', 'Your trial has been started! Check your email to set your password.');
-    } catch (\Throwable $e) {
-      // Log the exception
-      Log::error("Trial signup failed: " . $e->getMessage(), [
-        'exception' => $e,
-        'email' => $request->input('email')
-      ]);
-
-      // Redirect back with a general error message
-      return back()->withInput()->withErrors([
-        'error' => 'Could not start your trial. Please try again or contact support.'
-      ]);
+    // 2) Prepare username (sanitize + ensure unique)
+    $baseUsername = $data['username'] ?: Str::before($data['email'], '@') ?: 'owner';
+    $baseUsername = preg_replace('/[^a-z0-9_.-]+/i', '-', $baseUsername);
+    $baseUsername = trim($baseUsername, '-_.');
+    if ($baseUsername === '') {
+      $baseUsername = 'owner';
     }
+
+    $username = $baseUsername;
+    $counter = 1;
+
+    while (User::where('username', $username)->exists()) {
+      $username = $baseUsername . '-' . $counter;
+      $counter++;
+    }
+
+    // 3) Create the admin user for this tenant
+    $user = User::create([
+      'tenant_id' => $tenant->id,
+      'first_name' => $data['first_name'],
+      'last_name' => $data['last_name'],
+      'email' => $data['email'],
+      'role' => 'admin', // matches your ENUM
+      'username' => $username,
+      'password' => Hash::make($data['password']),
+    ]);
+
+    // 4) Log them in with the admin guard
+    Auth::guard('admin')->login($user);
+
+    if (($data['workspace_type'] ?? 'creative') === 'trades') {
+      app(TenantProvisioner::class)->applyTradesDefaults($tenant);
+    }
+
+    // 5) Redirect to onboarding
+    return redirect()->route('onboarding.welcome');
   }
 }

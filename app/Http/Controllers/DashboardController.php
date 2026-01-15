@@ -19,13 +19,29 @@ class DashboardController extends Controller
     $this->dashboard = $dashboard; // <- assign it
   }
 
-  public function index(Tenant $tenant): View
+  public function index(?Tenant $tenant = null): View
   {
-    $payload = $this->dashboard->getTenantDashboardPayload((int) $tenant->getKey());
+    $tenant = $tenant ?: request()->route('tenant');
+    $payload = [];
+    if ($tenant) {
+      $payload = $this->dashboard->getTenantDashboardPayload((int) $tenant->getKey());
+    }
 
-    return view('dashboards.index', array_merge([
+    $byStatus = $payload['leadStatusCounts'] ?? ['labels' => [], 'datasets' => []];
+    $growth = $payload['leadsGrowthData'] ?? ['labels' => [], 'datasets' => []];
+
+    // Tenant Lead Insights dashboard (safe defaults in the blade handle missing metrics)
+    return view('dashboards.index', [
       'tenant' => $tenant,
-    ], $payload));
+      'metrics' => $payload['metrics'] ?? ['new' => 0, 'convRate' => 0, 'avgDaysToConvert' => 0, 'active' => 0],
+      'byStatus' => $byStatus,
+      'bySource' => $payload['bySource'] ?? ['labels' => [], 'datasets' => []],
+      'growth' => $growth,
+      'funnel' => $payload['funnel'] ?? ['labels' => [], 'datasets' => []],
+      'recentLeads' => $payload['recentLeads'] ?? collect(),
+      'owners' => $payload['owners'] ?? [],
+      'sources' => $payload['sources'] ?? [],
+    ]);
   }
 
   /** -----------------------
@@ -84,21 +100,21 @@ class DashboardController extends Controller
    * If you wired tab routes (admin.dashboards.tasks/time/opportunities/leads)
    * you can reuse the same payload for now:
    */
-  public function tasks()
+  public function tasks(Tenant $tenant): View
   {
-    return $this->index();
+    return $this->index($tenant);
   }
-  public function time()
+  public function time(Tenant $tenant): View
   {
-    return $this->index();
+    return $this->index($tenant);
   }
-  public function opportunities()
+  public function opportunities(Tenant $tenant): View
   {
-    return $this->index();
+    return $this->index($tenant);
   }
-  public function leads()
+  public function leads(Tenant $tenant): View
   {
-    return $this->index();
+    return $this->index($tenant);
   }
 
   /**

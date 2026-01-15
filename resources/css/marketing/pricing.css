@@ -1,0 +1,284 @@
+@layer components {
+  /* --- Cards (match trial card) --- */
+  /* resources/css/marketing/pricing.css */
+
+  /* =========================
+   Page-level tuning
+   ========================= */
+  .pricing-page .section {
+    scroll-margin-top: 96px;
+  }
+
+  /* =========================
+   HERO: bind headline + card
+   ========================= */
+  .pricing-hero {
+    padding: 4.5rem 0 3rem;
+  }
+
+  .pricing-hero__frame {
+    background: rgba(var(--surface-muted), 0.65);
+    border: 1px solid rgba(var(--border), 0.92);
+    border-radius: 24px;
+    padding: 2.25rem;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.04);
+  }
+
+  .pricing-hero__inner {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  @media (max-width: 960px) {
+    .pricing-hero {
+      padding: 3.5rem 0 2.5rem;
+    }
+    .pricing-hero__frame {
+      padding: 1.5rem;
+    }
+    .pricing-hero__inner {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+  }
+
+  /* Copy rhythm */
+  .pricing-hero__copy .eyebrow {
+    margin-bottom: 0.5rem;
+  }
+
+  .pricing-hero__copy .h2 {
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+  }
+
+  .pricing-hero__copy .copy {
+    max-width: 52ch;
+    color: rgb(var(--text-subtle));
+  }
+
+  /* =========================
+   PRICING CARD: less floaty, more premium
+   ========================= */
+  .pricing-hero__card {
+    background: rgb(var(--surface));
+    border: 1px solid rgba(var(--border), 0.95);
+    border-radius: 20px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Thin brand edge */
+  .pricing-hero__card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    background: rgb(var(--brand-primary));
+    opacity: 0.9;
+  }
+
+  .pricing-hero__header {
+    padding: 1.5rem 1.75rem 0.75rem;
+  }
+
+  .pricing-hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--text-subtle));
+    background: rgba(var(--surface-muted), 0.7);
+    border: 1px solid rgba(var(--border), 0.9);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .pricing-hero__subcopy {
+    margin-top: 0.5rem;
+    color: rgb(var(--text-subtle));
+  }
+
+  .pricing-hero__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    padding: 0.75rem 1.75rem 1.25rem;
+  }
+
+  @media (max-width: 640px) {
+    .pricing-hero__body {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pricing-hero__list {
+    margin: 0;
+    padding-left: 1rem;
+    color: rgb(var(--text));
+  }
+
+  .pricing-hero__list li {
+    margin: 0.5rem 0;
+    color: rgb(var(--text-subtle));
+  }
+
+  .pricing-hero__footer {
+    padding: 1.25rem 1.75rem 1.5rem;
+    border-top: 1px solid rgba(var(--border), 0.9);
+    background: rgba(var(--surface-muted), 0.35);
+  }
+
+  .pricing-hero__cta-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .pricing-hero__meta {
+    margin-top: 0.75rem;
+    color: rgb(var(--text-subtle));
+    font-size: 0.875rem;
+  }
+
+  /* =========================
+   “Everything included”: supporting band, calmer cards
+   ========================= */
+  #whats-included.section--soft {
+    padding: 3.5rem 0;
+    border-top: 1px solid rgba(var(--border), 0.75);
+    border-bottom: 1px solid rgba(var(--border), 0.75);
+  }
+
+  .pricing-included__header {
+    max-width: 70ch;
+  }
+
+  .pricing-included__header .copy {
+    color: rgb(var(--text-subtle));
+  }
+
+  .pricing-included__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  @media (max-width: 980px) {
+    .pricing-included__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .pricing-included__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Normalize these cards just on pricing page */
+  .pricing-page .pricing-included__card.card {
+    background: rgb(var(--surface));
+    border: 1px solid rgba(var(--border), 0.88);
+    border-radius: 16px;
+    box-shadow: none;
+    padding: 1.05rem 1.05rem 1.2rem;
+  }
+
+  .pricing-included__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(var(--surface-muted), 0.85);
+    border: 1px solid rgba(var(--border), 0.9);
+    color: rgb(var(--brand-primary));
+    margin-bottom: 0.75rem;
+  }
+
+  .pricing-included__icon--purple {
+    color: rgb(var(--brand-secondary));
+  }
+
+  .pricing-page .pricing-included__card .h4 {
+    margin-bottom: 0.25rem;
+  }
+
+  .pricing-page .pricing-included__card .copy {
+    color: rgb(var(--text-subtle));
+    margin: 0;
+  }
+
+  /* =========================
+   Social proof: tighten spacing & reduce “glass” harshness
+   ========================= */
+  .pricing-quote.card--glass {
+    background: rgba(var(--surface), 0.75);
+    border: 1px solid rgba(var(--border), 0.9);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .pricing-quote .quote {
+    color: rgb(var(--text));
+    line-height: 1.6;
+  }
+
+  .pricing-quote .quote__meta {
+    color: rgb(var(--text-subtle));
+  }
+
+  /* =========================
+   FAQ: wider, clearer, better dividers
+   ========================= */
+  .pricing-faq.card {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 18px;
+    border: 1px solid rgba(var(--border), 0.92);
+    background: rgb(var(--surface));
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .pricing-faq__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: 0.75rem;
+  }
+
+  .pricing-faq details.faq {
+    border-top: 1px solid rgba(var(--border), 0.85);
+    padding: 1rem 0;
+  }
+
+  .pricing-faq details.faq:first-of-type {
+    border-top: none;
+    padding-top: 0.25rem;
+  }
+
+  .pricing-faq summary {
+    cursor: pointer;
+    color: rgb(var(--text));
+    font-weight: 600;
+  }
+
+  .pricing-faq details p {
+    margin: 0.5rem 0 0;
+    color: rgb(var(--text-subtle));
+  }
+
+  /* =========================
+   CTA band: smoother transition
+   ========================= */
+  .pricing-cta {
+    border-top: 1px solid rgba(var(--border), 0.35);
+  }
+}

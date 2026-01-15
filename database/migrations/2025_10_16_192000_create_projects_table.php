@@ -18,7 +18,7 @@ return new class extends Migration
                 ->constrained('tenants')
                 ->cascadeOnDelete();
 
-            $table->unsignedBigInteger('client_id')->nullable()->index();
+            $table->unsignedBigInteger('contact_id')->nullable()->index();
             $table->unsignedBigInteger('project_manager_id')->nullable()->index();
 
             $table->string('project_name');

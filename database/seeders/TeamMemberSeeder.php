@@ -11,7 +11,7 @@ class TeamMemberSeeder extends Seeder
 {
     public function run(): void
     {
-        $tenant = Tenant::first();
+        $tenant = Tenant::where('name', 'Renlo Test Tenant')->first() ?: Tenant::first();
         $user = User::first();
 
         if (!$tenant || !$user) {

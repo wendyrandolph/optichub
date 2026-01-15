@@ -1,0 +1,108 @@
+@layer components {
+  /* FAQ page visual hierarchy */
+  .faq-page .section {
+    padding: 3.75rem 0;
+  }
+
+  .faq-page .section + .section {
+    border-top: 1px solid rgb(var(--ui-border));
+  }
+
+  .faq-page #faq-hero {
+    background: rgb(var(--ui-surface));
+    border-bottom: 1px solid rgb(var(--ui-border));
+  }
+
+  .faq-page h1.h2 {
+    letter-spacing: -0.01em;
+  }
+
+  .faq-page h2.h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: rgb(var(--ui-text));
+    margin-bottom: 1rem;
+  }
+
+  .faq-page h2.h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(var(--ui-border), 1) 0,
+      rgba(var(--ui-border), 0.05) 100%
+    );
+  }
+
+  /* FAQ items */
+  .faq-page details.faq {
+    border: 1px solid rgba(var(--ui-border), 0.9);
+    background: rgb(var(--ui-surface));
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.85rem;
+    transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  }
+
+  .faq-page details.faq[open] {
+    background: rgba(var(--ui-surface-muted), 0.5);
+    border-color: rgb(var(--ui-border));
+    box-shadow: 0 8px 18px rgba(var(--ui-text), 0.04);
+  }
+
+  .faq-page summary {
+    cursor: pointer;
+    font-weight: 650;
+    color: rgb(var(--ui-text));
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    outline: none;
+  }
+
+  .faq-page summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-page summary::after {
+    content: '›';
+    font-size: 1.1rem;
+    color: rgb(var(--ui-text-subtle));
+    transition: transform 150ms ease, color 150ms ease;
+    margin-left: auto;
+  }
+
+  .faq-page details[open] summary::after {
+    transform: rotate(90deg);
+    color: rgb(var(--ui-primary));
+  }
+
+  .faq-page summary:hover {
+    color: rgb(var(--ui-primary));
+  }
+
+  .faq-page summary:focus-visible {
+    outline: 2px solid rgba(var(--ui-primary), 0.4);
+    outline-offset: 4px;
+    border-radius: 8px;
+  }
+
+  .faq-page details.faq p {
+    margin: 0.6rem 0 0;
+    color: rgb(var(--ui-text-subtle));
+    line-height: 1.6;
+  }
+
+  /* CTA */
+  .faq-page .section.cta {
+    background: rgb(var(--ui-surface));
+    border-top: 1px solid rgb(var(--ui-border));
+  }
+
+  .faq-page .section.cta .btn-row {
+    gap: 0.75rem;
+  }
+}

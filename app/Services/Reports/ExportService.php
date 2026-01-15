@@ -43,17 +43,6 @@ class ExportService
   }
 
 
-  protected function arAging(Tenant $tenant, array $filters): array
-  {
-    if (!Schema::hasTable('invoices')) return [];
-    return DB::table('invoices')
-      ->where('tenant_id', $tenant->id)
-      ->whereIn('status', ['sent', 'overdue'])
-      ->select('id', 'number', 'client_name', 'due_date', 'balance_due')
-      ->orderBy('due_date')
-      ->get()->map(fn($r) => (array)$r)->all();
-  }
-
   protected function tasksDue(Tenant $tenant, array $filters): array
   {
     if (!Schema::hasTable('tasks')) return [];

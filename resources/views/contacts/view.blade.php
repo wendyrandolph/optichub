@@ -4,439 +4,832 @@
 
 @section('content')
     @php
-        // Expecting: $client (Client model), $tenant (id), plus optional arrays:
-        // $projects_active, $projects_recent, $tasks_assigned, $invoices_unpaid,
-        // $aging, $notes_recent, $files_recent, $other_contacts, $activities, $kpi_*
+        use Illuminate\Support\Facades\Storage;
+    @endphp
+    @php
+        // Resolve contact + tenant context
+        $contact = $contact ?? ($client ?? null);
         $tenantId = $tenant ?? (auth()->user()->tenant_id ?? null);
 
-        // Safeguards
-        $fullName = trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? ''));
-        $company = $client->company_name ?? null;
-        $status = strtolower($client->status ?? 'active');
-        $hasLogin = property_exists($client, 'has_login')
-            ? (bool) $client->has_login
-            : (bool) optional($client->userAccount)->exists;
-        $money = fn($n) => '$' . number_format((float) $n, 0);
+        // Identity
+        $firstName = data_get($contact, 'first_name') ?? (data_get($contact, 'firstName') ?? '');
+        $lastName = data_get($contact, 'last_name') ?? (data_get($contact, 'lastName') ?? '');
+        $fullName = trim($firstName . ' ' . $lastName) ?: data_get($contact, 'name') ?? 'Contact';
+        $email = data_get($contact, 'email');
+        $phone = data_get($contact, 'phone_formatted') ?? data_get($contact, 'phone');
 
-        // KPI inputs
-        $kpi = [
-            'open_projects' => (int) ($kpi_open_projects ?? 0),
-            'unpaid' => (float) ($kpi_unpaid_balance ?? 0),
-            'last_activity' => $kpi_last_activity ?? null,
-            'next_due' => $kpi_next_due ?? null,
-            'last_invoice' => $kpi_last_invoice ?? null,
-        ];
+        // Company
+        $company =
+            optional($contact->company ?? ($contact->clientCompany ?? null))->name ??
+            data_get($contact, 'company_name');
+        $companyId =
+            optional($contact->company ?? ($contact->clientCompany ?? null))->id ??
+            data_get($contact, 'client_company_id');
 
-        // Collections/arrays (graceful defaults)
-        $projects_active = $projects_active ?? [];
-        $projects_recent = $projects_recent ?? [];
-        $tasks_assigned = $tasks_assigned ?? [];
-        $invoices_unpaid = $invoices_unpaid ?? [];
-        $aging = $aging ?? ['0-30' => 0, '31-60' => 0, '61-90' => 0, '90+' => 0];
-        $notes_recent = $notes_recent ?? [];
-        $files_recent = $files_recent ?? [];
-        $other_contacts = $other_contacts ?? [];
+        // Status / portal
+        $status = strtolower(data_get($contact, 'status', 'active'));
+        $hasLogin = (bool) (data_get($contact, 'has_login') ?? optional($contact->userAccount ?? null)->exists);
+
+        // KPI fallbacks
+        $kpiOpenProjects = (int) (data_get($contact, 'projects_count') ?? data_get($contact, 'kpi_open_projects', 0));
+        $kpiUnpaid = data_get($contact, 'unpaid_balance') ?? data_get($contact, 'kpi_unpaid_balance');
+        $kpiLastActivity = data_get($contact, 'last_activity_at') ?? data_get($contact, 'kpi_last_activity');
+        $kpiNextFollowup = data_get($contact, 'next_followup_at') ?? data_get($contact, 'kpi_next_due');
+
+        // Collections (safe fallbacks)
         $activities = $activities ?? [];
+        $projects = $projects ?? [];
+        $tasks = $tasks ?? [];
+        $billables = $billables ?? [];
+        $notes = $notes ?? [];
+        $files = $files ?? [];
 
-        // Route helpers with safe fallbacks (in case some features aren’t routed yet)
-        $routeOr = function ($name, $params = [], $fallback = '#') {
+        $routeOr = function (string $name, array $params = [], string $fallback = '#') {
             return \Illuminate\Support\Facades\Route::has($name) ? route($name, $params) : $fallback;
         };
+
+        $initials = function ($first, $last, $email) {
+            $a = mb_substr(trim((string) $first), 0, 1);
+            $b = mb_substr(trim((string) $last), 0, 1);
+            if ($a === '' && $b === '' && $email) {
+                return mb_strtoupper(mb_substr($email, 0, 1));
+            }
+            return mb_strtoupper(trim($a . $b)) ?: 'C';
+        };
+
+        $money = fn($value) => '$' . number_format((float) $value, 0);
+        $emailList = function ($value) {
+            if (is_array($value)) {
+                return array_values(array_filter($value));
+            }
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter($decoded));
+                }
+                return array_values(array_filter(array_map('trim', explode(',', $value))));
+            }
+            return [];
+        };
+        $recentEmails = $recentEmails ?? collect();
+        $gmailConfigured = $gmailConfigured ?? false;
+        $currentMailbox = $currentMailbox ?? null;
     @endphp
 
-    <section class="page-head mb-4">
-        <a href="{{ $routeOr('tenant.contacts.index', ['tenant' => $tenantId], url('/contacts')) }}" class="btn btn--ghost">
-            <i class="fa fa-arrow-left"></i> Back to Contacts
-        </a>
-    </section>
-
-    <div class="client-layout grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- LEFT: Context --}}
-        <aside class="client-sidebar space-y-6 lg:col-span-1">
-            <div class="client-card bg-white rounded-xl shadow p-5">
-                <h3 class="text-lg font-semibold mb-3">Contact Details</h3>
-                <dl class="details text-sm space-y-2">
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Email</dt>
-                        <dd>
-                            <a class="text-blue-600 hover:underline"
-                                href="mailto:{{ $client->email }}">{{ $client->email ?? '—' }}</a>
-                        </dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Phone</dt>
-                        <dd>{{ $client->phone ?? '—' }}</dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Company</dt>
-                        <dd>{{ $company ?? '—' }}</dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Status</dt>
-                        <dd class="capitalize">{{ $status }}</dd>
-                    </div>
-                    <div class="flex justify-between">
-                        <dt class="text-gray-500">Account</dt>
-                        <dd>{{ $hasLogin ? 'Created' : 'Not created' }}</dd>
-                    </div>
-                </dl>
-
-                @unless ($hasLogin)
-                    <div class="mt-4">
-                        <a class="btn btn--ghost" href="{{ url('/admins/create-client-user', ['client_id' => $client->id]) }}">
-                            <i class="fa fa-key"></i> Create login
-                        </a>
-                    </div>
-                @endunless
-            </div>
-
-            @if (!empty($other_contacts))
-                <div class="client-card bg-white rounded-xl shadow p-5">
-                    <h3 class="text-lg font-semibold mb-3">Other Contacts</h3>
-                    <ul class="simple-list space-y-2 text-sm">
-                        @foreach ($other_contacts as $oc)
-                            <li>
-                                <a class="text-blue-600 hover:underline"
-                                    href="{{ $routeOr('tenant.contacts.show', ['tenant' => $tenantId, 'contact' => $oc['id'] ?? null], url('/contacts/view/' . ($oc['id'] ?? ''))) }}">
-                                    {{ $oc['name'] ?? 'Contact' }}
-                                </a>
-                                — <span class="text-gray-600">{{ $oc['email'] ?? '' }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
+    @if (session('success_message') || session('error_message'))
+        <div class="mb-4">
+            @if (session('success_message'))
+                <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                    {{ session('success_message') }}
                 </div>
             @endif
+            @if (session('error_message'))
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mt-2">
+                    {{ session('error_message') }}
+                </div>
+            @endif
+            @if (session('magic_link_url'))
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 mt-2">
+                    Magic link: <span class="font-mono text-[11px] break-all">{{ session('magic_link_url') }}</span>
+                </div>
+            @endif
+        </div>
+    @endif
 
-            <div class="client-card bg-white rounded-xl shadow p-5">
-                <h3 class="text-lg font-semibold mb-3">Notes</h3>
-
-                @if (empty($notes_recent))
-                    <p class="text-gray-500 text-sm">No notes yet.</p>
-                @else
-                    <ul class="space-y-3">
-                        @foreach ($notes_recent as $n)
-                            <li class="border border-gray-200 rounded-lg p-3">
-                                <div class="note__meta text-xs text-gray-500 mb-1">
-                                    {{ \Carbon\Carbon::parse($n['created_at'] ?? now())->format('M j, Y g:ia') }}
-                                    • {{ $n['author'] ?? '' }}
-                                </div>
-                                <div class="note__body text-sm whitespace-pre-line">
-                                    {{ $n['body'] ?? '' }}
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-
-                {{-- TODO: Wire this to a proper notes store route if/when you add it --}}
-                <form method="POST" action="#" class="note-add mt-3 opacity-50 pointer-events-none">
+    @if (!empty($magicLink) && $magicLinkDaysLeft !== null && $magicLinkDaysLeft <= 2 && $magicLinkDaysLeft >= 0)
+        @php
+            $expiresAt = $magicLink?->expires_at;
+            $secondsLeft = $expiresAt ? max(0, now()->diffInSeconds($expiresAt, false)) : null;
+            $interval = $secondsLeft !== null ? \Carbon\CarbonInterval::seconds($secondsLeft)->cascade() : null;
+            $parts = [];
+            if ($interval) {
+                if ($interval->days > 0) {
+                    $parts[] = $interval->days . ' day' . ($interval->days === 1 ? '' : 's');
+                }
+                if ($interval->hours > 0) {
+                    $parts[] = $interval->hours . ' hour' . ($interval->hours === 1 ? '' : 's');
+                }
+                $minutes = max(1, (int) $interval->minutes);
+                $parts[] = $minutes . ' minute' . ($minutes === 1 ? '' : 's');
+            }
+            $countdown = $parts ? implode(' ', $parts) : 'less than a minute';
+        @endphp
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    Magic link expires in {{ $countdown }}.
+                    Consider sending a new link soon.
+                </div>
+                <form method="POST"
+                    action="{{ $routeOr('tenant.contacts.magic-link-task', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
                     @csrf
-                    <textarea name="body" rows="3" placeholder="Add a quick note…" class="w-full border rounded p-2"></textarea>
-                    <button class="btn btn--brand btn--sm mt-2" type="button" disabled>Add Note</button>
+                    <button type="submit"
+                        class="oh-btn inline-flex items-center gap-2 border border-border-default text-text-base hover:bg-surface-accent">
+                        <i class="fa-regular fa-square-check text-[12px]"></i>
+                        Add Task to Send New Link
+                    </button>
                 </form>
             </div>
+        </div>
+    @endif
 
-            <div class="client-card bg-white rounded-xl shadow p-5">
-                <h3 class="text-lg font-semibold mb-3">Files</h3>
-                @if (empty($files_recent))
-                    <p class="text-gray-500 text-sm">No files uploaded.</p>
-                @else
-                    <ul class="simple-list space-y-2 text-sm">
-                        @foreach ($files_recent as $f)
-                            <li>
-                                <a class="text-blue-600 hover:underline" href="{{ $f['url'] ?? '#' }}" target="_blank"
-                                    rel="noopener">
-                                    {{ $f['name'] ?? 'File' }}
-                                </a>
-                                <span class="text-gray-500"> • {{ $f['size'] ?? '' }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-
-                <a class="btn btn--ghost btn--sm mt-3" href="{{ url('/files/upload', ['client_id' => $client->id]) }}">
-                    <i class="fa fa-upload"></i> Upload
+    <div class="oh-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="space-y-1">
+                <p class="text-[11px] uppercase tracking-[0.2em] text-text-subtle">Contacts</p>
+                <h1 class="text-2xl font-semibold text-text-base">{{ $fullName }}</h1>
+                <p class="text-sm text-text-subtle">
+                    Manage this client’s profile, portal access, and communication.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ $routeOr('tenant.contacts.index', ['tenant' => $tenantId], url('/contacts')) }}"
+                    class="oh-btn">
+                    Back to contacts
+                </a>
+                <a href="{{ $routeOr('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                    class="oh-btn oh-btn--primary">
+                    Edit contact
                 </a>
             </div>
-        </aside>
+        </header>
 
-        {{-- RIGHT: Main --}}
-        <section class="client-main lg:col-span-2 space-y-6">
-            {{-- Hero --}}
-            <div class="client-hero bg-white rounded-xl shadow p-5">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="client-hero__title">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="avatar avatar--lg w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold">
-                                {{ mb_strtoupper(mb_substr($fullName ?: 'C', 0, 1)) }}
-                            </div>
-                            <div>
-                                <h1 class="text-xl font-semibold">{{ $fullName ?: '—' }}</h1>
-                                <div class="client-hero__chips mt-1 space-x-2">
-                                    <span
-                                        class="chip chip--ok inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs">{{ $status }}</span>
-                                    @if (!$hasLogin)
-                                        <span
-                                            class="chip chip--muted inline-block px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">no
-                                            login</span>
-                                    @else
-                                        <span
-                                            class="chip chip--brand inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">
-                                            <i class="fa-solid fa-key mr-1"></i>login
-                                        </span>
-                                    @endif
-                                    @if (!empty($company))
-                                        <span
-                                            class="chip chip--brand inline-block px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs">
-                                            <i class="fa-solid fa-building mr-1"></i>{{ $company }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="client-hero__actions flex flex-wrap gap-2">
-                        <a class="btn btn--brand"
-                            href="{{ $routeOr('tenant.projects.create', ['tenant' => $tenantId, 'client_id' => $client->id], url('/projects/create?client_id=' . $client->id)) }}">
-                            + New Project
-                        </a>
-                        <a class="btn btn--ghost"
-                            href="{{ $routeOr('tenant.tasks.create', ['tenant' => $tenantId], url('/tasks/assign?client_id=' . $client->id)) }}">
-                            New Task
-                        </a>
-                        <a class="btn btn--ghost"
-                            href="{{ $routeOr('tenant.invoices.create', ['tenant' => $tenantId, 'client_id' => $client->id], url('/invoices/create?client_id=' . $client->id)) }}">
-                            New Invoice
-                        </a>
-                        <a class="btn btn--ghost" href="mailto:{{ $client->email }}">Email</a>
-                        <a class="btn btn--ghost"
-                            href="{{ $routeOr('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => $client->id], url('/contacts/edit/' . $client->id)) }}">
-                            Edit
-                        </a>
-                    </div>
-                </div>
+        <section class="oh-card space-y-4">
+            <div class="flex flex-col gap-2">
+                <h2 class="text-base font-semibold text-text-base">Contact overview</h2>
+                <p class="text-sm text-text-subtle">
+                    A quick snapshot of status, portal access, and recent details.
+                </p>
             </div>
-
-            {{-- KPI strip --}}
-            <div class="client-kpis grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="bg-white rounded-xl shadow p-4">
-                    <div class="text-xs text-gray-500">Open Projects</div>
-                    <div class="text-2xl font-bold">{{ (int) $kpi['open_projects'] }}</div>
-                </div>
-                <div class="bg-white rounded-xl shadow p-4">
-                    <div class="text-xs text-gray-500">Unpaid Balance</div>
-                    <div class="text-2xl font-bold">{{ $money($kpi['unpaid']) }}</div>
-                </div>
-                <div class="bg-white rounded-xl shadow p-4">
-                    <div class="text-xs text-gray-500">Last Activity</div>
-                    <div class="text-lg">{{ $kpi['last_activity'] ?: '—' }}</div>
-                </div>
-                <div class="bg-white rounded-xl shadow p-4">
-                    <div class="text-xs text-gray-500">Next Task Due</div>
-                    <div class="text-lg">{{ $kpi['next_due'] ?: '—' }}</div>
-                </div>
-            </div>
-
-            {{-- Tabs --}}
-            <div class="client-card bg-white rounded-xl shadow p-5">
-                <nav class="tabs__nav flex gap-3 mb-4 text-sm">
-                    <button class="is-active px-3 py-1 rounded bg-gray-100" data-tab="projects">Projects</button>
-                    <button class="px-3 py-1 rounded hover:bg-gray-100" data-tab="activity">Activity</button>
-                    <button class="px-3 py-1 rounded hover:bg-gray-100" data-tab="billing">Billing</button>
-                    <button class="px-3 py-1 rounded hover:bg-gray-100" data-tab="tasks">Tasks</button>
-                </nav>
-
-                {{-- Projects --}}
-                <div class="tabs__panel is-active" id="tab-projects">
-                    @if (empty($projects_active) && empty($projects_recent))
-                        <p class="text-gray-500">No projects yet.</p>
-                        <a class="btn btn--brand btn--sm mt-2"
-                            href="{{ $routeOr('tenant.projects.create', ['tenant' => $tenantId, 'client_id' => $client->id], url('/projects/create?client_id=' . $client->id)) }}">
-                            <i class="fa fa-plus"></i> Create Project
-                        </a>
-                    @else
-                        <h4 class="font-semibold mb-2">Active</h4>
-                        <ul class="grid sm:grid-cols-2 gap-3">
-                            @foreach ($projects_active as $p)
-                                @php
-                                    $pid = is_array($p) ? $p['id'] ?? null : $p->id ?? null;
-                                    $pname = is_array($p)
-                                        ? $p['name'] ?? ''
-                                        : $p->name ?? ($p->project_name ?? 'Project');
-                                    $pstatus = is_array($p) ? $p['status'] ?? 'open' : $p->status ?? 'open';
-                                    $pstart = is_array($p) ? $p['start_date'] ?? null : $p->start_date ?? null;
-                                    $ppct = (int) (is_array($p) ? $p['progress_pct'] ?? 0 : $p->progress_pct ?? 0);
-                                @endphp
-                                <li class="tile border border-gray-200 rounded-lg p-3">
-                                    <div class="tile__title">
-                                        <a class="text-blue-600 hover:underline"
-                                            href="{{ $routeOr('tenant.projects.show', ['tenant' => $tenantId, 'project' => $pid], url('/projects/view/' . $pid)) }}">
-                                            {{ $pname }}
-                                        </a>
-                                    </div>
-                                    <div class="tile__meta text-xs text-gray-500">
-                                        {{ $pstatus }} •
-                                        {{ $pstart ? \Carbon\Carbon::parse($pstart)->format('M j, Y') : '—' }}
-                                    </div>
-                                    <div class="progress h-2 bg-gray-200 rounded mt-2">
-                                        <span class="block h-2 bg-blue-500 rounded"
-                                            style="width: {{ $ppct }}%"></span>
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
-
-                        @if (!empty($projects_recent))
-                            <h4 class="font-semibold mt-6 mb-2">Recently Updated</h4>
-                            <ul class="simple-list space-y-1 text-sm">
-                                @foreach ($projects_recent as $p)
-                                    @php
-                                        $pid = is_array($p) ? $p['id'] ?? null : $p->id ?? null;
-                                        $pname = is_array($p)
-                                            ? $p['name'] ?? ''
-                                            : $p->name ?? ($p->project_name ?? 'Project');
-                                        $pupd = is_array($p) ? $p['updated_at'] ?? null : $p->updated_at ?? null;
-                                    @endphp
-                                    <li>
-                                        <a class="text-blue-600 hover:underline"
-                                            href="{{ $routeOr('tenant.projects.show', ['tenant' => $tenantId, 'project' => $pid], url('/projects/view/' . $pid)) }}">
-                                            {{ $pname }}
-                                        </a>
-                                        <span class="text-gray-500">— updated
-                                            {{ $pupd ? \Carbon\Carbon::parse($pupd)->format('M j') : '—' }}</span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @endif
-                    @endif
-                </div>
-
-                {{-- Activity --}}
-                <div class="tabs__panel hidden" id="tab-activity">
-                    @if (empty($activities))
-                        <p class="text-gray-500">No recent activity.</p>
-                    @else
-                        <ul class="timeline space-y-2 text-sm">
-                            @foreach ($activities as $a)
-                                @php
-                                    $type = ucfirst($a['type'] ?? 'Activity');
-                                    $label = $a['label'] ?? '';
-                                    $when = $a['when'] ?? '';
-                                    $href = $a['href'] ?? null;
-                                @endphp
-                                <li>
-                                    <span
-                                        class="badge inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">{{ $type }}</span>
-                                    <span class="ml-2">{{ $label }}</span>
-                                    <span class="text-gray-500 ml-1">• {{ $when }}</span>
-                                    @if ($href)
-                                        <a class="text-blue-600 hover:underline ml-2" href="{{ $href }}">View</a>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </div>
-
-                {{-- Billing --}}
-                <div class="tabs__panel hidden" id="tab-billing">
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <h4 class="font-semibold mb-2">Unpaid Invoices</h4>
-                            @if (empty($invoices_unpaid))
-                                <p class="text-gray-500 text-sm">No unpaid invoices.</p>
-                            @else
-                                <ul class="simple-list space-y-1 text-sm">
-                                    @foreach ($invoices_unpaid as $inv)
-                                        @php
-                                            $iid = $inv['id'] ?? null;
-                                            $inum = $inv['number'] ?? $iid;
-                                            $due = $inv['due_date'] ?? null;
-                                            $amt = $inv['amount'] ?? 0;
-                                        @endphp
-                                        <li>
-                                            <a class="text-blue-600 hover:underline"
-                                                href="{{ url('/invoices/view/' . $iid) }}">#{{ $inum }}</a>
-                                            — due {{ $due ? \Carbon\Carbon::parse($due)->format('M j, Y') : '—' }}
-                                            <strong class="ml-1">{{ $money($amt) }}</strong>
-                                        </li>
-                                    @endforeach
-                                </ul>
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <div
+                        class="h-12 w-12 rounded-xl bg-[rgba(var(--brand-primary)/.14)] text-[rgb(var(--brand-primary))] ring-1 ring-[rgba(var(--brand-primary)/.28)] grid place-items-center text-sm font-semibold">
+                        {{ $initials($firstName, $lastName, $email) }}
+                    </div>
+                    <div class="min-w-0 space-y-2">
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span
+                                class="oh-pill {{ $status === 'active' ? 'oh-pill--success' : 'oh-pill--muted' }}">{{ ucfirst($status) }}</span>
+                            <span class="oh-pill {{ $hasLogin ? 'oh-pill--info' : 'oh-pill--muted' }}">
+                                {{ $hasLogin ? 'Portal Access' : 'No Login' }}
+                            </span>
+                            @if ($company)
+                                <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
+                                    class="oh-pill oh-pill--muted inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-building text-[11px]"></i>
+                                    {{ $company }}
+                                </a>
                             @endif
                         </div>
-                        <div>
-                            <h4 class="font-semibold mb-2">AR Aging</h4>
-                            <ul class="space-y-1 text-sm text-gray-700">
-                                <li>0–30: <strong>{{ $money($aging['0-30'] ?? 0) }}</strong></li>
-                                <li>31–60: <strong>{{ $money($aging['31-60'] ?? 0) }}</strong></li>
-                                <li>61–90: <strong>{{ $money($aging['61-90'] ?? 0) }}</strong></li>
-                                <li>90+: <strong>{{ $money($aging['90+'] ?? 0) }}</strong></li>
-                            </ul>
+                        <div class="text-sm text-text-subtle">
+                            {{ $email ?: 'No email on file' }} @if ($phone) • {{ $phone }} @endif
                         </div>
-                    </div>
-                    <div class="mt-4">
-                        <a class="btn btn--brand btn--sm"
-                            href="{{ $routeOr('tenant.invoices.create', ['tenant' => $tenantId, 'client_id' => $client->id], url('/invoices/create?client_id=' . $client->id)) }}">
-                            <i class="fa fa-file-invoice"></i> New Invoice
-                        </a>
                     </div>
                 </div>
 
-                {{-- Tasks --}}
-                <div class="tabs__panel hidden" id="tab-tasks">
-                    @if (empty($tasks_assigned))
-                        <p class="text-gray-500 text-sm">No tasks assigned.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    @if ($email)
+                        <a href="mailto:{{ $email }}" class="oh-btn oh-btn--primary inline-flex items-center gap-2">
+                            <i class="fa-regular fa-envelope text-[12px]"></i>
+                            Email
+                        </a>
                     @else
-                        <ul class="simple-list space-y-1 text-sm">
-                            @foreach ($tasks_assigned as $t)
-                                @php
-                                    $tid = $t['id'] ?? null;
-                                    $ttitle = $t['title'] ?? 'Task';
-                                    $tstatus = $t['status'] ?? 'open';
-                                    $tdue = $t['due_date'] ?? null;
-                                @endphp
-                                <li>
-                                    <a class="text-blue-600 hover:underline"
-                                        href="{{ $routeOr('tenant.tasks.index', ['tenant' => $tenantId], url('/tasks')) }}#task-{{ (int) $tid }}">
-                                        {{ $ttitle }}
-                                    </a>
-                                    — <span
-                                        class="badge inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">
-                                        {{ $tstatus }}
-                                    </span>
-                                    <span class="text-gray-500 ml-1">
-                                        due {{ $tdue ? \Carbon\Carbon::parse($tdue)->format('M j') : '—' }}
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
+                        <span class="oh-btn opacity-60 cursor-not-allowed inline-flex items-center gap-2"
+                            aria-disabled="true">
+                            <i class="fa-regular fa-envelope text-[12px]"></i>
+                            Email
+                        </span>
                     @endif
 
-                    <a class="btn btn--ghost btn--sm mt-2"
-                        href="{{ $routeOr('tenant.tasks.create', ['tenant' => $tenantId], url('/tasks/assign?client_id=' . $client->id)) }}">
-                        <i class="fa fa-plus"></i> Add Task
+                    @if ($phone)
+                        <a href="tel:{{ preg_replace('/[^0-9+]/', '', $phone) }}"
+                            class="oh-btn inline-flex items-center gap-2">
+                            <i class="fa-solid fa-phone text-[11px]"></i>
+                            Call
+                        </a>
+                    @endif
+
+                    @if ($hasLogin)
+                        <form method="POST"
+                            action="{{ $routeOr('tenant.contacts.magic-link', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
+                            @csrf
+                            <button type="submit" class="oh-btn inline-flex items-center gap-2">
+                                <i class="fa-solid fa-link text-[11px]"></i>
+                                Send Magic Link
+                            </button>
+                        </form>
+                    @endif
+
+                    @if (($tenant_workspace_type ?? null) === 'trades')
+                        <a href="{{ $routeOr('tenant.trades.locations.create', ['tenant' => $tenantId, 'client' => data_get($contact, 'id')]) }}"
+                            class="oh-btn inline-flex items-center gap-2">
+                            <i class="fa-solid fa-location-dot text-[12px]"></i>
+                            Add Location
+                        </a>
+                    @endif
+
+                    <a href="#" class="oh-btn inline-flex items-center gap-2">
+                        <i class="fa-regular fa-square-plus text-[12px]"></i>
+                        New Task
+                    </a>
+                    <a href="#" class="oh-btn inline-flex items-center gap-2" title="Coming soon" aria-disabled="true">
+                        <i class="fa-regular fa-file-lines text-[12px]"></i>
+                        New Invoice
                     </a>
                 </div>
             </div>
         </section>
+
+        {{-- Stat strip --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="oh-card p-4">
+                <div class="text-[11px] uppercase tracking-wide text-text-subtle">Open projects</div>
+                <div class="text-2xl font-semibold text-text-base mt-1">{{ $kpiOpenProjects }}</div>
+            </div>
+            <div class="oh-card p-4">
+                <div class="text-[11px] uppercase tracking-wide text-text-subtle">Unpaid balance</div>
+                <div class="text-2xl font-semibold text-text-base mt-1">
+                    {{ is_null($kpiUnpaid) ? '—' : $money($kpiUnpaid) }}</div>
+            </div>
+            <div class="oh-card p-4">
+                <div class="text-[11px] uppercase tracking-wide text-text-subtle">Last activity</div>
+                <div class="text-sm mt-1">{{ $kpiLastActivity ?: '—' }}</div>
+            </div>
+            <div class="oh-card p-4">
+                <div class="text-[11px] uppercase tracking-wide text-text-subtle flex items-center gap-2">
+                    Next follow-up
+                    @php
+                        $isOverdue = $kpiNextFollowup && \Illuminate\Support\Carbon::parse($kpiNextFollowup)->isPast();
+                    @endphp
+                    @if ($isOverdue)
+                        <span class="oh-pill oh-pill--danger text-[10px]">Overdue</span>
+                    @endif
+                </div>
+                <div class="text-sm mt-1">
+                    @if ($kpiNextFollowup)
+                        {{ \Illuminate\Support\Carbon::parse($kpiNextFollowup)->format('M j, Y g:ia') }}
+                    @else
+                        Not scheduled
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+            {{-- Left column --}}
+            <div class="space-y-5 xl:col-span-2">
+                <div class="oh-card p-5">
+                    <div class="flex flex-col gap-1 mb-4">
+                        <h2 class="text-base font-semibold text-text-base">Engagement</h2>
+                        <p class="text-sm text-text-subtle">Review activity, work, and notes for this contact.</p>
+                    </div>
+                    <nav class="tabs__nav flex flex-wrap gap-2 mb-4 text-xs font-medium">
+                        <button class="px-3 py-1 rounded-full bg-surface-accent text-text-base is-active"
+                            data-tab="activity">Activity</button>
+                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
+                            data-tab="projects">Projects</button>
+                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
+                            data-tab="tasks">Tasks</button>
+                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
+                            data-tab="billing">Billing</button>
+                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
+                            data-tab="notes">Notes</button>
+                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
+                            data-tab="files">Files</button>
+                    </nav>
+
+                    {{-- Activity --}}
+                    <div class="tabs__panel is-active" id="tab-activity">
+                        @if (empty($activities) || count($activities) === 0)
+                            <p class="text-sm text-text-subtle">No activity yet.</p>
+                        @else
+                            <ul class="space-y-2 text-sm">
+                                @foreach ($activities as $item)
+                                    @php
+                                        $type = data_get($item, 'type', 'activity');
+                                        $meta = data_get($item, 'meta', []);
+                                        $when = \Carbon\Carbon::parse(
+                                            data_get($item, 'happened_at', data_get($item, 'created_at', now())),
+                                        )->diffForHumans();
+                                        $actor = data_get($item, 'actor.name');
+                                        $label = match ($type) {
+                                            'note.call' => 'Call note added',
+                                            'note.meeting' => 'Meeting note added',
+                                            'note.decision' => 'Decision noted',
+                                            'file.uploaded' => 'File uploaded',
+                                            'followup.updated' => 'Follow-up scheduled',
+                                            default => ucfirst($type),
+                                        };
+                                        $link = null;
+                                        if (
+                                            ($type === 'note.call' ||
+                                                $type === 'note.meeting' ||
+                                                $type === 'note.decision') &&
+                                            data_get($meta, 'note_id')
+                                        ) {
+                                            $link = '#note-' . data_get($meta, 'note_id');
+                                        }
+                                    @endphp
+                                    <li
+                                        class="flex flex-wrap items-center gap-2 border border-border-default rounded-lg px-3 py-2 bg-surface-accent/40">
+                                        <span class="oh-pill oh-pill--muted text-[11px]">{{ $label }}</span>
+                                        @if ($actor)
+                                            <span class="text-text-subtle text-xs">• {{ $actor }}</span>
+                                        @endif
+                                        <span class="text-text-subtle text-xs">• {{ $when }}</span>
+                                        @if ($link)
+                                            <a href="{{ $link }}"
+                                                class="text-brand-primary hover:text-brand-secondary text-xs">View</a>
+                                        @endif
+                                        @if ($type === 'file.uploaded' && data_get($meta, 'name'))
+                                            <span class="text-xs text-text-subtle truncate">—
+                                                {{ data_get($meta, 'name') }}</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+
+                    {{-- Projects --}}
+                    <div class="tabs__panel hidden" id="tab-projects">
+                        @if (empty($projects))
+                            <p class="text-sm text-text-subtle">No projects yet.</p>
+                        @else
+                            <ul class="space-y-2 text-sm">
+                                @foreach ($projects as $project)
+                                    @php
+                                        $pid = data_get($project, 'id');
+                                        $pname =
+                                            data_get($project, 'name') ?? data_get($project, 'project_name', 'Project');
+                                        $pstatus = data_get($project, 'status', 'open');
+                                        $pupdated = data_get($project, 'updated_at');
+                                    @endphp
+                                    <li
+                                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border border-border-default rounded-xl px-3 py-2 bg-surface-accent/40">
+                                        <div class="min-w-0">
+                                            <a href="{{ $routeOr('tenant.projects.show', ['tenant' => $tenantId, 'project' => $pid]) }}"
+                                                class="font-semibold text-text-base hover:text-brand-primary truncate">
+                                                {{ $pname }}
+                                            </a>
+                                            <div class="text-xs text-text-subtle">
+                                                {{ $pupdated ? \Illuminate\Support\Carbon::parse($pupdated)->diffForHumans() : '—' }}
+                                            </div>
+                                        </div>
+                                        <span class="oh-pill oh-pill--muted text-[11px]">{{ ucfirst($pstatus) }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+
+                    {{-- Tasks --}}
+                    <div class="tabs__panel hidden" id="tab-tasks">
+                        @if (empty($tasks))
+                            <p class="text-sm text-text-subtle">No tasks yet.</p>
+                        @else
+                            <ul class="space-y-2 text-sm">
+                                @foreach ($tasks as $task)
+                                    @php
+                                        $tid = data_get($task, 'id');
+                                        $ttitle = data_get($task, 'title', 'Task');
+                                        $tstatus = data_get($task, 'status', 'open');
+                                        $tdue = data_get($task, 'due_date');
+                                    @endphp
+                                    <li
+                                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border border-border-default rounded-xl px-3 py-2 bg-surface-accent/40">
+                                        <div class="min-w-0">
+                                            <a href="{{ $routeOr('tenant.tasks.show', ['tenant' => $tenantId, 'task' => $tid]) }}"
+                                                class="font-semibold text-text-base hover:text-brand-primary truncate">
+                                                {{ $ttitle }}
+                                            </a>
+                                            <div class="text-xs text-text-subtle">
+                                                {{ $tdue ? 'Due ' . \Illuminate\Support\Carbon::parse($tdue)->format('M j, Y') : '—' }}
+                                            </div>
+                                        </div>
+                                        <span class="oh-pill oh-pill--muted text-[11px]">{{ ucfirst($tstatus) }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+
+                    {{-- Billing --}}
+                    <div class="tabs__panel hidden" id="tab-billing">
+                        <p class="text-sm text-text-subtle">Coming soon.</p>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div class="tabs__panel hidden" id="tab-notes">
+                        <form class="space-y-2" method="POST"
+                            action="{{ $routeOr('contacts.notes.store', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
+                            @csrf
+                            <textarea name="body" required minlength="8" maxlength="2000"
+                                class="oh-textarea w-full"
+                                rows="3" placeholder="Context → Decision → Next step"></textarea>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                <select name="note_type" class="oh-select">
+                                    <option value="">Note type (optional)</option>
+                                    @foreach (['Call', 'Meeting', 'Decision', 'Preference', 'Risk', 'General'] as $type)
+                                        <option value="{{ $type }}">{{ $type }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="datetime-local" name="happened_at"
+                                    class="oh-input"
+                                    placeholder="When it happened (optional)">
+                                <label class="inline-flex items-center gap-2 text-xs text-text-subtle">
+                                    <input type="checkbox" name="pinned" value="1"
+                                        class="rounded border-border-default">
+                                    Pin note
+                                </label>
+                            </div>
+                            <button type="submit" class="oh-btn oh-btn--primary text-sm">Save note</button>
+                        </form>
+
+                        <div class="mt-4 space-y-3">
+                            @forelse ($notes as $note)
+                                <div class="border border-border-default/70 rounded-xl px-3 py-2 bg-surface-accent"
+                                    id="note-{{ data_get($note, 'id') }}">
+                                    <div class="flex items-center justify-between gap-2 text-xs text-text-subtle mb-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            @if (data_get($note, 'note_type'))
+                                                <span class="oh-pill oh-pill--muted text-[11px]">
+                                                    {{ data_get($note, 'note_type') }}
+                                                </span>
+                                            @endif
+                                            <span>{{ \Carbon\Carbon::parse(data_get($note, 'created_at', now()))->diffForHumans() }}</span>
+                                            @if (data_get($note, 'author.name'))
+                                                • {{ data_get($note, 'author.name') }}
+                                            @endif
+                                            @if (data_get($note, 'pinned'))
+                                                <span class="oh-pill oh-pill--info text-[10px]">Pinned</span>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <form method="POST"
+                                                action="{{ $routeOr('contacts.notes.pin', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id'), 'note' => data_get($note, 'id')]) }}">
+                                                @csrf
+                                                <button type="submit" class="oh-icon-btn oh-tooltip"
+                                                    data-tooltip="Pin/unpin">
+                                                    <i class="fa-solid fa-thumbtack text-[11px]"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST"
+                                                action="{{ $routeOr('contacts.notes.destroy', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id'), 'note' => data_get($note, 'id')]) }}"
+                                                onsubmit="return confirm('Delete this note?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="oh-icon-btn oh-tooltip"
+                                                    data-tooltip="Delete note">
+                                                    <i class="fa-solid fa-trash text-[11px] text-rose-500"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm whitespace-pre-line text-text-base line-clamp-3" data-expandable>
+                                        {{ data_get($note, 'body', '') }}
+                                    </div>
+                                    @if (data_get($note, 'happened_at'))
+                                        <div class="text-[11px] text-text-subtle mt-1">
+                                            Happened
+                                            {{ \Carbon\Carbon::parse(data_get($note, 'happened_at'))->format('M j, Y g:ia') }}
+                                        </div>
+                                    @endif
+                                    <div class="flex items-center justify-between mt-2 text-xs">
+                                        <button type="button"
+                                            class="oh-btn text-xs px-2 py-1 toggle-expand">Expand</button>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-sm text-text-subtle">No notes yet.</p>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    {{-- Files --}}
+                    <div class="tabs__panel hidden" id="tab-files">
+                        @php
+                            $categories = ['Contract/SOW', 'Billing', 'Access', 'Brand', 'Requirements', 'Other'];
+                        @endphp
+                        <form class="space-y-2" method="POST" enctype="multipart/form-data"
+                            action="{{ $routeOr('contacts.files.store', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
+                            @csrf
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                <select name="category" class="oh-select" required>
+                                    <option value="">Select category</option>
+                                    @foreach ($categories as $cat)
+                                        <option value="{{ $cat }}">{{ $cat }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="text" name="description"
+                                    class="oh-input"
+                                    placeholder="Description (optional)">
+                            </div>
+                            <button type="submit" class="oh-btn oh-btn--primary text-sm">Upload file</button>
+                        </form>
+
+                        <div class="mt-4 space-y-2 text-sm">
+                            @forelse ($files as $file)
+                                <div
+                                    class="flex items-start justify-between gap-3 border border-border-default rounded-xl px-3 py-2">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span
+                                                class="oh-pill oh-pill--muted text-[11px]">{{ data_get($file, 'category', 'File') }}</span>
+                                            <span class="text-xs text-text-subtle">
+                                                {{ \Carbon\Carbon::parse(data_get($file, 'created_at', now()))->format('M j, Y') }}
+                                            </span>
+                                            @if (data_get($file, 'uploaded_by'))
+                                                <span class="text-xs text-text-subtle">•
+                                                    {{ data_get($file, 'uploader.name') }}</span>
+                                            @endif
+                                        </div>
+                                        <a href="{{ $routeOr('contacts.files.download', ['tenant' => $tenantId, 'file' => data_get($file, 'id')]) }}"
+                                            class="block text-brand-primary hover:text-brand-secondary truncate">
+                                            {{ data_get($file, 'original_name', 'File') }}
+                                        </a>
+                                        @if (data_get($file, 'description'))
+                                            <div class="text-xs text-text-subtle truncate">
+                                                {{ data_get($file, 'description') }}</div>
+                                        @endif
+                                        @if (data_get($file, 'size'))
+                                            <div class="text-[11px] text-text-subtle">
+                                                {{ number_format(data_get($file, 'size') / 1024, 1) }} KB
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <form method="POST"
+                                        action="{{ $routeOr('contacts.files.destroy', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id'), 'file' => data_get($file, 'id')]) }}"
+                                        onsubmit="return confirm('Delete this file?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="oh-icon-btn oh-tooltip" data-tooltip="Delete file">
+                                            <i class="fa-solid fa-trash text-[11px] text-rose-500"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            @empty
+                                <p class="text-sm text-text-subtle">No files uploaded yet. Use categories like Contract/SOW
+                                    or
+                                    Billing.</p>
+                            @endforelse
+                        </div>
+                        @if ($company)
+                            <div
+                                class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3 flex items-start gap-2">
+
+                                <div>
+                                    Tip: Contract/SOW or Billing documents often belong on the company. Upload here if
+                                    contact-specific,
+                                    or
+                                    <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
+                                        class="text-brand-primary hover:text-brand-secondary">open Company files</a>.
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right rail --}}
+            <aside class="space-y-4 xl:col-span-1">
+                <div class="oh-card p-5">
+                    <h3 class="text-sm font-semibold text-text-base mb-1">Next follow-up</h3>
+                    <p class="text-xs text-text-subtle mb-3">Stay on top of the next check-in.</p>
+                    @php
+                        $isOverdue = $kpiNextFollowup && \Illuminate\Support\Carbon::parse($kpiNextFollowup)->isPast();
+                    @endphp
+                    <div class="flex items-center gap-2 text-sm">
+                        <span>{{ $kpiNextFollowup ? \Illuminate\Support\Carbon::parse($kpiNextFollowup)->format('M j, Y g:ia') : 'Not scheduled' }}</span>
+                        @if ($isOverdue)
+                            <span class="oh-pill oh-pill--danger text-[11px]">Overdue</span>
+                        @elseif ($kpiNextFollowup)
+                            <span class="oh-pill oh-pill--muted text-[11px]">
+                                In {{ \Illuminate\Support\Carbon::parse($kpiNextFollowup)->diffForHumans(null, true) }}
+                            </span>
+                        @endif
+                    </div>
+                    <form class="mt-3 space-y-2" method="POST"
+                        action="{{ $routeOr('contacts.followup', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
+                        @csrf
+                        <label class="text-xs text-text-subtle" for="next_followup_at">Set follow-up</label>
+                        <input type="datetime-local" id="next_followup_at" name="next_followup_at"
+                            value="{{ $kpiNextFollowup ? \Illuminate\Support\Carbon::parse($kpiNextFollowup)->format('Y-m-d\\TH:i') : '' }}"
+                            class="oh-input w-full">
+                        <button type="submit" class="oh-btn oh-btn--primary w-full text-sm">Save follow-up</button>
+                    </form>
+                </div>
+
+                <div class="oh-card p-5">
+                    <h3 class="text-sm font-semibold text-text-base mb-1">Contact details</h3>
+                    <p class="text-xs text-text-subtle mb-3">Contact channels and portal access.</p>
+                    <dl class="text-sm space-y-2">
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-text-subtle">Email</dt>
+                            <dd class="text-right">
+                                @if ($email)
+                                    <a href="mailto:{{ $email }}"
+                                        class="text-brand-primary hover:text-brand-secondary break-all">
+                                        {{ $email }}
+                                    </a>
+                                @else
+                                    <span class="text-text-subtle">—</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-text-subtle">Phone</dt>
+                            <dd class="text-right">
+                                @if ($phone)
+                                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $phone) }}"
+                                        class="hover:text-brand-primary">
+                                        {{ $phone }}
+                                    </a>
+                                @else
+                                    <span class="text-text-subtle">—</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-text-subtle">Company</dt>
+                            <dd class="text-right">
+                                @if ($company)
+                                    <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
+                                        class="hover:text-brand-primary">
+                                        {{ $company }}
+                                    </a>
+                                @else
+                                    <span class="text-text-subtle">—</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-text-subtle">Status</dt>
+                            <dd class="text-right capitalize">{{ $status }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="text-text-subtle">Portal</dt>
+                            <dd class="text-right">{{ $hasLogin ? 'Has login' : 'No login' }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-4 space-y-2">
+                        @if (!$hasLogin)
+                            <form method="POST"
+                                action="{{ $routeOr('tenant.contacts.create-login', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                                class="flex flex-wrap items-center gap-2">
+                                @csrf
+                                <input type="email" name="email" value="{{ $email }}" required
+                                    class="oh-input w-full sm:w-auto"
+                                    placeholder="Client email">
+                                <button type="submit" class="oh-btn inline-flex items-center gap-2">
+                                    <i class="fa fa-key text-xs"></i>
+                                    Create login
+                                </button>
+                            </form>
+                        @else
+                            <form method="POST"
+                                action="{{ $routeOr('tenant.contacts.resend-login', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                                class="flex flex-wrap items-center gap-2">
+                                @csrf
+                                <button type="submit" class="oh-btn inline-flex items-center gap-2">
+                                    <i class="fa fa-envelope text-xs"></i>
+                                    Resend login email
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="oh-card p-5 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-text-base">Recent emails</h3>
+                        @if ($gmailConfigured && $currentMailbox && $currentMailbox->status === 'connected')
+                            <form method="POST"
+                                action="{{ $routeOr('tenant.settings.mailbox.sync', ['tenant' => $tenantId]) }}">
+                                @csrf
+                                <button type="submit"
+                                    class="oh-btn oh-btn--primary text-xs {{ $currentMailbox->sync_in_progress ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                    {{ $currentMailbox->sync_in_progress ? 'disabled' : '' }}>
+                                    {{ $currentMailbox->sync_in_progress ? 'Sync in progress' : 'Sync now' }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+
+                    @if (!$gmailConfigured)
+                        <p class="text-sm text-text-subtle">
+                            Gmail sync is not configured. Configure it in
+                            <a href="{{ $routeOr('tenant.settings.mailbox', ['tenant' => $tenantId]) }}"
+                                class="text-brand-primary hover:text-brand-secondary">Mailbox Sync</a>.
+                        </p>
+                    @elseif (!$currentMailbox || $currentMailbox->status !== 'connected')
+                        <p class="text-sm text-text-subtle">
+                            Connect your mailbox to see recent emails.
+                            <a href="{{ $routeOr('tenant.settings.mailbox', ['tenant' => $tenantId]) }}"
+                                class="text-brand-primary hover:text-brand-secondary">Connect Gmail</a>.
+                        </p>
+                    @elseif ($recentEmails->isEmpty())
+                        <p class="text-sm text-text-subtle">No recent emails yet.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ $routeOr('tenant.email-logs.index', ['tenant' => $tenantId]) }}"
+                                class="oh-btn text-xs">Open email log</a>
+                            <form method="POST"
+                                action="{{ $routeOr('tenant.settings.mailbox.sync', ['tenant' => $tenantId]) }}">
+                                @csrf
+                                <button type="submit"
+                                    class="oh-btn oh-btn--primary text-xs {{ $currentMailbox->sync_in_progress ? 'opacity-60 cursor-not-allowed' : '' }}"
+                                    {{ $currentMailbox->sync_in_progress ? 'disabled' : '' }}>
+                                    {{ $currentMailbox->sync_in_progress ? 'Sync in progress' : 'Sync now' }}
+                                </button>
+                            </form>
+                        </div>
+                    @else
+                        <div class="space-y-3">
+                            @foreach ($recentEmails as $log)
+                                @php
+                                    $to = $emailList(data_get($log, 'to_emails'));
+                                    $cc = $emailList(data_get($log, 'cc_emails'));
+                                    $direction = data_get($log, 'direction', 'inbound');
+                                    $sentAt = data_get($log, 'sent_at') ? \Illuminate\Support\Carbon::parse(data_get($log, 'sent_at')) : null;
+                                @endphp
+                                <div class="border border-border-default rounded-lg p-3 space-y-1">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span
+                                            class="oh-pill {{ $direction === 'outbound' ? 'oh-pill--info' : 'oh-pill--muted' }}">
+                                            {{ ucfirst($direction) }}
+                                        </span>
+                                        @if (data_get($log, 'status') === 'needs_review')
+                                            <span class="oh-pill oh-pill--warning">Needs review</span>
+                                        @endif
+                                        @if ($sentAt)
+                                            <span class="text-text-subtle">{{ $sentAt->diffForHumans() }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-sm font-semibold text-text-base truncate">
+                                        {{ data_get($log, 'subject', '(No subject)') }}
+                                    </div>
+                                    <div class="text-xs text-text-subtle truncate">
+                                        <span class="font-semibold text-text-base">{{ data_get($log, 'from_email') }}</span>
+                                        @if (!empty($to))
+                                            <span class="text-text-subtle">→ {{ implode(', ', array_slice($to, 0, 2)) }}</span>
+                                        @endif
+                                        @if (!empty($cc))
+                                            <span class="text-text-subtle"> • cc: {{ implode(', ', array_slice($cc, 0, 2)) }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-xs text-text-subtle line-clamp-2">
+                                        {{ data_get($log, 'snippet') }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <a href="{{ $routeOr('tenant.email-logs.index', ['tenant' => $tenantId]) }}"
+                            class="oh-btn text-sm w-full justify-center mt-2">View all email logs</a>
+                    @endif
+                </div>
+
+            </aside>
+        </div>
     </div>
 
-    {{-- Tiny tabs toggler (no framework required) --}}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const navBtns = document.querySelectorAll('.tabs__nav button');
             const panels = document.querySelectorAll('.tabs__panel');
+            const expandToggles = document.querySelectorAll('.toggle-expand');
+
             navBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    navBtns.forEach(b => b.classList.remove('is-active', 'bg-gray-100'));
+                    const target = btn.dataset.tab;
+                    navBtns.forEach(b => {
+                        b.classList.remove('is-active');
+                        b.classList.remove('bg-surface-accent');
+                        b.classList.add('text-text-subtle');
+                    });
                     panels.forEach(p => p.classList.add('hidden'));
-                    btn.classList.add('is-active', 'bg-gray-100');
-                    const id = 'tab-' + btn.dataset.tab;
-                    document.getElementById(id)?.classList.remove('hidden');
+                    btn.classList.add('is-active');
+                    btn.classList.add('bg-surface-accent');
+                    btn.classList.remove('text-text-subtle');
+                    const panel = document.getElementById('tab-' + target);
+                    if (panel) panel.classList.remove('hidden');
+                });
+            });
+
+            expandToggles.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const container = btn.closest('[data-expandable]') || btn
+                        .previousElementSibling;
+                    if (!container) return;
+                    container.classList.toggle('line-clamp-3');
+                    btn.textContent = container.classList.contains('line-clamp-3') ? 'Expand' :
+                        'Collapse';
                 });
             });
         });
     </script>
+
+
 @endsection

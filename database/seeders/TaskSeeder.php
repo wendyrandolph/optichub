@@ -3,108 +3,115 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\{Task, Project, Tenant, TeamMember, User, Phase};
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\Contact;
+use App\Models\Tenant;
+use Carbon\Carbon;
 
 class TaskSeeder extends Seeder
 {
     public function run(): void
     {
-        // Work across all tenants
-        $tenants = Tenant::all();
-        if ($tenants->isEmpty()) {
-            $this->command->warn('No tenants found. Seed tenants first.');
+        // Grab a tenant + a contact so we can assign client-visible tasks (prefer the Renlo test tenant)
+        $tenant = Tenant::where('name', 'Renlo Test Tenant')->first() ?: Tenant::first();
+        if (! $tenant) {
+            $this->command->warn('TaskSeeder: no tenants found.');
             return;
         }
 
-        foreach ($tenants as $tenant) {
-            // Projects for this tenant
-            $project = Project::where('tenant_id', $tenant->id)->first();
-            if (! $project) {
-                $this->command->warn("No project for tenant {$tenant->id}. Seed projects first.");
-                continue;
-            }
+        $contact = Contact::where('tenant_id', $tenant->id)->first();
+        if (! $contact) {
+            $this->command->warn('TaskSeeder: no contacts found for tenant ' . $tenant->id);
+            return;
+        }
 
-            // IMPORTANT: ignore tenant/global scopes while seeding
-            $members = TeamMember::withoutGlobalScopes()
-                ->where('tenant_id', $tenant->id)
-                ->get();
+        // Use any existing projects for this tenant
+        $projects = Project::where('tenant_id', $tenant->id)->get();
+        if ($projects->isEmpty()) {
+            $this->command->warn('TaskSeeder: no projects found for tenant ' . $tenant->id);
+            return;
+        }
 
-            if ($members->isEmpty()) {
-                $this->command->warn("No team members for tenant {$tenant->id} (without scopes).");
-                continue;
-            }
+        $this->command->info("TaskSeeder: seeding tasks for tenant #{$tenant->id} and contact #{$contact->id}");
 
-            $admins = User::withoutGlobalScopes()
-                ->where('tenant_id', $tenant->id)
-                ->whereIn('role', ['admin', 'provider', 'super_admin', 'superadmin'])
-                ->get();
+        foreach ($projects as $project) {
+            $this->seedTasksForProject($tenant->id, $project, $contact->id);
+        }
+    }
 
-            $clients = User::withoutGlobalScopes()
-                ->where('tenant_id', $tenant->id)
-                ->where('role', 'client')
-                ->get();
+    protected function seedTasksForProject(int $tenantId, Project $project, int $contactId): void
+    {
+        $startDate = $project->start_date ? Carbon::parse($project->start_date) : null;
 
-            $adminUser  = $admins->first()  ?? User::withoutGlobalScopes()->where('tenant_id', $tenant->id)->first();
-            $clientUser = $clients->first() ?? $adminUser;
-            $phaseId = Phase::where('tenant_id', $tenant->id)
-                ->where('project_id', $project->id)
-                ->value('id');
-
-            $rows[] = [
-                'tenant_id'   => $tenant->id,
-                'project_id'  => $project->id,
-                'phase_id'    => $phaseId,               // if you added it
-                'title'       => 'Kickoff Meeting',
-                'description' => 'Initial project kickoff...',
-                'status'      => 'open',
-                'priority'    => 'high',
-                'assign_type' => 'admin',                 // if you added these cols
-                'assign_id'   => $adminUser->id,
-                'user_id'     => $adminUser->id,          // <- point to users.id
-                'due_date'    => now()->addDays(3),
-            ];
+        // A mix of internal + client-facing tasks
+        $tasks = [
             [
-                'tenant_id'   => $tenant->id,
-                'project_id'  => $project->id,
-                'phase_id'    => $phaseId,
-                'title'       => 'Client Content Upload',
-                'description' => 'Client to upload website content and assets.',
-                'status'      => 'in_progress',
-                'priority'    => 'medium',
-                'assign_type' => 'client',
-                'assign_id'   => $adminUser->id,
-                'user_id'     => $adminUser->id,          // <- point to users.id
-                'due_date'    => now()->addDays(7),
-            ];
+                'title'            => 'Internal kickoff – align on goals',
+                'status'           => 'in-progress',
+                'priority'         => 'high',
+                'assign_type'      => 'user',
+                'client_visible'   => false,
+                'requires_approval' => false,
+                'due_offset'       => -5,
+            ],
             [
-                'tenant_id'   => $tenant->id,
-                'project_id'  => $project->id,
-                'phase_id'    => $phaseId,
-                'title'       => 'Design Approval',
-                'description' => 'Awaiting client feedback on homepage design.',
-                'status'      => 'completed',
-                'priority'    => 'low',
-                'assign_type' => 'admin',
-                'assign_id'   => $adminUser->id,
-                'user_id'     => $adminUser->id,          // <- point to users.id
-                'due_date'    => now()->subDays(2),
-            ];
+                'title'            => 'Client: complete project intake form',
+                'status'           => 'todo',
+                'priority'         => 'medium',
+                'assign_type'      => 'client',
+                'client_visible'   => true,
+                'requires_approval' => false,
+                'due_offset'       => -3,
+            ],
+            [
+                'title'            => 'Client: review homepage concept',
+                'status'           => 'todo',
+                'priority'         => 'medium',
+                'assign_type'      => 'client',
+                'client_visible'   => true,
+                'requires_approval' => true,
+                'due_offset'       => 0,
+            ],
+            [
+                'title'            => 'Set up staging environment',
+                'status'           => 'todo',
+                'priority'         => 'medium',
+                'assign_type'      => 'user',
+                'client_visible'   => false,
+                'requires_approval' => false,
+                'due_offset'       => 2,
+            ],
+            [
+                'title'            => 'Client: final approval before launch',
+                'status'           => 'todo',
+                'priority'         => 'high',
+                'assign_type'      => 'client',
+                'client_visible'   => true,
+                'requires_approval' => true,
+                'due_offset'       => 7,
+            ],
+        ];
 
-
-            foreach ($rows as $data) {
-                Task::updateOrCreate(
-                    [
-                        'tenant_id' => $data['tenant_id'],
-                        'project_id' => $data['project_id'],
-                        'title'     => $data['title'],
-                    ],
-                    $data
-                );
-            }
-
-            $this->command->info("✅ Seeded demo tasks for tenant {$tenant->id} (project {$project->id}).");
+        foreach ($tasks as $t) {
+            Task::create([
+                'tenant_id'        => $tenantId,
+                'project_id'       => $project->id,
+                'phase_id'         => null,              // hook up later if you use phases
+                'contact_id'       => $contactId,
+                'user_id'          => null,              // can be set to a team member if you have one
+                'title'            => $t['title'],
+                'description'      => null,
+                'due_date'         => $startDate
+                    ? $startDate->copy()->addDays($t['due_offset'])
+                    : now()->addDays($t['due_offset']),
+                'status'           => $t['status'],      // e.g. 'todo', 'open', etc.
+                'priority'         => $t['priority'],    // e.g. 'low', 'medium', 'high'
+                'assign_type'      => $t['assign_type'], // 'user' or 'client'
+                'assign_id'        => null,
+                'client_visible'   => $t['client_visible'],
+                'requires_approval' => $t['requires_approval'],
+            ]);
         }
     }
 }

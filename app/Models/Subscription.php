@@ -32,8 +32,14 @@ class Subscription extends Model
     'current_period_end' => 'datetime',
     'auto_renew' => 'boolean',
     'amount' => 'float',
+    'trial_ends_at'       => 'datetime',
   ];
 
+
+  public function tenant()
+  {
+    return $this->belongsTo(\App\Models\Tenant::class);
+  }
   // --- Static Methods (Replacing procedural startTrial) ---
 
   /**

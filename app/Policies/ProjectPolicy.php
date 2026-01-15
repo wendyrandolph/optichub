@@ -83,9 +83,11 @@ class ProjectPolicy
             return false;
         }
 
-        // Provider/SaaS employees can update projects they manage (user_id).
-        if ($user->role === 'employee') {
-            return $project->user_id === $user->id;
+        $role = strtolower((string) $user->role);
+
+        // Admin/owner/provider/staff/employee can update any project in their tenant.
+        if (in_array($role, ['admin', 'owner', 'provider', 'staff', 'employee'], true)) {
+            return true;
         }
 
         // Clients cannot update projects.
@@ -105,6 +107,13 @@ class ProjectPolicy
         // Check tenant ownership first
         if ($user->tenant_id !== $project->tenant_id) {
             return false;
+        }
+
+        $role = strtolower((string) $user->role);
+
+        // Admin/owner/provider/staff can delete.
+        if (in_array($role, ['admin', 'owner', 'provider', 'staff'], true)) {
+            return true;
         }
 
         // Allow deletion if the user is the original creator/manager

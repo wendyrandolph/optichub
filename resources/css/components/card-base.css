@@ -1,0 +1,20 @@
+@layer components {
+  /* Surface building blocks */
+  .surface {
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+  }
+
+  .card {
+    background: rgb(var(--card));
+    color: rgb(var(--card-foreground));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  .divider {
+    height: 1px;
+    background: rgb(var(--border));
+  }
+}

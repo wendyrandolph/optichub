@@ -12,6 +12,13 @@ class UpdateInvoiceRequest extends FormRequest
     return true;
   }
 
+  protected function prepareForValidation(): void
+  {
+    $this->merge([
+      'status' => strtolower((string) $this->input('status', 'draft')),
+    ]);
+  }
+
   public function rules(): array
   {
     $tenantId = (int)($this->user()->tenant_id ?? 0);
@@ -19,7 +26,7 @@ class UpdateInvoiceRequest extends FormRequest
     $invoiceId = (int)($this->route('invoice')?->id ?? 0);
 
     return [
-      'client_id'      => ['required', 'integer', 'exists:clients,id'],
+      'contact_id'      => ['required', 'integer', 'exists:contacts,id'],
       'invoice_number' => [
         'required',
         'string',
@@ -30,7 +37,7 @@ class UpdateInvoiceRequest extends FormRequest
       ],
       'issue_date'     => ['required', 'date'],
       'due_date'       => ['required', 'date', 'after_or_equal:issue_date'],
-      'status'         => ['required', Rule::in(['Draft', 'Sent', 'Paid'])],
+      'status'         => ['required', Rule::in(['draft', 'sent', 'paid', 'overdue', 'partial'])],
       'notes'          => ['nullable', 'string'],
 
       'items'                      => ['required', 'array', 'min:1'],

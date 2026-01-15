@@ -6,11 +6,6 @@ return [
     |--------------------------------------------------------------------------
     | Authentication Defaults
     |--------------------------------------------------------------------------
-    |
-    | This option defines the default authentication "guard" and password
-    | reset "broker" for your application. You may change these values
-    | as required, but they're a perfect start for most applications.
-    |
     */
 
     'defaults' => [
@@ -22,21 +17,38 @@ return [
     |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
-   
     */
 
     'guards' => [
+        // Default app (staff / internal)
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // Admin area
         'admin' => [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Client portal
+        'client' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // Optional API (e.g. for mobile apps or external integrations)
+        // 'api' => [
+        //     'driver' => 'sanctum',
+        //     'provider' => 'users',
+        // ],
     ],
 
     /*
     |--------------------------------------------------------------------------
     | User Providers
     |--------------------------------------------------------------------------
-
     */
 
     'providers' => [
@@ -44,18 +56,12 @@ return [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Resetting Passwords
+    | Password Reset
     |--------------------------------------------------------------------------
-
     */
 
     'passwords' => [
@@ -71,7 +77,7 @@ return [
     |--------------------------------------------------------------------------
     | Password Confirmation Timeout
     |--------------------------------------------------------------------------
-   */
+    */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 

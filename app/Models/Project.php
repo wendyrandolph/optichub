@@ -6,6 +6,7 @@ use App\Scopes\TenantScope; // <-- 1. Import your custom scope
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
@@ -17,7 +18,9 @@ class Project extends Model
   // Define the fillable fields for mass assignment
   protected $fillable = [
     'tenant_id',
-    'client_id',
+    'client_company_id',
+    'opportunity_id',
+    'contact_id',
     'project_manager_id',
     'project_name',
     'status',
@@ -25,6 +28,7 @@ class Project extends Model
     'color',
     'start_date',
     'end_date',
+    'uses_phases',
     'budgeted_hours',
     'slug',
   ];
@@ -71,8 +75,8 @@ class Project extends Model
 
   public function client(): BelongsTo
   {
-    // assumes App\Models\Client and projects.client_id -> clients.id
-    return $this->belongsTo(Client::class, 'client_id', 'id');
+    // maintain legacy method name but map to the new contact column
+    return $this->belongsTo(Contact::class, 'contact_id');
   }
 
   // nice to have
@@ -83,9 +87,26 @@ class Project extends Model
   /**
    * Get the client user associated with the project.
    */
+
+  public function messages()
+  {
+    return $this->hasMany(\App\Models\ProjectMessage::class)->latest();
+  }
+
+  // app/Models/Project.php
+  public function conversation()
+  {
+    return $this->hasOne(\App\Models\ProjectConversation::class);
+  }
+
   public function clientUser(): BelongsTo
   {
     return $this->belongsTo(User::class, 'client_user_id');
+  }
+
+  public function opportunity(): BelongsTo
+  {
+    return $this->belongsTo(Opportunity::class);
   }
 
   public function scopeForTenant(Builder $query, int|string $tenantId): Builder
@@ -117,5 +138,28 @@ class Project extends Model
   public function phases()
   {
     return $this->hasMany(Phase::class);
+  }
+  public function company()
+  {
+    return $this->belongsTo(ClientCompany::class, 'client_company_id');
+  }
+  public function contact()
+  {
+    return $this->belongsTo(Contact::class);
+  }
+
+  public function agreements()
+  {
+    return $this->hasMany(\App\Models\ProjectAgreement::class);
+  }
+
+  public function payments()
+  {
+    return $this->hasMany(\App\Models\ProjectPayment::class);
+  }
+
+  public function tasks(): HasMany
+  {
+    return $this->hasMany(Task::class);
   }
 }

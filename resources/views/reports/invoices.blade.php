@@ -4,13 +4,13 @@
 @section('content')
     @php
         $tenantParam = $tenant ?? (auth()->user()->tenant ?? auth()->user()->tenant_id);
-        $range = $filters['range'] ?? 'wtd';
+        $range = $filters['range'] ?? 'all';
         $status = $filters['status'] ?? null;
         $sort = $filters['sort'] ?? 'due_date';
         $dir = $filters['dir'] ?? 'asc';
         $th = function ($key, $label) use ($sort, $dir, $tenantParam, $status, $range) {
             $nextDir = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.invoices', [
+            $url = route('tenant.reports.invoices', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $nextDir,
@@ -28,7 +28,7 @@
         };
     @endphp
     {{-- Back to Reports --}}
-    <x-reports.back-button :tenant="$tenant" />
+    <x-reports.back-button :tenant="$tenant" exportType="invoices" />
 
 
     <div class="oh-card mb-4">
@@ -37,10 +37,10 @@
                 <h1 class="text-lg font-semibold text-text-base">Invoices Due</h1>
                 <p class="text-sm text-text-subtle">Window: {{ strtoupper($range) }}</p>
             </div>
-            <form method="GET" action="{{ route('tenant.admin.reports.invoices', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.invoices', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <select name="range" class="oh-select">
-                    @foreach (['wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30d'] as $k => $lbl)
+                    @foreach (['all' => 'All time', 'wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30d'] as $k => $lbl)
                         <option value="{{ $k }}" @selected($range === $k)>{{ $lbl }}</option>
                     @endforeach
                 </select>
@@ -54,14 +54,17 @@
                 <input type="hidden" name="dir" value="{{ $dir }}">
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.invoices', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.invoices', ['tenant' => $tenantParam]) }}">Reset</a>
 
             </form>
         </div>
     </div>
 
-    <div class="oh-card mb-4">
-        <x-oh-chart :config="$invoicesConfig" class="w-full h-64 mb-6" />
+    <div class="oh-card mb-4 space-y-3">
+        <x-oh-chart :config="$invoicesConfig" class="w-full h-64" />
+        @if (empty(array_filter($invoicesConfig['data']['datasets'][0]['data'] ?? [])))
+            <p class="text-sm text-text-subtle">No invoice totals to chart for this range yet.</p>
+        @endif
     </div>
 
     <div class="oh-card overflow-x-auto">

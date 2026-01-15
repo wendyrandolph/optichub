@@ -1,0 +1,49 @@
+@layer components {
+  /* ---------- DEMO CARD ---------- */
+
+  .demo-card {
+    border-radius: 28px;
+    padding: 1.6rem 1.7rem;
+    background: radial-gradient(
+      circle at 0% 0%,
+      rgb(var(--surface)) 0,
+      rgb(var(--surface-accent)) 60%,
+      rgb(var(--surface-muted)) 100%
+    );
+    box-shadow:
+      0 20px 48px rgba(var(--text), 0.16),
+      0 0 0 1px rgba(var(--surface), 0.95);
+    display: grid;
+    gap: 1.2rem;
+  }
+
+  @media (min-width: 900px) {
+    .demo-card {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 1.3fr);
+      align-items: center;
+    }
+  }
+
+  .demo-copy .lead {
+    margin-top: 0.5rem;
+  }
+
+  .demo-meta {
+    border-radius: 18px;
+    padding: 0.8rem 1rem;
+    background: rgba(var(--text), 0.03);
+    font-size: 0.85rem;
+    color: rgb(var(--text-subtle));
+  }
+
+  .demo-tag {
+    display: inline-flex;
+    padding: 0.22rem 0.75rem;
+    border-radius: 9999px;
+    background: rgba(var(--brand-primary), 0.08);
+    color: rgb(var(--brand-primary));
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+}

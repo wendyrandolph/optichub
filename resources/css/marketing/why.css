@@ -1,0 +1,100 @@
+@layer components {
+  /* ---------- WHY BAND ---------- */
+
+  .section--soft-band {
+    background: radial-gradient(
+      circle at 0% 0%,
+      rgb(var(--surface-accent)) 0,
+      rgb(var(--surface-muted)) 50%,
+      rgb(var(--surface)) 100%
+    );
+    border-bottom: 1px solid rgba(var(--border), 0.25);
+  }
+
+  .marketing .section--why {
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(var(--brand-primary), 0.1),
+        transparent 55%
+      ),
+      linear-gradient(to bottom, rgb(var(--surface-muted)), rgb(var(--surface)));
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .marketing .why-layout {
+    @apply max-w-6xl mx-auto;
+    @apply grid gap-10 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)];
+    align-items: flex-start;
+  }
+
+  .marketing .why-list {
+    @apply mt-4 space-y-2;
+  }
+
+  .marketing .why-grid {
+    @apply grid gap-4;
+  }
+
+  @media (min-width: 768px) {
+    .marketing .why-grid {
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .marketing .why-tile {
+    @apply flex gap-3 items-start rounded-xl border bg-[rgb(var(--surface))];
+    @apply border-[rgb(var(--border))];
+    padding: 14px 16px;
+    box-shadow: 0 6px 18px rgba(var(--text), 0.05);
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .marketing .why-tile:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 26px rgba(var(--text), 0.08),
+      0 0 0 1px rgba(var(--border), 0.25);
+  }
+
+  .marketing .why-tile__icon {
+    @apply mt-1 flex items-center justify-center rounded-full;
+    width: 32px;
+    height: 32px;
+    background: rgb(var(--surface));
+    box-shadow: 0 0 0 1px rgba(var(--border), 0.6);
+  }
+
+  .marketing .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+  }
+
+  .marketing .dot--blue {
+    background-color: rgb(var(--ui-primary));
+  }
+  .marketing .dot--green {
+    background-color: rgb(var(--ui-success));
+  }
+  .marketing .dot--purple {
+    background-color: rgb(var(--ui-accent));
+  }
+
+  .marketing .why-tile__title {
+    @apply text-sm font-semibold text-[rgb(var(--text))];
+    margin-bottom: 2px;
+  }
+
+  .marketing .why-tile__body {
+    @apply text-xs text-[rgb(var(--text-subtle))] leading-snug;
+  }
+
+  .marketing .grad-text {
+    @apply bg-gradient-to-r from-[rgb(var(--brand-primary))] via-[rgb(var(--brand-secondary))] to-[rgb(var(--brand-accent))] bg-clip-text text-transparent;
+  }
+}

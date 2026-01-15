@@ -17,7 +17,7 @@
                     ({{ $summary['pct'] }}%)</p>
             </div>
             <form class="flex gap-2" method="GET"
-                action="{{ route('tenant.admin.reports.tasks-on-time', ['tenant' => $tenantParam]) }}">
+                action="{{ route('tenant.reports.tasks-on-time', ['tenant' => $tenantParam]) }}">
                 <select name="range" class="oh-select">
                     @foreach (['wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30'] as $k => $v)
                         <option value="{{ $k }}" @selected(($filters['range'] ?? 'wtd') === $k)>{{ $v }}</option>

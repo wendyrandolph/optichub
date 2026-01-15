@@ -68,6 +68,35 @@
                         @endforeach
                     </select>
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-heading">Company (optional)</label>
+                    <select name="company_id"
+                        class="mt-1 w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">None</option>
+                        @foreach (($companies ?? []) as $c)
+                            <option value="{{ $c->id }}" @selected((string) old('company_id', $lead->company_id) === (string) $c->id)>{{ $c->company_name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Link when this lead already belongs to a company.</p>
+                    <div class="mt-3 space-y-2">
+                        <button type="button" id="toggleQuickCompany" class="text-xs text-blue-600 hover:underline">
+                            Quick add company
+                        </button>
+                        <div id="quickCompanyForm" class="hidden space-y-2">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <input type="text" id="qcName" placeholder="Company name"
+                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" id="qcWebsite" placeholder="Website (optional)"
+                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" id="qcPhone" placeholder="Phone (optional)"
+                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 md:col-span-2">
+                            </div>
+                            <button type="button" id="saveQuickCompany" class="oh-btn oh-btn--primary text-xs">Save &amp; select</button>
+                            <div id="qcMessage" class="text-xs text-rose-600 hidden"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div>
@@ -86,3 +115,57 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (function() {
+            const toggleBtn = document.getElementById('toggleQuickCompany');
+            const form = document.getElementById('quickCompanyForm');
+            const saveBtn = document.getElementById('saveQuickCompany');
+            const msg = document.getElementById('qcMessage');
+            const companySelect = document.querySelector('select[name="company_id"]');
+
+            function toggle() {
+                form.classList.toggle('hidden');
+            }
+
+            async function save() {
+                msg.classList.add('hidden');
+                const name = document.getElementById('qcName').value.trim();
+                const website = document.getElementById('qcWebsite').value.trim();
+                const phone = document.getElementById('qcPhone').value.trim();
+                if (!name) {
+                    msg.textContent = 'Company name is required.';
+                    msg.classList.remove('hidden');
+                    return;
+                }
+                try {
+                    const res = await fetch("{{ route('tenant.companies.quick-store', ['tenant' => $tenantParam]) }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ company_name: name, website, phone })
+                    });
+                    if (!res.ok) throw new Error('Failed to save company.');
+                    const data = await res.json();
+                    const opt = document.createElement('option');
+                    opt.value = data.id;
+                    opt.textContent = data.company_name;
+                    opt.selected = true;
+                    companySelect.appendChild(opt);
+                    msg.classList.add('hidden');
+                    form.classList.add('hidden');
+                } catch (e) {
+                    msg.textContent = e.message;
+                    msg.classList.remove('hidden');
+                }
+            }
+
+            toggleBtn?.addEventListener('click', toggle);
+            saveBtn?.addEventListener('click', save);
+        })();
+    </script>
+@endpush

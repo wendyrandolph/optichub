@@ -9,7 +9,7 @@ class TeamMemberPolicy
 {
   public function before(User $user, $ability)
   {
-    if (in_array(strtolower($user->role), ['super_admin', 'superadmin', 'provider'])) {
+    if (in_array(strtolower($user->role), ['super_admin', 'superadmin', 'provider', 'admin'])) {
       return true;
     }
     return null;

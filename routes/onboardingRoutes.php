@@ -1,23 +1,54 @@
 <?php
 
-require_once base_path('app/Http/Controllers/OnboardingController.php');
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\BillingController;
 
-// Public: set password (token-based)
-$router->get('/onboarding/set-password', fn() => (new OnboardingController($pdo))->setPasswordForm());
-$router->post('/onboarding/set-password', fn() => (new OnboardingController($pdo))->handleSetPassword());
+/**
+ * Public (token-based) onboarding routes
+ * - These should NOT require auth
+ */
+Route::prefix('onboarding')->name('onboarding.')->middleware('guest')->group(function () {
+  Route::get('setup-password',  [OnboardingController::class, 'setupPasswordForm'])
+    ->name('setup-password'); // <-- matches your redirect in TrialController
+  Route::post('setup-password', [OnboardingController::class, 'handleSetupPassword'])
+    ->name('setup-password.store');
+  // Request a new activation link (public)
+  Route::get('request-link',  [OnboardingController::class, 'requestLinkForm'])->name('request_link.form');
+  Route::post('request-link', [OnboardingController::class, 'handleRequestLink'])->name('request_link.store');
+  Route::get('link-sent',     [OnboardingController::class, 'linkSent'])->name('link_sent');
+});
 
-// Auth required from here on
-$router->get('/onboarding/company', fn() => (new OnboardingController($pdo))->companyForm());
-$router->post('/onboarding/company', fn() => (new OnboardingController($pdo))->handleCompany());
+/**
+ * Auth-required onboarding steps (finish company profile, api key, finish)
+ * Pick the guard that makes sense (admin for your internal onboarding)
+ */
+Route::prefix('onboarding')->name('onboarding.')->middleware(['auth:admin'])->group(function () {
+  // onboarding flow
+  Route::get('welcome', [OnboardingController::class, 'welcome'])->name('welcome');
+  Route::post('workspace', [OnboardingController::class, 'storeWorkspace'])->name('workspace.store');
 
-$router->get('/onboarding/api-key', fn() => (new OnboardingController($pdo))->apiKeyForm());
-$router->post('/onboarding/api-key', fn() => (new OnboardingController($pdo))->handleApiKey());
+  Route::get('brand', [OnboardingController::class, 'brand'])->name('brand');
+  Route::post('brand', [OnboardingController::class, 'storeBrand'])->name('brand.store');
 
-$router->get('/onboarding/finish', fn() => (new OnboardingController($pdo))->finish());
+  Route::get('logo', [OnboardingController::class, 'logo'])->name('logo');
+  Route::post('logo', [OnboardingController::class, 'storeLogo'])->name('logo.store');
 
-// Request a new activation link (public)
-$router->get('/onboarding/request-link', fn() => (new OnboardingController($pdo))->requestLinkForm());
-$router->post('/onboarding/request-link', fn() => (new OnboardingController($pdo))->handleRequestLink());
-$router->get('/onboarding/link-sent', fn() => (new OnboardingController($pdo))->linkSent());
+  Route::get('client', [OnboardingController::class, 'client'])->name('client');
+  Route::post('client', [OnboardingController::class, 'storeClient'])->name('client.store');
 
-$router->get('/billing/portal', ['BillingController', 'portal']); // authed
+  Route::get('project', [OnboardingController::class, 'project'])->name('project');
+  Route::post('project', [OnboardingController::class, 'storeProject'])->name('project.store');
+
+  Route::get('team', [OnboardingController::class, 'team'])->name('team');
+  Route::post('team', [OnboardingController::class, 'storeTeam'])->name('team.store');
+
+  Route::get('finish', [OnboardingController::class, 'finish'])->name('finish');
+});
+
+/**
+ * Billing portal (requires auth; choose the right guard)
+ */
+Route::get('/billing/portal', [BillingController::class, 'portal'])
+  ->middleware(['auth:client']) // or ['auth:admin'] depending on who should access it
+  ->name('billing.portal');

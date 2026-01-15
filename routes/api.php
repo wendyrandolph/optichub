@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\LeadApiController;
 use App\Http\Controllers\Api\EventApiController;
 
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->middleware('apikey')->group(function () {
   // Public ping (no key)
   Route::get('/ping', [ApiController::class, 'ping'])->name('api.v1.ping');
 

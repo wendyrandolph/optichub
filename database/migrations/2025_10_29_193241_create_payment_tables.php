@@ -14,7 +14,7 @@ return new class extends Migration
          * Example credentials payload per provider:
          *  - stripe:       {"secret":"sk_live_...","account_id":"acct_...","webhook_secret":"whsec_..."}
          *  - authorizenet: {"api_login_id":"...","transaction_key":"...","signature_key":"...","sandbox":true}
-         *  - paypal:       {"client_id":"...","client_secret":"...","mode":"sandbox|live"}
+         *  - paypal:       {"contact_id":"...","client_secret":"...","mode":"sandbox|live"}
          */
         Schema::create('tenant_gateway_configs', function (Blueprint $t) {
             $t->id();

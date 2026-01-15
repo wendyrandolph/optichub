@@ -11,12 +11,13 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class TeamMember extends Model
 {
-    use HasFactory, HasTenantScope;
+    use HasFactory, HasTenantScope, \App\Traits\FormatsPhone;
 
     protected $table = 'team_members';
 
     protected $fillable = [
         'tenant_id',
+        'user_id',
         'firstName',      // camelCase to match your columns
         'lastName',
         'email',
@@ -25,6 +26,7 @@ class TeamMember extends Model
         'title',
         'status',
         'avatar',
+        'color_hex',
         'notes',
         'password',
     ];
@@ -58,12 +60,19 @@ class TeamMember extends Model
         return $query->where('status', 'active');
     }
 
+    public function getPhoneFormattedAttribute(): ?string
+    {
+        return $this->formatPhone($this->attributes['phone'] ?? null);
+    }
+
     // --- Accessors / Mutators ---
 
-    // Full name accessor (camelCase fields)
-    protected function fullName(): Attribute
+    /**
+     * Backwards-compatible accessor so calling $member->fullName works.
+     */
+    public function getFullNameAttribute(): string
     {
-        return Attribute::get(fn() => trim(($this->firstName ?? '') . ' ' . ($this->lastName ?? '')));
+        return trim(($this->firstName ?? '') . ' ' . ($this->lastName ?? ''));
     }
 
     // Hash password automatically if set/changed

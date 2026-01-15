@@ -7,14 +7,15 @@ use Illuminate\Support\Facades\Route;
 // It is critical that you paste these routes inside the group that defines
 // the 'admin' prefix and the 'admin.' name prefix, for example:
 
-Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth:admin', 'verified:admin'])->prefix('admin')->name('admin.')->group(function () {
   // PASTE ALL THE ROUTES BELOW HERE:
 
   // Tenant Management Routes (Resource-like routes)
   Route::get('tenants', [AdminController::class, 'indexTenants'])->name('tenants.index');
   Route::get('tenants/create', [AdminController::class, 'createTenant'])->name('tenants.create');
+
   Route::post('tenants', [AdminController::class, 'storeTenant'])->name('tenants.store');
-  Route::get('tenants/{tenant}', [AdminController::class, 'showTenant'])->name('tenants.show');
+  Route::get('tenants/{tenant}/show', [AdminController::class, 'showTenant'])->name('tenants.show');
   Route::delete('tenants/{tenant}', [AdminController::class, 'destroyTenant'])->name('tenants.destroy');
 
   // These routes link up the other placeholder methods in your AdminController for completeness

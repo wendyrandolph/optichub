@@ -38,4 +38,12 @@ class Appointment extends Model
   {
     return $this->belongsTo(User::class, 'staff_user_id');
   }
+  public function assignments()
+  {
+    return $this->hasMany(\App\Models\AppointmentAssignment::class, 'appointment_id');
+  }
+  public function appointments()
+  {
+    return $this->hasMany(\App\Models\TradeAppointment::class, 'trade_job_id');
+  }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProjectRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class StoreProjectRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,20 @@ class StoreProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'project_name'      => ['required', 'string', 'max:255'],
+            'description'       => ['nullable', 'string'],
+            'status'            => ['required', 'in:open,closed'],
+            'color'             => ['nullable', 'string', 'max:10'],
+            'start_date'        => ['nullable', 'date'],
+            'end_date'          => ['nullable', 'date', 'after_or_equal:start_date'],
+            'budgeted_hours'    => ['nullable', 'numeric', 'min:0'],
+            'owner_id'          => ['nullable', 'integer'],
+            'client_id'         => [
+                'nullable',
+                Rule::exists('contacts', 'id')->where(fn ($q) => $q->where('tenant_id', $this->route('tenant')?->id)),
+            ],
+            'client_company_id' => ['nullable', 'integer'],
+            'uses_phases'       => ['sometimes', 'boolean'],
         ];
     }
 }

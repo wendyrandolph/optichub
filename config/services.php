@@ -40,5 +40,12 @@ return [
 
         // You might also need your standard secret key here for API calls
         'secret' => env('STRIPE_SECRET'),
-    ]
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'enable_sync' => env('ENABLE_GMAIL_SYNC', false),
+    ],
 ];

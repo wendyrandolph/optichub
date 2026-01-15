@@ -47,7 +47,7 @@ class Proposal extends Model
    */
   public function organization(): BelongsTo
   {
-    return $this->belongsTo(Organization::class, 'tenant_id');
+    return $this->belongsTo(Tenant::class, 'tenant_id');
   }
 
   // --- Static Methods to Replace Procedural Logic ---

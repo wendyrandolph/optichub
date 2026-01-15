@@ -1,0 +1,17 @@
+@layer components {
+  .input {
+    background: rgb(var(--card));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    line-height: 1.2;
+    transition:
+      border-color var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+
+  .input:focus {
+    border-color: rgb(var(--ring));
+    box-shadow: 0 0 0 3px rgb(var(--ring) / 0.18);
+  }
+}

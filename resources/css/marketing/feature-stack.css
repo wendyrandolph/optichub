@@ -1,0 +1,314 @@
+@layer components {
+  /* ---------- FEATURES HERO ---------- */
+
+  .section--features-hero {
+    @apply py-14 md:py-16;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(var(--brand-primary), 0.26),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(var(--brand-accent), 0.22),
+        transparent 55%
+      ),
+      rgb(var(--surface-accent));
+  }
+
+  #features-hero .container {
+    @apply max-w-3xl mx-auto text-center;
+  }
+  #features-hero .h2 {
+    @apply text-3xl md:text-4xl font-extrabold text-[rgb(var(--text))];
+  }
+  #features-hero .copy {
+    @apply mt-3 text-base md:text-lg text-[rgb(var(--text-subtle))];
+  }
+
+  /* --- Sticky subnav: light, minimal --- */
+  .feature-subnav {
+    @apply sticky top-0 z-20 bg-[rgb(var(--surface))/0.8] backdrop-blur border-b border-[rgb(var(--border))];
+  }
+  .feature-subnav__row {
+    @apply h-11 flex items-center gap-3 overflow-x-auto text-xs md:text-sm;
+  }
+  .feature-subnav__row a {
+    @apply px-3 py-1 rounded-full text-[rgb(var(--text-subtle))] hover:text-[rgb(var(--brand-primary))] hover:bg-[rgba(var(--brand-primary),0.08)] transition-colors whitespace-nowrap;
+  }
+
+  /* ------------- FEATURE STACK ------------- */
+
+  .section--feature-stack {
+    @apply relative;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(var(--brand-primary), 0.2),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(var(--brand-accent), 0.18),
+        transparent 55%
+      ),
+      rgb(var(--surface-accent));
+  }
+
+  .feature-stack {
+    @apply relative max-w-6xl mx-auto space-y-10 md:space-y-12;
+  }
+
+  .feature-stack::before,
+  .feature-stack::after {
+    content: '';
+    @apply absolute rounded-full pointer-events-none;
+    filter: blur(70px);
+    opacity: 0.8;
+    z-index: 0;
+  }
+  .feature-stack::before {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(
+      circle,
+      rgba(var(--brand-primary), 0.55),
+      transparent 60%
+    );
+    top: -80px;
+    left: -80px;
+  }
+  .feature-stack::after {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(
+      circle,
+      rgba(var(--brand-accent), 0.55),
+      transparent 60%
+    );
+    bottom: -60px;
+    right: -80px;
+  }
+
+  .feature-card {
+    @apply relative grid gap-6 md:gap-10 md:grid-cols-2 items-start;
+    @apply bg-[rgb(var(--surface))] rounded-3xl border border-[rgb(var(--border))] shadow-[0_22px_70px_rgba(var(--text),0.16)];
+    @apply px-6 py-6 md:px-10 md:py-8;
+    z-index: 1;
+  }
+
+  .feature-card--left {
+    transform: translateX(-6px);
+  }
+  .feature-card--right {
+    transform: translateX(6px);
+  }
+  @media (min-width: 1024px) {
+    .feature-card--left {
+      transform: translateX(-32px);
+    }
+    .feature-card--right {
+      transform: translateX(32px);
+    }
+  }
+
+  .feature-card {
+    transition:
+      transform 220ms ease,
+      box-shadow 220ms ease;
+  }
+  .feature-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 26px 80px rgba(var(--text), 0.22);
+  }
+  .feature-card:hover.feature-card--left {
+    transform: translateX(-32px) translateY(-4px) scale(1.01);
+  }
+  .feature-card:hover.feature-card--right {
+    transform: translateX(32px) translateY(-4px) scale(1.01);
+  }
+
+  .feature-card__visual {
+    @apply order-1 md:order-none;
+  }
+
+  .feature-card__content {
+    @apply space-y-3;
+  }
+
+  .screenshot-frame {
+    @apply relative rounded-2xl overflow-hidden bg-[rgb(var(--text))/0.05];
+    padding: 3px;
+    background: linear-gradient(135deg, rgb(var(--brand-primary)), rgb(var(--brand-secondary)));
+    box-shadow: 0 18px 55px rgba(var(--text), 0.16);
+  }
+  .screenshot-frame::before {
+    content: '';
+    @apply absolute inset-0 rounded-[18px] bg-[rgb(var(--text))];
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+  .screenshot-frame img {
+    @apply relative z-[1] w-full h-auto block rounded-[14px] bg-[rgb(var(--surface-muted))] object-cover;
+  }
+
+  .feature-card__content .eyebrow {
+    @apply text-xs font-semibold tracking-[0.16em] uppercase text-[rgb(var(--brand-primary))];
+  }
+  .feature-card__content .h3 {
+    @apply text-2xl md:text-3xl font-bold text-[rgb(var(--text))];
+  }
+  .feature-card__content .copy {
+    @apply text-sm md:text-base text-[rgb(var(--text-subtle))];
+  }
+  .feature-card__content .checklist {
+    @apply list-disc pl-5 text-sm text-[rgb(var(--text-subtle))] space-y-1.5;
+  }
+  .feature-card__content .before-after {
+    @apply text-xs md:text-sm text-[rgb(var(--text-subtle))];
+  }
+
+  .feature-card details.faq {
+    @apply mt-2 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))/0.8] px-3 py-2 text-sm text-[rgb(var(--text-subtle))];
+  }
+  .feature-card details.faq[open] {
+    @apply bg-[rgb(var(--surface))] shadow-sm;
+  }
+  .feature-card details.faq summary {
+    @apply cursor-pointer list-none font-medium flex items-center justify-between gap-2;
+  }
+  .feature-card details.faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .feature-card details.faq summary::after {
+    content: '▾';
+    @apply text-xs text-[rgb(var(--text-subtle))];
+  }
+  .feature-card details.faq[open] summary::after {
+    content: '▴';
+  }
+
+  .micro-quote {
+    @apply mt-2 text-sm italic text-[rgb(var(--text-subtle))] border-l-4 border-[rgb(var(--brand-primary))]/20 pl-3;
+  }
+  .micro-quote span {
+    @apply block mt-1 not-italic text-xs text-[rgb(var(--text-subtle))];
+  }
+
+  .marketing .card--hoverable {
+    transition:
+      transform 180ms ease-out,
+      box-shadow 180ms ease-out,
+      border-color 180ms ease-out,
+      background-color 180ms ease-out;
+  }
+
+  .marketing .card--hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 55px rgba(var(--text), 0.18);
+    border-color: rgb(var(--brand-accent));
+    background-color: rgb(var(--surface));
+  }
+
+  /* ------------- CALENDAR + QUOTE OVERLAP ------------- */
+
+  .section--calendar-quote {
+    @apply pt-6 pb-0 relative;
+  }
+
+  .calendar-quote-shell {
+    @apply max-w-6xl mx-auto relative;
+  }
+
+  .calendar-quote-card {
+    @apply relative grid gap-6 md:gap-10 md:grid-cols-[1.2fr_minmax(0,1fr)];
+    @apply bg-[rgb(var(--surface))] rounded-3xl border border-[rgb(var(--border))] shadow-[0_24px_80px_rgba(var(--text),0.18)];
+    @apply px-6 py-6 md:px-10 md:py-8;
+    margin-bottom: -60px;
+    z-index: 5;
+  }
+
+  .calendar-quote-card__left .feature__icon {
+    @apply w-10 h-10 rounded-2xl bg-[rgba(var(--brand-primary),0.12)] text-[rgb(var(--brand-primary))] flex items-center justify-center text-xl mb-3;
+  }
+
+  .calendar-quote-card__left .h4 {
+    @apply text-xl font-semibold text-[rgb(var(--text))];
+  }
+
+  .calendar-quote-card__left .copy {
+    @apply text-sm text-[rgb(var(--text-subtle))] mb-2;
+  }
+
+  .calendar-quote-card__right .quote {
+    @apply text-sm md:text-base text-[rgb(var(--text))] italic;
+  }
+  .calendar-quote-card__right .quote__meta {
+    @apply mt-2 text-xs md:text-sm text-[rgb(var(--text-subtle))] not-italic;
+  }
+
+  .section--features-last {
+    @apply relative py-16 md:py-20 pb-40;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(var(--brand-primary), 0.2),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(var(--brand-accent), 0.18),
+        transparent 55%
+      ),
+      rgb(var(--surface-accent));
+    height: 50vh;
+  }
+
+  .features-last-card__left .feature__icon {
+    @apply w-10 h-10 rounded-2xl bg-[rgba(var(--brand-primary),0.12)] text-[rgb(var(--brand-primary))]
+           flex items-center justify-center text-xl mb-3;
+  }
+
+  .features-last-card__left .eyebrow {
+    @apply text-xs font-semibold tracking-[0.16em] uppercase text-[rgb(var(--brand-primary))] mb-1;
+  }
+
+  .features-last-card__left .h3 {
+    @apply text-2xl md:text-3xl font-bold text-[rgb(var(--text))] mb-2;
+  }
+
+  .features-last-card__left .copy {
+    @apply text-sm md:text-base text-[rgb(var(--text-subtle))] mb-2;
+  }
+
+  .features-last-card__left .clean {
+    @apply text-sm text-[rgb(var(--text-subtle))] space-y-1.5 pl-4;
+  }
+
+  .features-last-card__right {
+    @apply flex flex-col justify-between gap-4 md:gap-6;
+  }
+
+  .features-last-card__right .quote {
+    @apply text-sm md:text-base text-[rgb(var(--text))] italic;
+  }
+
+  .features-last-card__right .quote__meta {
+    @apply block mt-2 text-xs md:text-sm text-[rgb(var(--text-subtle))] not-italic;
+  }
+
+  .features-last-card__actions {
+    @apply mt-2 flex flex-wrap gap-3;
+  }
+
+  .features-last-card__meta {
+    @apply text-xs text-[rgb(var(--text-subtle))];
+  }
+
+  @media (max-width: 767px) {
+    .features-last-card {
+      @apply text-left;
+    }
+  }
+}

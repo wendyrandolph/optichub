@@ -1,0 +1,12 @@
+@layer components {
+  .oh-msg {
+    @apply rounded-xl p-3 ring-1;
+    background: rgb(var(--surface));
+    --tw-ring-color: rgb(var(--border) / 0.6);
+  }
+
+  .oh-msg.is-unread {
+    box-shadow: 0 0 0 2px rgba(var(--brand-primary) / 0.25);
+    background: rgba(var(--brand-primary) / 0.06);
+  }
+}

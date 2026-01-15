@@ -16,7 +16,7 @@
 
         $th = function ($key, $label) use ($sort, $dir, $tenantParam, $asOf, $status, $bucket, $qText, $min, $max) {
             $next = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.ar_aging', [
+            $url = route('tenant.reports.ar_aging', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $next,
@@ -38,7 +38,7 @@
         };
     @endphp
 
-    <x-reports.back-button :tenant="$tenant" />
+    <x-reports.back-button :tenant="$tenant" exportType="ar_aging" />
 
     {{-- Header / Filters --}}
     <div class="oh-card mb-4">
@@ -48,7 +48,7 @@
                 <p class="text-sm text-text-subtle">As of {{ \Carbon\Carbon::parse($asOf)->format('M d, Y') }}</p>
             </div>
 
-            <form method="GET" action="{{ route('tenant.admin.reports.ar_aging', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.ar_aging', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <input type="date" name="as_of" value="{{ $asOf }}" class="oh-select">
 
@@ -72,7 +72,7 @@
 
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.ar_aging', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.ar_aging', ['tenant' => $tenantParam]) }}">Reset</a>
             </form>
         </div>
     </div>
@@ -82,7 +82,7 @@
         <div class="flex flex-wrap items-center gap-2">
             @php
                 $chipUrl = fn($b) => route(
-                    'tenant.admin.reports.ar_aging',
+                    'tenant.reports.ar_aging',
                     ['tenant' => $tenantParam] + array_merge(request()->query(), ['bucket' => $b]),
                 );
             @endphp

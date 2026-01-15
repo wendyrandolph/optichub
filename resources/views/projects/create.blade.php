@@ -4,13 +4,12 @@
     @php
         /**
          * Expected:
-         * - $clients (id, firstName, lastName)
-         * - $users (id, username) — optional
-         * - $currentUserId — optional default owner
-         * - $projectTemplates (id, name) — optional
+         * - $clients (id, firstName, lastName, name)
+         * - $users (id, username)
+         * - $currentUserId (optional default owner)
+         * - $projectTemplates (id, name)
          */
 
-        // 🔒 Robust tenant ID resolution (no tenant() helper needed)
         $routeTenant = request()->route('tenant');
         if ($routeTenant instanceof \App\Models\Tenant) {
             $tenantId = $routeTenant->getKey();
@@ -20,7 +19,7 @@
             $tenantId = (int) (auth()->user()->tenant_id ?? 0);
         }
 
-        // Color helpers
+        // Color palette + defaults
         $palette = [
             '#1F3C66',
             '#2E5D95',
@@ -41,210 +40,247 @@
         $selectedClientId = (int) old('client_id', 0);
         $autoColor = $palette[$selectedClientId % max(count($palette), 1)];
         $chosenColor = old('color', $autoColor);
+        $usesPhasesDefault = old('uses_phases', $usesPhasesDefault ?? false);
+        $phaseNames = array_pad(array_slice((array) old('phases', []), 0, 5), 5, '');
 
-        // General error passthrough
         $generalError = session('general_error') ?? session('error');
         if (!$generalError && isset($errors) && method_exists($errors, 'has') && $errors->has('general')) {
             $generalError = $errors->first('general');
         }
     @endphp
 
-    <section class="form-card">
-        <header class="form-card__head">
-            <h2 class="form-card__title">Create New Project</h2>
-            <div class="page-actions">
-                @if ($tenantId)
-                    <a href="{{ route('tenant.projects.index', ['tenant' => $tenantId]) }}" class="btn btn--ghost">
-                        <i class="fa fa-arrow-left"></i> Back to Projects
-                    </a>
-                @else
-                    <button class="btn btn--ghost" disabled title="No tenant in context">
-                        <i class="fa fa-arrow-left"></i> Back to Projects
-                    </button>
-                @endif
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {{-- Header --}}
+        <div class="flex flex-col gap-3">
+            <div>
+                <a href="{{ $tenantId ? route('tenant.projects.index', ['tenant' => $tenantId]) : '#' }}"
+                    @if (!$tenantId) aria-disabled="true" @endif
+                    class="inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base relative">
+                    <i class="fa-solid fa-arrow-left mr-2 text-[10px]"></i>
+                    <span class="relative after:absolute after:left-1/2 after:bottom-[-3px] after:h-0.5 after:w-0 after:bg-[rgb(var(--brand-accent))] after:transition-all after:duration-200 hover:after:w-full hover:after:left-0">Back to projects</span>
+                </a>
             </div>
-        </header>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">Projects</p>
+                    <h1 class="text-2xl font-semibold text-text-base">Create project</h1>
+                    <p class="text-sm text-text-subtle mt-1">Capture the basics now — you can add phases, tasks, and files after saving.</p>
+                </div>
+            </div>
+        </div>
 
         @if ($generalError)
-            <div class="notice notice--danger" role="alert">{{ $generalError }}</div>
+            <div class="oh-card border border-rose-200 bg-rose-50 text-rose-700 p-3 text-sm">{{ $generalError }}</div>
         @endif
-
         @if (!$tenantId)
-            <div class="notice notice--danger" role="alert">
+            <div class="oh-card border border-rose-200 bg-rose-50 text-rose-700 p-3 text-sm">
                 Unable to resolve tenant context. Please navigate from a tenant URL like <code>/{id}/projects/create</code>.
             </div>
         @endif
 
-        <form method="POST" action="{{ route('tenant.projects.store', ['tenant' => $tenant->id]) }}"
-            class="form-container form-grid" novalidate>
-            @csrf
+        {{-- Form --}}
+        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-6">
+            <form method="POST" action="{{ route('tenant.projects.store', ['tenant' => $tenantId]) }}" novalidate class="space-y-5">
+                @csrf
 
-            {{-- A) Basics --}}
-            <div class="form-group">
-                <label class="label" for="client_id">Client</label>
-                <div class="input-with-addon">
-                    @php $clients = $clients ?? collect(); @endphp
-                    <select name="client_id" id="client_id" required>
-                        <option value="">Select Client</option>
-                        @foreach ($clients as $c)
-                            <option value="{{ $c->id }}" @selected(old('client_id') == $c->id)>{{ $c->name }}</option>
-                        @endforeach
-                    </select>
-                    <button type="button" id="quickAddClient" class="btn btn--ghost" aria-haspopup="dialog"
-                        aria-controls="quickClientModal" aria-expanded="false" @disabled(!$tenantId)>
-                        + Quick add
-                    </button>
-                </div>
-                @if ($errors?->first('client_id'))
-                    <small class="error">{{ $errors->first('client_id') }}</small>
-                @else
-                    <small class="hint">Don’t see them? Add a minimal contact—name + email.</small>
-                @endif
-            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                    {{-- Client --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="client_id">Client</label>
+                        <div class="flex items-center gap-2">
+                            @php $clients = $clients ?? collect(); @endphp
+                            <select name="client_id" id="client_id" required class="oh-select h-10 flex-1" @disabled(!$tenantId)>
+                                <option value="">Select client</option>
+                                @foreach ($clients as $c)
+                                    @php
+                                        $clientLabel = $c->name
+                                            ?? trim(($c->firstName ?? '') . ' ' . ($c->lastName ?? ''))
+                                            ?? trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? ''));
+                                        if (! $clientLabel) {
+                                            $clientLabel = 'Client #' . $c->id;
+                                        }
+                                    @endphp
+                                    <option value="{{ $c->id }}" @selected(old('client_id') == $c->id)>{{ $clientLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @if ($errors?->first('client_id'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('client_id') }}</p>
+                        @else
+                            <p class="text-xs text-text-subtle">Don’t see them? Add a minimal contact — name + email.</p>
+                        @endif
+                    </div>
 
-            <div class="form-group">
-                <label class="label" for="project_name">Project Name</label>
-                <input id="project_name" name="project_name" class="input" required value="{{ old('project_name') }}"
-                    @disabled(!$tenantId)>
-                @if ($errors?->first('project_name'))
-                    <small class="error">{{ $errors->first('project_name') }}</small>
-                @endif
-            </div>
+                    {{-- Project name --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="project_name">Project name</label>
+                        <input id="project_name" name="project_name" class="oh-input h-10" required value="{{ old('project_name') }}"
+                            @disabled(!$tenantId)>
+                        @if ($errors?->first('project_name'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('project_name') }}</p>
+                        @endif
+                    </div>
 
-            <div class="form-group">
-                <label class="label" for="owner_id">Project Owner</label>
-                @php $ownerDefault = old('owner_id', $currentUserId ?? null); @endphp
-                <select id="owner_id" name="owner_id" class="select" @disabled(!$tenantId)>
-                    @foreach ($users ?? [] as $user)
-                        @php
-                            $userId = (int) data_get($user, 'id', 0);
-                            $username = data_get($user, 'username');
-                        @endphp
-                        <option value="{{ $userId }}" @selected((string) $ownerDefault === (string) $userId)>
-                            {{ $username ?? 'User #' . $userId }}</option>
-                    @endforeach
-                </select>
-                @if ($errors?->first('owner_id'))
-                    <small class="error">{{ $errors->first('owner_id') }}</small>
-                @endif
-            </div>
+                    {{-- Owner --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="owner_id">Project owner</label>
+                        @php $ownerDefault = old('owner_id', $currentUserId ?? null); @endphp
+                        <select id="owner_id" name="owner_id" class="oh-select h-10" @disabled(!$tenantId)>
+                            @foreach ($users ?? [] as $member)
+                                @php
+                                    $memberId = (int) data_get($member, 'id', 0);
+                                    $userId = (int) data_get($member, 'user_id', $memberId);
+                                    $fullName = trim((data_get($member, 'firstName') ?? '') . ' ' . (data_get($member, 'lastName') ?? ''));
+                                    $fallbackFull = trim((data_get($member, 'first_name') ?? '') . ' ' . (data_get($member, 'last_name') ?? ''));
+                                    $email = data_get($member, 'email');
+                                    $username = data_get($member, 'user.username') ?? data_get($member, 'username');
+                                    $label = $fullName ?: $fallbackFull ?: $username ?: $email ?: 'Member #' . $memberId;
+                                @endphp
+                                <option value="{{ $userId }}" @selected((string) $ownerDefault === (string) $userId)>
+                                    {{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @if ($errors?->first('owner_id'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('owner_id') }}</p>
+                        @endif
+                    </div>
 
-            <div class="form-group">
-                <label class="label" for="status">Status</label>
-                @php $statuses = ['Planned','In Progress','On Hold','Completed','Cancelled']; @endphp
-                <select id="status" name="status" class="select" @disabled(!$tenantId)>
-                    @foreach ($statuses as $status)
-                        <option value="{{ $status }}" @selected(old('status', 'Planned') === $status)>{{ $status }}</option>
-                    @endforeach
-                </select>
-                @if ($errors?->first('status'))
-                    <small class="error">{{ $errors->first('status') }}</small>
-                @endif
-            </div>
+                    {{-- Status --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="status">Status</label>
+                        @php $statuses = ['Planned','In Progress','On Hold','Completed','Cancelled']; @endphp
+                        <select id="status" name="status" class="oh-select h-10" @disabled(!$tenantId)>
+                            @foreach ($statuses as $status)
+                                <option value="{{ $status }}" @selected(old('status', 'Planned') === $status)>{{ $status }}</option>
+                            @endforeach
+                        </select>
+                        @if ($errors?->first('status'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('status') }}</p>
+                        @endif
+                    </div>
 
-            <div class="form-group">
-                <span class="label">Project Color</span>
-                <div class="color-picker" role="radiogroup" aria-label="Project color">
-                    @foreach ($palette as $i => $hex)
-                        @php $cid = "color_{$i}"; @endphp
-                        <label class="color-radio" for="{{ $cid }}">
-                            <input type="radio" id="{{ $cid }}" name="color" value="{{ $hex }}"
-                                @checked($chosenColor === $hex) @disabled(!$tenantId)>
-                            <span class="swatch" style="--sw: {{ $hex }}"></span>
+                    {{-- Color --}}
+                    <div class="space-y-1.5 md:col-span-2">
+                        <span class="text-sm font-medium text-text-base">Project color</span>
+                        <p class="text-xs text-text-subtle mb-1">Pick a color for cards and timeline markers.</p>
+                        <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Project color">
+                            @foreach ($palette as $i => $hex)
+                                @php $cid = "color_{$i}"; @endphp
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" id="{{ $cid }}" name="color" value="{{ $hex }}"
+                                        @checked($chosenColor === $hex) @disabled(!$tenantId)
+                                        class="sr-only peer">
+                                    <span class="h-8 w-8 rounded-full ring-1 ring-border-default/60 peer-checked:ring-2 peer-checked:ring-brand-primary"
+                                        style="background: {{ $hex }}"></span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @if ($errors?->first('color'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('color') }}</p>
+                        @endif
+                    </div>
+
+                    {{-- Dates --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="start_date">Start date</label>
+                        <input id="start_date" class="oh-input h-10" type="date" name="start_date" value="{{ old('start_date') }}"
+                            @disabled(!$tenantId)>
+                        @if ($errors?->first('start_date'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('start_date') }}</p>
+                        @endif
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="end_date">End date</label>
+                        <input id="end_date" class="oh-input h-10" type="date" name="end_date" value="{{ old('end_date') }}"
+                            @disabled(!$tenantId)>
+                        @if ($errors?->first('end_date'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('end_date') }}</p>
+                        @else
+                            <p class="text-xs text-text-subtle">Optional. We’ll prevent end date earlier than start.</p>
+                        @endif
+                    </div>
+
+                    {{-- Budget --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="budgeted_hours">Budgeted hours</label>
+                        <input id="budgeted_hours" class="oh-input h-10" type="number" step="0.25" min="0" name="budgeted_hours"
+                            value="{{ old('budgeted_hours') }}" placeholder="e.g. 40" @disabled(!$tenantId)>
+                        @if ($errors?->first('budgeted_hours'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('budgeted_hours') }}</p>
+                        @endif
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="space-y-1.5 md:col-span-2">
+                        <label class="text-sm font-medium text-text-base" for="description">Description</label>
+                        <textarea id="description" name="description" class="oh-input min-h-[110px]" rows="3" @disabled(!$tenantId)>{{ old('description') }}</textarea>
+                        @if ($errors?->first('description'))
+                            <p class="text-xs text-rose-600">{{ $errors->first('description') }}</p>
+                        @endif
+                    </div>
+
+                    {{-- Use phases --}}
+                    <div class="space-y-1.5 md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="uses_phases" value="1"
+                                @checked($usesPhasesDefault)
+                                class="rounded border-border-default text-brand-primary">
+                            <span class="text-text-base">Use phases for this project</span>
                         </label>
-                    @endforeach
+                        <p class="text-xs text-text-subtle">Leave unchecked for simple task-only projects.</p>
+                    </div>
+
+                    {{-- Phases (if enabled) --}}
+                    <div class="md:col-span-2 space-y-2 {{ $usesPhasesDefault ? '' : 'hidden' }}" data-phase-fields>
+                        <div class="text-xs text-text-subtle">Customize up to 5 phases. Leave blank to remove.</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            @foreach ($phaseNames as $idx => $pname)
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Phase {{ $idx + 1 }}</span>
+                                    <input type="text" name="phases[]" value="{{ $pname }}"
+                                        class="oh-input h-10">
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Template --}}
+                    <div class="space-y-1.5">
+                        <label class="text-sm font-medium text-text-base" for="template_id">Template</label>
+                        <select id="template_id" name="template_id" class="oh-select h-10" @disabled(!$tenantId)>
+                            <option value="">(None)</option>
+                            @foreach ($projectTemplates ?? [] as $template)
+                                @php $templateId = (int) data_get($template, 'id', 0); @endphp
+                                <option value="{{ $templateId }}" @selected((string) old('template_id') === (string) $templateId)>
+                                    {{ data_get($template, 'name') }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-text-subtle">Optional: pre-load phases & tasks.</p>
+                    </div>
                 </div>
-                @if ($errors?->first('color'))
-                    <small class="error">{{ $errors->first('color') }}</small>
-                @endif
-            </div>
 
-            {{-- B) Timing & Budget --}}
-            <div class="form-group">
-                <label class="label" for="start_date">Start Date</label>
-                <input id="start_date" class="input" type="date" name="start_date" value="{{ old('start_date') }}"
-                    @disabled(!$tenantId)>
-                @if ($errors?->first('start_date'))
-                    <small class="error">{{ $errors->first('start_date') }}</small>
-                @endif
-            </div>
-
-            <div class="form-group">
-                <label class="label" for="end_date">End Date</label>
-                <input id="end_date" class="input" type="date" name="end_date" value="{{ old('end_date') }}"
-                    @disabled(!$tenantId)>
-                @if ($errors?->first('end_date'))
-                    <small class="error">{{ $errors->first('end_date') }}</small>
-                @else
-                    <small class="hint">Optional. We’ll prevent end date earlier than start date.</small>
-                @endif
-            </div>
-
-            <div class="form-group">
-                <label class="label" for="budgeted_hours">Budgeted Hours</label>
-                <input id="budgeted_hours" class="input" type="number" step="0.25" min="0" name="budgeted_hours"
-                    value="{{ old('budgeted_hours') }}" placeholder="e.g. 40" @disabled(!$tenantId)>
-                @if ($errors?->first('budgeted_hours'))
-                    <small class="error">{{ $errors->first('budgeted_hours') }}</small>
-                @endif
-            </div>
-
-            {{-- C) Details --}}
-            <div class="form-group span-2">
-                <label class="label" for="description">Description</label>
-                <textarea id="description" name="description" class="textarea" rows="3" @disabled(!$tenantId)>{{ old('description') }}</textarea>
-                @if ($errors?->first('description'))
-                    <small class="error">{{ $errors->first('description') }}</small>
-                @endif
-            </div>
-
-            <div class="form-group">
-                <label class="label" for="template_id">Template</label>
-                <select id="template_id" name="template_id" class="select" @disabled(!$tenantId)>
-                    <option value="">(None)</option>
-                    @foreach ($projectTemplates ?? [] as $template)
-                        @php $templateId = (int) data_get($template, 'id', 0); @endphp
-                        <option value="{{ $templateId }}" @selected((string) old('template_id') === (string) $templateId)>
-                            {{ data_get($template, 'name') }}
-                        </option>
-                    @endforeach
-                </select>
-                <small class="hint">Optional: pre-load phases & tasks.</small>
-            </div>
-
-            {{-- Actions --}}
-            <div class="form-group centered-block">
-                @if ($tenantId)
-                    <a href="{{ route('tenant.projects.index', ['tenant' => $tenantId]) }}"
-                        class="btn btn--ghost">Cancel</a>
-                    <button class="btn btn-add" type="submit">Create Project</button>
-                @else
-                    <button class="btn btn--ghost" disabled>Cancel</button>
-                    <button class="btn btn-add" type="button" disabled>Create Project</button>
-                @endif
-            </div>
-        </form>
-    </section>
-
-    {{-- Quick Add Client (minimal) --}}
-    <div id="quickClientModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="qcTitle">
-        <div class="modal-content" role="document">
-            <h3 id="qcTitle">Add Client</h3>
-            <form id="quickClientForm">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <label class="label" for="qc_first">First name</label>
-                <input id="qc_first" class="input" name="firstName" required>
-                <label class="label" for="qc_last">Last name</label>
-                <input id="qc_last" class="input" name="lastName" required>
-                <label class="label" for="qc_email">Email</label>
-                <input id="qc_email" class="input" type="email" name="email" required>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn--ghost" data-close>Cancel</button>
-                    <button type="submit" class="btn btn-add">Save</button>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-border-default/60">
+                    <a href="{{ $tenantId ? route('tenant.projects.index', ['tenant' => $tenantId]) : '#' }}"
+                        class="oh-btn">Cancel</a>
+                    <button class="oh-btn oh-btn--primary" type="submit" @disabled(!$tenantId)>Create Project</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="project-data" data-palette='@json($palette)' style="display:none;"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.querySelector('input[name="uses_phases"]');
+            const phaseFields = document.querySelector('[data-phase-fields]');
+            if (!toggle || !phaseFields) return;
+            const sync = () => {
+                phaseFields.classList.toggle('hidden', !toggle.checked);
+            };
+            toggle.addEventListener('change', sync);
+            sync();
+        });
+    </script>
 @endsection

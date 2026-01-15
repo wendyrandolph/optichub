@@ -1,0 +1,21 @@
+@layer components {
+  .text-brand-primary {
+    color: rgb(var(--brand-primary));
+  }
+
+  .bg-brand-primary {
+    background-color: rgb(var(--brand-primary));
+  }
+
+  .bg-brand-secondary {
+    background-color: rgb(var(--brand-secondary));
+  }
+
+  .border-brand-primary {
+    border-color: rgb(var(--brand-primary));
+  }
+
+  .bg-brand-soft {
+    background-color: rgb(var(--brand-soft));
+  }
+}

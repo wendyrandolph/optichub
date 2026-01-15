@@ -1,0 +1,117 @@
+@layer components {
+  /* Full-width calendar band */
+
+  .marketing .section--calendar-band {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(var(--brand-primary), 0.4),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(var(--brand-accent), 0.35),
+        transparent 55%
+      ),
+      linear-gradient(
+        to right,
+        rgb(var(--brand-secondary)),
+        rgb(var(--brand-primary))
+      );
+    color: rgb(var(--surface));
+  }
+
+  .marketing .calendar-band__inner {
+    max-width: 52rem;
+    margin: 0 auto;
+  }
+
+  .marketing .calendar-band__content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .marketing .calendar-band__card {
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1.75rem;
+    background: rgba(var(--brand-secondary), 0.55);
+    border: 1px solid rgba(var(--surface), 0.18);
+    box-shadow: 0 24px 60px rgba(var(--brand-secondary), 0.7);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.25rem;
+    align-items: flex-start;
+  }
+
+  .marketing .calendar-band__icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(
+      circle at top,
+      rgba(var(--status-success), 0.9),
+      rgb(var(--status-success))
+    );
+    color: rgb(var(--brand-secondary));
+    flex-shrink: 0;
+  }
+
+  .marketing .calendar-band__card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgb(var(--surface));
+    margin-bottom: 0.5rem;
+  }
+
+  .marketing .calendar-band__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: rgba(var(--surface), 0.9);
+  }
+
+  .marketing .calendar-band__list li + li {
+    margin-top: 0.25rem;
+  }
+
+  .marketing .calendar-band__cta {
+    margin-top: 1.75rem;
+    align-items: center;
+  }
+
+  .marketing .btn--ghost-on-dark {
+    border: 1px solid rgba(var(--surface), 0.75);
+    color: rgb(var(--surface));
+    background: transparent;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .marketing .btn--ghost-on-dark:hover {
+    background: rgba(var(--surface), 0.24);
+    border-color: rgba(var(--surface), 1);
+  }
+
+  @media (max-width: 768px) {
+    .marketing .calendar-band__card {
+      grid-template-columns: 1fr;
+    }
+
+    .marketing .calendar-band__cta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+  }
+}

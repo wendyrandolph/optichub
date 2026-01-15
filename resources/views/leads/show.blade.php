@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <div class="text-sm text-text-subtle">Phone</div>
-                    <div class="text-text-base">{{ $lead->phone ?: '—' }}</div>
+                    <div class="text-text-base">{{ $lead->phone_formatted ?? '—' }}</div>
                 </div>
                 <div>
                     <div class="text-sm text-text-subtle">Status</div>

@@ -5,6 +5,7 @@
 @section('content')
     @php
         use App\Models\Tenant;
+        use App\Models\TeamMember;
 
         // Resolve tenant from route or fallback to user
         $rt = request()->route('tenant') ?? ($tenant ?? auth()->user()->tenant_id);
@@ -14,241 +15,491 @@
         $q = request('q', '');
         $st = request('status', '');
 
-        // Status → pill classes
-        $statusClass = function ($status) {
+        $statusPill = function ($status) {
             $s = strtolower((string) $status);
             return match (true) {
-                str_contains($s, 'new')
-                    => 'bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800',
-                str_contains($s, 'contact')
-                    => 'bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800',
-                str_contains($s, 'interested'),
-                str_contains($s, 'qualified')
-                    => 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800',
-                str_contains($s, 'client'),
-                str_contains($s, 'won')
-                    => 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800',
-                str_contains($s, 'closed'),
-                str_contains($s, 'lost')
-                    => 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700',
-                default
-                    => 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700',
+                str_contains($s, 'new') => 'oh-pill oh-pill--info',
+                str_contains($s, 'contact') => 'oh-pill oh-pill--warning',
+                str_contains($s, 'interested'), str_contains($s, 'qualified') => 'oh-pill oh-pill--success',
+                str_contains($s, 'client'), str_contains($s, 'won') => 'oh-pill oh-pill--success',
+                str_contains($s, 'lost') => 'oh-pill oh-pill--danger',
+                str_contains($s, 'closed') => 'oh-pill',
+                default => 'oh-pill',
             };
         };
 
-        // For selects
+        $sourcePill = function ($src) {
+            $s = strtolower((string) $src);
+            return match ($s) {
+                'referral' => 'oh-pill oh-pill--success',
+                'ads' => 'oh-pill oh-pill--warning',
+                'email' => 'oh-pill oh-pill--info',
+                default => 'oh-pill',
+            };
+        };
+
+        $lifecycleLabel = function ($lead) {
+            $created = data_get($lead, 'created_at') ? \Illuminate\Support\Carbon::parse($lead->created_at) : null;
+            $becameClient = data_get($lead, 'became_client_at')
+                ? \Illuminate\Support\Carbon::parse($lead->became_client_at)
+                : null;
+            $lostAt = data_get($lead, 'lost_at') ? \Illuminate\Support\Carbon::parse($lead->lost_at) : null;
+            $closedAt = data_get($lead, 'closed_at') ? \Illuminate\Support\Carbon::parse($lead->closed_at) : null;
+            $status = strtolower((string) data_get($lead, 'status', 'new'));
+
+            $age = $created ? $created->diffForHumans(null, true) : null;
+            $delta = fn($from, $to) => $from && $to ? $from->diffForHumans($to, true) : null;
+
+            if (in_array($status, ['client']) && $becameClient) {
+                return ['label' => 'Client', 'detail' => 'In ' . ($delta($created, $becameClient) ?? '—')];
+            }
+
+            if (in_array($status, ['lost']) && $lostAt) {
+                return ['label' => 'Lost', 'detail' => 'After ' . ($delta($created, $lostAt) ?? '—')];
+            }
+
+            if (in_array($status, ['closed']) && $closedAt) {
+                return ['label' => 'Closed', 'detail' => 'At ' . $closedAt->format('M j, Y')];
+            }
+
+            return ['label' => 'Open', 'detail' => $age ? $age . ' open' : '—'];
+        };
+
+        $initials = function ($text) {
+            $parts = preg_split('/\s+/', trim((string) $text));
+            $a = strtoupper(mb_substr($parts[0] ?? '', 0, 1));
+            $b = strtoupper(mb_substr($parts[1] ?? '', 0, 1));
+            return trim($a . $b) ?: 'L';
+        };
+
         $statusOptions = ['new', 'contacted', 'interested', 'client', 'closed', 'lost'];
+
+        $fallbackPalette = ['#1F3C66', '#5FB4A8', '#EA7D51', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#0EA5E9'];
+
+        $ownerColorMap = TeamMember::where('tenant_id', $tenantId)
+            ->whereNotNull('color_hex')
+            ->get(['user_id', 'color_hex', 'firstName', 'lastName'])
+            ->filter(fn($m) => !empty($m->user_id))
+            ->mapWithKeys(function ($m) {
+                return [
+                    (int) $m->user_id => [
+                        'color' => $m->color_hex,
+                        'name' => trim(($m->firstName ?? '') . ' ' . ($m->lastName ?? '')),
+                    ],
+                ];
+            })
+            ->toArray();
+
+        $ownerColorFor = function ($lead) use ($ownerColorMap, $fallbackPalette) {
+            $ownerId = (int) data_get($lead, 'owner_id', 0);
+            if ($ownerId && isset($ownerColorMap[$ownerId]['color'])) {
+                return $ownerColorMap[$ownerId]['color'];
+            }
+            if ($ownerId) {
+                $idx = abs(crc32((string) $ownerId)) % count($fallbackPalette);
+                return $fallbackPalette[$idx];
+            }
+            return '#94A3B8';
+        };
+
+        $sourceColorMap = [
+            'web' => '#6366F1',
+            'referral' => '#22C55E',
+            'ads' => '#F59E0B',
+            'email' => '#3B82F6',
+            'event' => '#F97316',
+            'other' => '#94A3B8',
+        ];
+        $sourceLabelMap = [
+            'web' => 'Web',
+            'referral' => 'Referral',
+            'ads' => 'Ads',
+            'email' => 'Email',
+            'event' => 'Event',
+            'other' => 'Other',
+        ];
     @endphp
 
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div class="oh-page space-y-6">
 
-        {{-- Header + Quick Action --}}
-        <header class="flex flex-wrap items-center justify-between gap-3">
+        {{-- Header + Quick Action (Renlo pattern) --}}
+        <header class="flex flex-wrap items-start justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-semibold text-text-base">Leads</h1>
+                <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-subtle">Leads</div>
+                <h1 class="text-2xl font-semibold text-text-base mt-1">Leads Overview</h1>
                 <p class="text-sm text-text-subtle mt-1">Track prospects and keep follow-ups moving.</p>
             </div>
 
-            <a href="{{ route('tenant.leads.create', ['tenant' => $tenantId]) }}"
-                class="inline-flex items-center justify-center h-10 px-4 rounded-lg text-sm font-medium text-white
-              bg-gradient-to-b from-brand-primary to-blue-700 hover:brightness-110 transition">
-                <i class="fa-solid fa-plus mr-2"></i> New Lead
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('tenant.leads.create', ['tenant' => $tenantId]) }}"
+                    class="oh-btn oh-btn--primary inline-flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    New Lead
+                </a>
+                <button id="toggleKey" type="button" aria-controls="colorKey" aria-expanded="true" class="oh-btn">
+                    Toggle Color Key
+                </button>
+            </div>
         </header>
 
         {{-- Toolbar (search + status) --}}
-        <div class="rounded-xl bg-surface-card/70 border border-border-default/60 mb-8">
+        <section class="oh-card space-y-3">
             <form method="GET" action="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}"
-                class="p-4 md:p-5 flex flex-col md:flex-row md:flex-wrap gap-3 md:items-center">
-                <div class="flex-1 md:flex-none md:w-[320px]">
+                class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+                <div class="flex-1 md:max-w-[360px]">
                     <input name="q" value="{{ $q }}" placeholder="Search name, email, notes…"
-                        class="w-full h-10 rounded-lg bg-white/70 dark:bg-gray-900/40 text-text-base px-3 text-sm
-                    border border-border-default focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                        class="oh-input w-full h-10">
                 </div>
 
-                <select name="status"
-                    class="h-10 rounded-lg bg-white/70 dark:bg-gray-900/40 text-text-base px-3 text-sm
-                   border border-border-default focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-                    <option value="" @selected($st === '')>All statuses</option>
-                    <option value="new" @selected($st === 'new')>New</option>
-                    <option value="contacted" @selected($st === 'contacted')>Contacted</option>
-                    <option value="interested" @selected($st === 'interested')>Interested</option>
-                    <option value="client" @selected($st === 'client')>Client</option>
-                    <option value="closed" @selected($st === 'closed')>Closed</option>
-                    <option value="lost" @selected($st === 'lost')>Lost</option>
-                </select>
-
-                <div class="flex gap-2">
-                    <button type="submit"
-                        class="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-                        Apply
+                <div class="flex items-center gap-2">
+                    <button type="button" class="oh-btn text-text-subtle cursor-not-allowed opacity-70" disabled
+                        title="Coming soon: Source, Owner, Date range">
+                        <i class="fa-solid fa-sliders text-xs"></i>
+                        More filters
                     </button>
+                    <button type="submit" class="oh-btn oh-btn--primary">Apply</button>
+
                     @if ($q !== '' || $st !== '')
-                        <a href="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}"
-                            class="h-10 px-4 rounded-lg bg-white/70 dark:bg-gray-900/40 text-text-base text-sm border border-border-default">
+                        <a href="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}" class="oh-btn">
                             Reset
                         </a>
                     @endif
                 </div>
             </form>
-        </div>
 
-        @php
-            // status & source chips
-            $statusPill = function ($status) {
-                $s = strtolower((string) $status);
-                return match (true) {
-                    str_contains($s, 'new')
-                        => 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800',
-                    str_contains($s, 'contact')
-                        => 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800',
-                    str_contains($s, 'interested')
-                        => 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800',
-                    str_contains($s, 'client')
-                        => 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800',
-                    str_contains($s, 'closed')
-                        => 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:border-slate-700',
-                    str_contains($s, 'lost')
-                        => 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-800',
-                    default
-                        => 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:border-slate-700',
-                };
-            };
-            $sourceChip = function ($src) {
-                $s = strtolower((string) $src);
-                return match ($s) {
-                    'web'
-                        => 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800',
-                    'referral'
-                        => 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800',
-                    'ads'
-                        => 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800',
-                    'email'
-                        => 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800',
-                    'event'
-                        => 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-200 dark:border-fuchsia-800',
-                    default
-                        => 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-200 dark:border-slate-700',
-                };
-            };
-            $initials = function ($text) {
-                $parts = preg_split('/\s+/', trim((string) $text));
-                $first = strtoupper(mb_substr($parts[0] ?? '', 0, 1));
-                $second = strtoupper(mb_substr($parts[1] ?? '', 0, 1));
-                return $first . $second;
-            };
-        @endphp
-
-        {{-- Cards Grid --}}
-        <section class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            @forelse ($leads as $lead)
+            {{-- Status chips --}}
+            <div class="flex flex-wrap gap-2">
                 @php
-                    $name =
-                        data_get($lead, 'name') ?:
-                        trim(data_get($lead, 'first_name') . ' ' . data_get($lead, 'last_name'));
-                    $email = data_get($lead, 'email', '—');
-                    $phone = data_get($lead, 'phone', '—');
-                    $status = data_get($lead, 'status', 'New');
-                    $source = data_get($lead, 'source', 'other');
-                    $owner = data_get($lead, 'owner.name') ?? (data_get($lead, 'owner_name') ?? 'Unassigned');
-                    $id = data_get($lead, 'id');
-                    $created = data_get($lead, 'created_at');
-                    $createdFmt = $created ? \Carbon\Carbon::parse($created)->format('M j, Y') : '—';
+                    $seg = [
+                        '' => 'All',
+                        'new' => 'New',
+                        'contacted' => 'Contacted',
+                        'interested' => 'Interested',
+                        'client' => 'Client',
+                        'closed' => 'Closed',
+                        'lost' => 'Lost',
+                    ];
                 @endphp
 
-                <article
-                    class="group rounded-2xl bg-white/80 dark:bg-gray-900/50 border border-slate-200/70 dark:border-slate-800/70
-         hover:border-slate-300 hover:shadow-lg hover:shadow-slate-900/5 transition-all duration-200"
-                    @if ($createdFmt) title="Added {{ $createdFmt }}" @endif>
-                    <div class="p-4">
-                        {{-- Top row: avatar + name/email + status --}}
+                @foreach ($seg as $val => $label)
+                    @php $isActive = $st === $val; @endphp
+                    <a href="{{ request()->fullUrlWithQuery(['status' => $val ?: null, 'page' => null]) }}"
+                        class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold border border-border-default
+                  {{ $isActive ? 'bg-[rgb(var(--brand-primary)/.14)] text-text-base ring-1 ring-[rgb(var(--brand-primary)/.25)]' : 'bg-surface-card text-text-subtle hover:text-text-base' }}"
+                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
+                        @if ($isActive) aria-current="page" @endif>
+                        <span>{{ $label }}</span>
+                        @if ($isActive)
+                            <i class="fa-solid fa-check text-[10px] opacity-70"></i>
+                        @endif
+                    </a>
+                @endforeach
+            </div>
+        </section>
+
+        @php
+            $leadsCollection = method_exists($leads, 'getCollection') ? $leads->getCollection() : collect($leads);
+            $ownerKeyItems = $leadsCollection
+                ->filter(fn($lead) => !empty(data_get($lead, 'owner_id')))
+                ->map(function ($lead) use ($ownerColorFor) {
+                    $owner = data_get($lead, 'owner');
+                    $ownerName =
+                        trim(($owner->first_name ?? '') . ' ' . ($owner->last_name ?? '')) ?:
+                        ($owner->username ?? $owner->email ?? 'Owner');
+
+                    return [
+                        'id' => (int) data_get($lead, 'owner_id'),
+                        'name' => $ownerName,
+                        'color' => $ownerColorFor($lead),
+                    ];
+                })
+                ->unique('id')
+                ->values();
+        @endphp
+
+        <section id="colorKey" class="oh-card bg-white py-3">
+            <div class="flex flex-col gap-3 text-sm">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="font-semibold text-text-base">Owner Color Key</span>
+                    @if ($ownerKeyItems->count())
+                        <ul class="flex flex-wrap gap-4">
+                            @foreach ($ownerKeyItems as $item)
+                                <li class="flex items-center gap-2 text-text-subtle">
+                                    <span class="inline-block w-3.5 h-3.5 rounded-sm border border-[rgb(var(--border-default))]"
+                                        style="background: {{ $item['color'] }};"></span>
+                                    <span>{{ $item['name'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <span class="text-text-subtle">No owners assigned yet.</span>
+                    @endif
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="font-semibold text-text-base">Source Color Key</span>
+                    <ul class="flex flex-wrap gap-4">
+                        @foreach ($sourceColorMap as $key => $color)
+                            <li class="flex items-center gap-2 text-text-subtle">
+                                <span class="inline-block w-3.5 h-3.5 rounded-sm border border-[rgb(var(--border-default))]"
+                                    style="background: {{ $color }};"></span>
+                                <span>{{ $sourceLabelMap[$key] ?? ucfirst($key) }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+
+        @php
+            $from = method_exists($leads, 'firstItem') ? $leads->firstItem() : 0;
+            $to = method_exists($leads, 'lastItem') ? $leads->lastItem() : $leads->count();
+            $total = method_exists($leads, 'total') ? $leads->total() : $leads->count();
+        @endphp
+
+        <div class="oh-card p-4 md:p-5 space-y-4">
+            {{-- Mobile (compact cards) --}}
+            <div class="md:hidden grid gap-3 sm:grid-cols-2">
+                @forelse ($leads as $lead)
+                    @php
+                        $id = data_get($lead, 'id');
+                        $name =
+                            data_get($lead, 'name') ?:
+                            trim((data_get($lead, 'first_name') ?? '') . ' ' . (data_get($lead, 'last_name') ?? ''));
+                        $email = data_get($lead, 'email') ?: '—';
+                        $status = data_get($lead, 'status', 'new');
+                        $source = data_get($lead, 'source', '—');
+                        $owner = data_get($lead, 'owner');
+                        $ownerName =
+                            trim(($owner->first_name ?? '') . ' ' . ($owner->last_name ?? '')) ?:
+                            ($owner->username ?? $owner->email ?? 'Unassigned');
+                        $ownerColor = $ownerColorFor($lead);
+                        $sourceKey = strtolower((string) $source);
+                        $sourceColor = $sourceColorMap[$sourceKey] ?? '#94A3B8';
+                        $sourceLabel = $sourceLabelMap[$sourceKey] ?? ucfirst($sourceKey);
+                        $updated = optional($lead->updated_at)->diffForHumans() ?? '—';
+                        $showUrl = route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]);
+                        $editUrl = route('tenant.leads.edit', ['tenant' => $tenantId, 'lead' => $id]);
+                    @endphp
+
+                    <article class="oh-card p-4">
                         <div class="flex items-start gap-3">
-                            <div
-                                class="h-9 w-9 rounded-full bg-blue-600/10 text-blue-700 dark:text-blue-300 grid place-items-center text-xs font-bold">
+                            <div class="h-10 w-10 rounded-xl grid place-items-center text-xs font-bold"
+                                style="background: rgba(var(--brand-primary)/.14); color: rgb(var(--brand-primary)); border: 1px solid rgba(var(--brand-primary)/.28);">
                                 {{ $initials($name ?: $email) }}
                             </div>
 
                             <div class="min-w-0 flex-1">
-                                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                <a href="{{ $showUrl }}" class="font-semibold text-text-base truncate block">
                                     {{ $name ?: $email }}
-                                </h3>
-                                <p class="text-xs text-gray-500 truncate">{{ $email }}</p>
-                            </div>
+                                </a>
+                                <div class="text-xs text-text-subtle truncate">{{ $email }}</div>
 
-                            <span
-                                class="px-2 py-0.5 rounded-md text-[11px] font-medium shrink-0 {{ $statusPill($status) }}">
-                                {{ ucfirst($status) }}
-                            </span>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span class="{{ $statusPill($status) }}">{{ ucfirst((string) $status) }}</span>
+                                    <span class="inline-flex items-center gap-1 text-xs text-text-subtle">
+                                        <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $sourceColor }};"></span>
+                                        {{ $sourceLabel }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 text-xs text-text-subtle">
+                                        <span class="h-2.5 w-2.5 rounded-full" style="background: {{ $ownerColor }};"></span>
+                                        {{ $ownerName }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-2 text-xs text-text-subtle">
+                                    Updated {{ $updated }}
+                                </div>
+                            </div>
                         </div>
 
-                        {{-- Chips: source + owner + phone (as a chip instead of footer) --}}
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <span class="px-2 py-0.5 rounded-md text-[11px] {{ $sourceChip($source) }}">
-                                {{ ucfirst($source) }}
-                            </span>
-                            <span
-                                class="px-2 py-0.5 rounded-md text-[11px] bg-slate-50 text-slate-500 border border-slate-200 dark:bg-slate-800/40 dark:text-slate-300">
-                                <i class="fa-regular fa-clock mr-1"></i>{{ $createdFmt }}
-                            </span>
+                        <div class="mt-3 pt-3 border-t border-border-default/60 flex items-center justify-end gap-3">
+                            <a href="{{ $showUrl }}"
+                                class="text-sm font-semibold text-brand-primary hover:text-brand-secondary">View</a>
+                            <a href="{{ $editUrl }}"
+                                class="text-sm font-semibold text-text-subtle hover:text-text-base">Edit</a>
 
-                            <span
-                                class="px-2 py-0.5 rounded-md text-[11px] bg-slate-50 text-slate-600 border border-slate-200
-                   dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700">
-                                <i class="fa-regular fa-user mr-1"></i>{{ $owner }}
-                            </span>
+                            <form method="POST"
+                                action="{{ route('tenant.leads.destroy', ['tenant' => $tenantId, 'lead' => $id]) }}"
+                                onsubmit="return confirm('Delete this lead?');">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                    class="text-sm font-semibold text-rose-500 hover:text-rose-600">Delete</button>
+                            </form>
+                        </div>
+                    </article>
+                @empty
+                    <div class="oh-card p-6 text-center text-text-subtle">
+                        No leads found. Try adjusting your filters.
+                    </div>
+                @endforelse
+            </div>
 
-                            @if ($phone && $phone !== '—')
-                                <a href="tel:{{ preg_replace('/\D+/', '', $phone) }}"
-                                    class="px-2 py-0.5 rounded-md text-[11px] bg-slate-50 text-slate-600 border border-slate-200
-                  hover:bg-slate-100 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800/70">
-                                    <i class="fa-regular fa-phone mr-1"></i>{{ $phone }}
-                                </a>
+            {{-- Desktop (table) --}}
+            <div class="hidden md:block rounded-xl border border-border-default/70 overflow-hidden">
+                <div class="overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm">
+                        <thead style="background: rgba(var(--surface-muted)/.55);">
+                            <tr class="text-left text-text-subtle border-b border-border-default/60">
+                                <th class="px-5 py-2.5 font-medium">Lead</th>
+                                <th class="px-5 py-2.5 font-medium">Status</th>
+                                <th class="px-5 py-2.5 font-medium">Updated</th>
+                                <th class="px-5 py-2.5 font-medium">Cycle</th>
+                                <th class="px-5 py-2.5 font-medium text-right">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y" style="--tw-divide-color: rgb(var(--border) / .35);">
+                            @forelse($leads as $lead)
+                                @php
+                                    $id = data_get($lead, 'id');
+                                    $name =
+                                        data_get($lead, 'name') ?:
+                                        trim(
+                                            (data_get($lead, 'first_name') ?? '') .
+                                                ' ' .
+                                                (data_get($lead, 'last_name') ?? ''),
+                                        );
+                                    $email = data_get($lead, 'email') ?: '—';
+                                    $status = data_get($lead, 'status', 'new');
+                                    $source = data_get($lead, 'source', '—');
+                                    $owner = data_get($lead, 'owner');
+                                    $ownerName =
+                                        trim(($owner->first_name ?? '') . ' ' . ($owner->last_name ?? '')) ?:
+                                        ($owner->username ?? $owner->email ?? 'Unassigned');
+                                    $ownerColor = $ownerColorFor($lead);
+                                    $sourceKey = strtolower((string) $source);
+                                    $sourceColor = $sourceColorMap[$sourceKey] ?? '#94A3B8';
+                                    $sourceLabel = $sourceLabelMap[$sourceKey] ?? ucfirst($sourceKey);
+                                    $updated = optional($lead->updated_at)->diffForHumans() ?? '—';
+                                    $cycle = $lifecycleLabel($lead);
+
+                                    $showUrl = route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]);
+                                    $editUrl = route('tenant.leads.edit', ['tenant' => $tenantId, 'lead' => $id]);
+                                @endphp
+
+                                <tr class="group hover:bg-surface-accent/40 transition-colors">
+                                    {{-- Lead (row-click target lives here) --}}
+                                    <td class="px-5 py-2.5 relative">
+                                        {{-- Stretch-link for row click (keeps actions clickable because they are z-10) --}}
+                                        <a href="{{ $showUrl }}"
+                                            class="after:absolute after:inset-0 after:content-[''] after:z-0"
+                                            aria-label="Open lead {{ $name ?: $email }}"></a>
+
+                                        <div class="relative z-10 flex items-center gap-3 min-w-0">
+                                            <div class="h-9 w-9 rounded-full ring-1 ring-[rgb(var(--border)/.6)] grid place-items-center text-[11px] font-bold shrink-0"
+                                                style="background: rgba(var(--brand-primary)/.14); color: rgb(var(--brand-primary));">
+                                                {{ $initials($name ?: $email) }}
+                                            </div>
+
+                                            <div class="min-w-0">
+                                                <div class="font-semibold text-text-base truncate">
+                                                    {{ $name ?: $email }}
+                                                </div>
+                                                <div class="text-xs text-text-subtle truncate">{{ $email }}</div>
+                                                <div class="mt-1 flex flex-wrap gap-2 text-[11px] text-text-subtle">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <span class="h-2 w-2 rounded-full" style="background: {{ $ownerColor }};"></span>
+                                                        {{ $ownerName }}
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <span class="h-2 w-2 rounded-full" style="background: {{ $sourceColor }};"></span>
+                                                        {{ $sourceLabel }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-5 py-2.5">
+                                        <span class="{{ $statusPill($status) }}">{{ ucfirst((string) $status) }}</span>
+                                    </td>
+
+                                    <td class="px-5 py-2.5 text-text-subtle text-sm">
+                                        {{ $updated }}
+                                    </td>
+
+                                    <td class="px-5 py-2.5">
+                                        <div class="text-sm font-semibold text-text-base">{{ $cycle['label'] ?? '—' }}</div>
+                                        <div class="text-[11px] text-text-subtle">{{ $cycle['detail'] ?? '' }}</div>
+                                        @if (!empty($lead->lost_reason) && strtolower((string) $lead->status) === 'lost')
+                                            <div class="text-[11px] text-rose-600 mt-1 line-clamp-1">Reason: {{ $lead->lost_reason }}
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    <td class="px-5 py-2.5 text-right relative z-10">
+                                        <div class="inline-flex items-center gap-2">
+                                            <a href="{{ $showUrl }}" class="oh-icon-btn oh-tooltip"
+                                                aria-label="View lead" data-tooltip="View">
+                                                <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                            </a>
+
+                                            <a href="{{ $editUrl }}" class="oh-icon-btn oh-tooltip"
+                                                aria-label="Edit lead" data-tooltip="Edit">
+                                                <i class="fa-solid fa-pen text-[12px]"></i>
+                                            </a>
+
+                                            <form method="POST"
+                                                action="{{ route('tenant.leads.destroy', ['tenant' => $tenantId, 'lead' => $id]) }}"
+                                                class="inline" onsubmit="return confirm('Delete this lead?');">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="oh-icon-btn oh-tooltip text-rose-600"
+                                                    aria-label="Delete lead" data-tooltip="Delete">
+                                                    <i class="fa-solid fa-trash text-[12px]"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-6 py-10 text-center text-text-subtle">
+                                        No leads found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Pagination (if $leads is LengthAwarePaginator) --}}
+            @if (method_exists($leads, 'links'))
+                @php $pager = $leads->appends(request()->only(['q', 'status'])); @endphp
+                @if ($pager->hasPages())
+                    <div class="pt-2 border-t border-border-default/60 text-sm text-text-subtle space-y-3">
+                        <div>Showing {{ $from }} to {{ $to }} of {{ $total }} results</div>
+                        <div class="flex items-center justify-between">
+                            @if ($pager->onFirstPage())
+                                <span class="oh-btn opacity-50 pointer-events-none">Previous</span>
+                            @else
+                                <a href="{{ $pager->previousPageUrl() }}" class="oh-btn">Previous</a>
+                            @endif
+                            @if ($pager->hasMorePages())
+                                <a href="{{ $pager->nextPageUrl() }}" class="oh-btn">Next</a>
+                            @else
+                                <span class="oh-btn opacity-50 pointer-events-none">Next</span>
                             @endif
                         </div>
-
-                        {{-- Notes (clamped) --}}
-                        @if (!empty($lead['notes']))
-                            <p class="mt-3 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{{ $lead['notes'] }}</p>
-                        @endif
                     </div>
-
-                    {{-- Action bar only (no meta here) --}}
-                    <div
-                        class="px-4 py-2 border-t border-slate-200/70 dark:border-slate-800/70 flex items-center justify-end gap-2">
-                        <a href="{{ route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]) }}"
-                            class="px-2.5 py-1.5 rounded-md text-sm bg-surface-card/60 hover:bg-surface-card/90 text-text-base">
-                            View
-                        </a>
-                        <a href="{{ route('tenant.leads.edit', ['tenant' => $tenantId, 'lead' => $id]) }}"
-                            class="px-2.5 py-1.5 rounded-md text-sm bg-surface-card/60 hover:bg-surface-card/90 text-text-base">
-                            Edit
-                        </a>
-                        <form method="POST"
-                            action="{{ route('tenant.leads.destroy', ['tenant' => $tenantId, 'lead' => $id]) }}"
-                            onsubmit="return confirm('Delete this lead?');">
-                            @csrf @method('DELETE')
-                            <button type="submit"
-                                class="px-2.5 py-1.5 rounded-md text-sm bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-300">
-                                Delete
-                            </button>
-                        </form>
-                    </div>
-                </article>
-
-            @empty
-                <div
-                    class="col-span-full rounded-2xl bg-white/80 dark:bg-gray-900/50 border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center text-text-subtle">
-                    No leads found. Try adjusting your filters.
-                </div>
-            @endforelse
-        </section>
-
-        {{-- Pagination (if $leads is LengthAwarePaginator) --}}
-        @if (method_exists($leads, 'links'))
-            <div>
-                {{ $leads->appends(request()->only(['q', 'status']))->links() }}
-            </div>
-        @endif
+                @endif
+            @endif
+        </div>
     </div>
+
+    @push('scripts')
+        <script>
+            document.getElementById('toggleKey')?.addEventListener('click', () => {
+                const el = document.getElementById('colorKey');
+                if (!el) return;
+                const shown = el.style.display !== 'none';
+                el.style.display = shown ? 'none' : '';
+                document.getElementById('toggleKey')?.setAttribute('aria-expanded', String(!shown));
+            });
+        </script>
+    @endpush
 @endsection

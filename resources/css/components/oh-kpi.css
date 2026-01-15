@@ -1,0 +1,201 @@
+@layer components {
+  /* Page rhythm helpers */
+  .oh-page {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6;
+  }
+
+  /* Main section card (token-based + softer shadow) */
+  .oh-card {
+    @apply rounded-2xl ring-1;
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    --tw-ring-color: rgb(var(--border) / 0.55);
+
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6),
+      0 10px 30px rgba(15, 23, 42, 0.06);
+    @apply px-4 py-4 sm:px-5 sm:py-5 lg:px-6;
+  }
+  .oh-card.group:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6),
+      0 14px 34px rgba(15, 23, 42, 0.08);
+  }
+  .oh-card--interactive {
+    transition:
+      transform 160ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+    will-change: transform, box-shadow;
+  }
+
+  /* premium hover: tiny lift + slightly clearer shadow (not darker) */
+  .oh-card--interactive:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7),
+      0 14px 34px rgba(15, 23, 42, 0.08);
+    --tw-ring-color: rgb(var(--border) / 0.75);
+  }
+
+  .oh-card--interactive:active {
+    transform: translateY(0px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.65),
+      0 10px 26px rgba(15, 23, 42, 0.07);
+  }
+  /* Section title spacing (use padding rhythm, not huge margins) */
+  .oh-section-title {
+    @apply mt-8 mb-3 text-sm font-semibold tracking-wide text-text-subtle uppercase;
+  }
+
+  /* Auto-fit grid so 3-card and 4-card rows stay inline on wide screens */
+  .oh-grid-kpis {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .oh-kpi {
+    @apply relative block w-full rounded-xl transition py-4 sm:py-5 border border-[rgb(var(--ui-border))] border-l-4 px-4 sm:px-5;
+    background: var(--kpi-tint, rgb(var(--ui-surface-muted)));
+    border-left-color: var(--kpi-edge, rgb(var(--ui-border)));
+    --tw-ring-color: rgb(var(--ui-primary) / 0.6);
+    color: rgb(var(--ui-text));
+  }
+  .oh-kpi:hover {
+    background: color-mix(in srgb, var(--kpi-tint, rgb(var(--ui-surface-muted))) 94%, white);
+  }
+  /* shared internal layout */
+  .oh-kpi__top {
+    @apply flex items-center justify-between gap-3;
+  }
+  .oh-kpi__bottom {
+    @apply mt-2;
+  }
+
+  .oh-kpi__value {
+    @apply text-2xl font-bold tracking-tight;
+    color: rgb(var(--ui-text));
+    line-height: 1;
+  }
+  .oh-kpi__label {
+    @apply text-[11px] font-extrabold uppercase tracking-wider;
+    color: rgb(var(--ui-text-subtle));
+  }
+  .oh-kpi__sub {
+    @apply text-xs mt-1;
+    color: rgb(var(--ui-text-subtle));
+  }
+
+  .oh-kpi__iconWrap {
+    @apply h-9 w-9 rounded-xl grid place-items-center border;
+    border-color: rgb(var(--ui-border) / 0.55);
+    background: var(--kpi-edge-alpha, rgba(var(--ui-border), 0.1));
+  }
+  .oh-kpi__icon {
+    @apply text-[14px];
+    color: var(--kpi-edge, rgb(var(--ui-text)));
+  }
+
+  /* =========================
+     VARIANT A: “TILE” (Key Metrics)
+     punchier, flatter, more like your sample
+  ========================== */
+  .oh-kpi--tile {
+    @apply relative rounded-2xl border px-4 py-4;
+    border-color: rgb(var(--ui-border) / 0.65);
+    background: var(--kpi-tint, rgb(var(--ui-surface-muted)));
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  }
+  .oh-kpi--tile .oh-kpi__iconWrap {
+    background: var(--kpi-edge-alpha, rgba(var(--ui-border), 0.1));
+    border-color: color-mix(in srgb, var(--kpi-edge, rgb(var(--ui-border))) 25%, rgb(var(--ui-border)));
+  }
+
+  /* =========================
+     VARIANT B: “CARD” (Finance/Operations)
+     softer, premium, calmer
+  ========================== */
+  .oh-kpi--card {
+    @apply relative rounded-2xl border px-4 py-4;
+    border-color: rgb(var(--ui-border) / 0.45);
+    border-left-width: 4px;
+    border-left-style: solid;
+    border-left-color: var(--kpi-edge, rgb(var(--ui-border)));
+    background: var(--kpi-tint, rgb(var(--ui-surface-muted)));
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  }
+  .oh-kpi--card .oh-kpi__iconWrap {
+    background: var(--kpi-edge-alpha, rgba(var(--ui-border), 0.1));
+    border-color: rgb(var(--ui-border) / 0.35);
+  }
+
+  /* ===== HERO KPI VARIANT ===== */
+  .oh-hero-kpi {
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease;
+    will-change: transform;
+  }
+
+  .oh-hero-kpi:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 18px rgba(15, 23, 42, 0.06),
+      0 1px 2px rgba(15, 23, 42, 0.04);
+    border-color: rgb(var(--brand-primary) / 0.22);
+  }
+  .oh-kpi--hero .oh-kpi__top {
+    @apply flex items-center gap-3;
+  }
+
+  .oh-kpi--hero .oh-kpi__value {
+    @apply text-3xl font-semibold;
+  }
+
+  .oh-kpi__meta {
+    @apply mt-3 space-y-1;
+  }
+
+  .oh-kpi__label--hero {
+    @apply text-[11px] font-semibold uppercase tracking-wide;
+    color: rgb(var(--text-subtle));
+  }
+
+  .oh-kpi__subtitle {
+    @apply text-xs;
+    color: rgb(var(--text-subtle));
+  }
+
+  /* Insight KPI */
+
+  .oh-insights-grid {
+    @apply grid gap-4 md:gap-6;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  .oh-insight-tile {
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6),
+      0 10px 26px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Premium hover: subtle only */
+  .oh-insight-tile:hover {
+    background: rgb(var(--surface-muted));
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6),
+      0 14px 34px rgba(15, 23, 42, 0.08);
+  }
+
+  /* If you want *no* hover lift at all, use this instead:
+  .oh-insight-tile:hover { background: rgb(var(--surface)); box-shadow: ...same as base...; }
+  */
+}

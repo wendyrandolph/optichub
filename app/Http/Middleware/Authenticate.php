@@ -14,6 +14,14 @@ class Authenticate extends Middleware
   {
     // If the request expects JSON (e.g., an API request), return null (no redirect).
     // Otherwise, redirect to the named 'login' route.
-    return $request->expectsJson() ? null : route('login');
+    if ($request->expectsJson()) {
+      return null;
+    }
+
+    if ($request->is('portal') || $request->is('portal/*')) {
+      return route('portal.login');
+    }
+
+    return route('login');
   }
 }

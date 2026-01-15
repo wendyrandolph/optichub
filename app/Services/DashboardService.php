@@ -101,7 +101,7 @@ class DashboardService
     $labels = $rows->pluck('name')->values();
     $data   = $rows->pluck('completed_count')->values();
 
-    // Optic Hub palette (feel free to tweak)
+    // Renlo palette (feel free to tweak)
     $palette = ['#2E5D95', '#679CD5', '#62AC39', '#5E4587', '#A586CB', '#F59E0B', '#EF4444', '#10B981', '#3B82F6'];
     // Repeat colors if needed
     $colors  = collect(range(0, max(0, $data->count() - 1)))

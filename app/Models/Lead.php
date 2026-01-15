@@ -17,7 +17,7 @@ use DateTimeInterface;
 class Lead extends Model
 {
   // Use the Factory and the tenant scoping trait for automatic multi-tenancy filtering
-  use HasFactory, HasTenantScope;
+  use HasFactory, HasTenantScope, \App\Traits\FormatsPhone;
 
   protected $table = 'leads';
 
@@ -26,14 +26,36 @@ class Lead extends Model
   // and 'organization_id' is 'tenant_id' for consistency with the HasTenantScope trait.
   protected $fillable = [
     'tenant_id',
+    'company_id',
     'name',
     'first_name',
     'last_name',
     'email',
     'phone',
     'status',
+    'status_changed_at',
+    'first_contacted_at',
+    'scheduled_at',
+    'won_at',
+    'value_cents',
     'source',
+    'source_detail',
+    'description',
+    'preferred_time',
+    'service_address',
+    'captured_at',
+    'assigned_to_user_id',
+    'became_client_at',
+    'lost_at',
+    'lost_reason',
+    'closed_at',
+    'notes',
   ];
+
+  public function getPhoneFormattedAttribute(): ?string
+  {
+    return $this->formatPhone($this->attributes['phone'] ?? null);
+  }
 
   /**
    * Relationship to the owning Organization (Tenant).
@@ -47,6 +69,34 @@ class Lead extends Model
   {
     return $this->belongsTo(\App\Models\User::class, 'owner_id');
   }
+
+  public function assignedTo()
+  {
+    return $this->belongsTo(\App\Models\User::class, 'assigned_to_user_id');
+  }
+
+  public function events()
+  {
+    return $this->hasMany(\App\Models\TradeLeadEvent::class, 'lead_id');
+  }
+
+  public function company()
+  {
+    return $this->belongsTo(ClientCompany::class, 'company_id');
+  }
+
+  protected $casts = [
+    'captured_at' => 'datetime',
+    'status_changed_at' => 'datetime',
+    'first_contacted_at' => 'datetime',
+    'scheduled_at' => 'datetime',
+    'won_at' => 'datetime',
+    'became_client_at' => 'datetime',
+    'lost_at' => 'datetime',
+    'closed_at' => 'datetime',
+    'source_detail' => 'array',
+    'value_cents' => 'int',
+  ];
 
   // --- Core Analytical/Counting methods replacing old procedural logic ---
 
@@ -116,6 +166,9 @@ class Lead extends Model
   public function updateStatus(string $newStatus): bool
   {
     // Called on an existing model instance, e.g., Lead::find(1)->updateStatus('New')
+    if ($this->status !== $newStatus) {
+      $this->status_changed_at = now();
+    }
     return $this->update(['status' => $newStatus]);
   }
 }

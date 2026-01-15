@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasTenantScope;
+use App\Models\InvoicePayment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,13 +25,23 @@ class Invoice extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'client_id',
+        'contact_id',
         'project_id',
+        'trade_job_id',
         'invoice_number',
         'issue_date',
         'due_date',
         'status',
+        'sent_at',
+        'updated_after_sent',
         'notes',
+        'subtotal',
+        'tax_rate',
+        'tax_total',
+        'discount_type',
+        'discount_value',
+        'total',
+        'currency',
         'stripe_link',
         'tenant_id' // Will be automatically set by the HasTenantScope trait
     ];
@@ -39,18 +50,47 @@ class Invoice extends Model
      * The attributes that should be cast to native types.
      */
     protected $casts = [
-        'issue_date' => 'date',
-        'due_date' => 'date',
+        'issue_date'   => 'date',
+        'due_date'     => 'date',
+        'subtotal'     => 'decimal:2',
+        'tax_total'    => 'decimal:2',
+        'tax_rate'     => 'decimal:2',
+        'discount_value' => 'decimal:2',
+        'total'        => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'balance_due'  => 'decimal:2',
+        'tax_breakdown' => 'array',
+        'sent_at'      => 'datetime',
+        'updated_after_sent' => 'boolean',
     ];
 
+    protected static function booted()
+    {
+        static::saving(function (self $invoice) {
+            if ($invoice->sent_at && $invoice->isDirty()) {
+                $invoice->updated_after_sent = true;
+            }
+        });
+    }
+
+
     // --- Relationships ---
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
 
     /**
      * An invoice belongs to a Client.
      */
     public function client()
     {
-        return $this->belongsTo(Client::class);
+        // Your Client model is an alias to contacts table
+        return $this->belongsTo(\App\Models\Client::class, 'contact_id');
+    }
+    public function lineItems()
+    {
+        return $this->hasMany(InvoiceLineItem::class, 'invoice_id')->orderBy('position');
     }
 
     /**
@@ -61,12 +101,18 @@ class Invoice extends Model
         return $this->belongsTo(Project::class);
     }
 
+    public function tradeJob()
+    {
+        return $this->belongsTo(TradeJob::class, 'trade_job_id');
+    }
+
     /**
      * An invoice has many Invoice Items (for calculating total).
      */
     public function items()
     {
-        return $this->hasMany(InvoiceItem::class);
+        // Backwards-compat alias
+        return $this->lineItems();
     }
 
     /**
@@ -87,7 +133,7 @@ class Invoice extends Model
         // Select all invoice columns (i.*) and the concatenated client name.
         $query = static::select('invoices.*')
             ->selectRaw("CONCAT(clients.firstName, ' ', clients.lastName) AS client_name")
-            ->join('clients', 'invoices.client_id', '=', 'clients.id')
+            ->join('clients', 'invoices.contact_id', '=', 'clients.id')
             ->orderBy('invoices.issue_date', 'DESC');
 
         if ($limit !== null) {
@@ -101,6 +147,30 @@ class Invoice extends Model
         return $query->get();
     }
 
+    public function getAmountPaidAttribute()
+    {
+        return (float) $this->total_amount - (float) $this->balance_due;
+    }
+
+    public function getIsPaidAttribute()
+    {
+        return $this->balance_due <= 0 && $this->status === 'paid';
+    }
+
+    public function getStatusLabelAttribute()
+    {
+        // simple example, tweak as you like
+        return ucfirst($this->status);
+    }
+
+    public function getWasEditedAfterSendAttribute(): bool
+    {
+        if (!$this->sent_at) {
+            return false;
+        }
+
+        return (bool)$this->updated_after_sent || ($this->updated_at && $this->updated_at->gt($this->sent_at));
+    }
     /**
      * Retrieves a single invoice by ID, automatically tenant-scoped.
      * Replaces getById().
@@ -111,7 +181,7 @@ class Invoice extends Model
         return static::with('client')
             ->select('invoices.*')
             ->selectRaw("CONCAT(clients.firstName, ' ', clients.lastName) AS client_name")
-            ->join('clients', 'invoices.client_id', '=', 'clients.id')
+            ->join('clients', 'invoices.contact_id', '=', 'clients.id')
             ->find($id);
     }
 
@@ -134,7 +204,7 @@ class Invoice extends Model
      */
     public static function getByClientId(int $clientId): Collection
     {
-        return static::where('client_id', $clientId)
+        return static::where('contact_id', $clientId)
             ->with('client') // Eager load client name (if needed for display)
             ->orderBy('issue_date', 'DESC')
             ->get();
@@ -191,7 +261,19 @@ class Invoice extends Model
             'hasAmount' => $amountCol !== 'total_amount',
         ];
     }
+    public function getAmountResolvedAttribute()
+    {
+        if ($this->total_amount !== null) {
+            return $this->total_amount;
+        }
 
+        // fallback to calculated total if items exist
+        try {
+            return $this->getTotalAmount();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
 
     /**
      * Calculates payment sums between dates, replacing paymentsSumBetween().
@@ -264,6 +346,32 @@ class Invoice extends Model
             ->where('tenant_id', $tenantId)
             ->whereBetween('due_date', [$from, $to])
             ->sum('total_amount');
+    }
+
+
+
+    /**
+     * If subtotal is missing, fall back to total - tax_total.
+     */
+    public function getSubtotalResolvedAttribute(): float
+    {
+        if ($this->subtotal !== null) {
+            return (float) $this->subtotal;
+        }
+
+        return (float) $this->total_amount - (float) $this->tax_total;
+    }
+
+    /**
+     * Tax breakdown always returns an array (never null) for safe foreach.
+     */
+    public function getTaxBreakdownResolvedAttribute(): array
+    {
+        if (is_array($this->tax_breakdown)) {
+            return $this->tax_breakdown;
+        }
+
+        return [];
     }
 }
 

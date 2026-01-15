@@ -1,0 +1,110 @@
+@layer components {
+  .section--about-hero {
+    @apply bg-gradient-to-b from-[rgb(var(--surface-muted))] to-[rgb(var(--surface))];
+  }
+
+  .scripture {
+    @apply italic text-[rgb(var(--text))] border-l-4 pl-4 mt-4;
+    border-color: rgba(var(--brand-primary), 0.25);
+  }
+  .scripture > span {
+    @apply block text-sm text-[rgb(var(--text-subtle))] mt-1 not-italic;
+  }
+
+  .founder-note__inner {
+    @apply grid gap-8 md:grid-cols-2 items-center;
+  }
+  .founder-note__text {
+    @apply space-y-4;
+  }
+  .founder-note__image img {
+    @apply rounded-2xl shadow;
+  }
+
+  .clean {
+    @apply list-disc pl-5 text-[rgb(var(--text))] space-y-1;
+  }
+
+  .grid-2 {
+    @apply grid gap-8 md:grid-cols-2 items-start;
+  }
+
+  .form {
+    @apply max-w-3xl mx-auto;
+  }
+  .form--card {
+    @apply bg-[rgb(var(--surface))] shadow-md rounded-2xl p-6;
+  }
+  .field {
+    @apply space-y-1;
+  }
+  .field > label {
+    @apply block text-sm font-medium text-[rgb(var(--text))];
+  }
+  .field > input,
+  .field > select,
+  .field > textarea {
+    @apply w-full;
+  }
+
+  .badge {
+    @apply inline-block rounded-full bg-[rgb(var(--surface-muted))] text-[rgb(var(--text))] px-2.5 py-1 text-xs font-medium;
+  }
+  .link {
+    @apply text-[rgb(var(--brand-primary))] hover:text-[rgb(var(--brand-secondary))] underline underline-offset-4;
+  }
+  .link--tiny {
+    @apply text-sm;
+  }
+
+  .oh-hero {
+    @apply relative overflow-hidden py-20;
+  }
+  .oh-hero__inner {
+    @apply max-w-3xl mx-auto px-6 text-center;
+  }
+  .oh-hero--aperture {
+    @apply bg-gradient-to-b from-[rgb(var(--surface-muted))] to-[rgb(var(--surface))];
+  }
+
+  .marketing .grad-text {
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--brand-accent)),
+      rgb(var(--brand-secondary)),
+      rgb(var(--brand-primary)),
+      rgb(var(--brand-accent))
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: optic-gradient-sweep 14s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marketing .grad-text {
+      animation: none;
+      background-position: 0 0;
+    }
+  }
+
+  @keyframes optic-gradient-sweep {
+    0% {
+      background-position: 0% 0;
+    }
+    50% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: 0% 0;
+    }
+  }
+
+  .quote {
+    @apply text-lg text-[rgb(var(--text))] italic;
+  }
+  .quote__meta {
+    @apply block text-sm text-[rgb(var(--text-subtle))] mt-2;
+  }
+}

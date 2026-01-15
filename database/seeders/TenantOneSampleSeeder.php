@@ -4,14 +4,20 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Client;
+use App\Models\Contact;
 
 class TenantOneSampleSeeder extends Seeder
 {
   public function run(): void
   {
+
+    if (! Schema::hasTable('tenants')) {
+      return;
+    }
     // 1) Ensure Tenant #1 exists
     $tenant = Tenant::firstOrCreate(
       ['id' => 1],
@@ -62,13 +68,13 @@ class TenantOneSampleSeeder extends Seeder
     ]);
 
     // 3) Clients (Tenant 1)
-    $clients = Client::factory()->count(12)->create([
+    $clients = Contact::factory()->count(12)->create([
       'tenant_id' => $tenant->id,
     ]);
 
     // 4) One client-portal user for the first client
     if ($client = $clients->first()) {
-      User::firstOrCreate(
+      User::updateOrCreate(
         ['email' => 'client1@causey.test'],
         [
           'tenant_id'  => $tenant->id,
@@ -77,7 +83,7 @@ class TenantOneSampleSeeder extends Seeder
           'last_name'  => $client->lastName,
           'password'   => bcrypt('password123'),
           'role'       => 'client',
-          'client_id'  => $client->id,
+          'contact_id'  => $client->id,
           'is_beta'    => false,
           'must_change_password' => false,
         ]

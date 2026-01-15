@@ -1,357 +1,411 @@
 @extends('layouts.marketing')
-@section('title', 'Optic Hub - Home')
+@section('title', 'Renlo - Home')
 
 @section('content')
-<!-- HERO -->
-<section class="oh-hero oh-hero--aperture" id="home">
-  <div class="oh-hero__inner">
-    <h1><span class="grad-text">Clarity</span> for creatives who juggle clients.</h1>
-    <p class="sub">
-      Keep projects, timelines, and invoices in one calm place—so you can focus on the work you love.
-    </p>
+    @php
+        $isLoggedIn = auth('admin')->check() || auth()->check();
+        $productName = 'Renlo';
+    @endphp
 
-    <div class="btn-row">
-      <a class="btn btn--primary btn--glow" href="/trial/start">Start Free Trial</a>
-      <a class="btn btn--ghost" href="#demo">Book a Demo</a>
-    </div>
+    <!-- HERO -->
+    <section class="marketing-hero" id="home">
+        <div class="marketing-hero__frame">
+            {{-- LEFT: Copy + CTAs --}}
+            <div class="marketing-hero__copy">
+                <p class="marketing-hero__copy-eyebrow">
+                    Built for people who do the work
+                </p>
 
-    <p class="meta">14-day free trial. Month-to-month. Stripe-secured.</p>
-  </div>
-</section>
+                <h1>
+                    <span class="grad-text">Stop juggling</span> clients, projects, and files. {{ $productName }} keeps
+                    your work organized and moving forward.
+                </h1>
 
+                <p class="marketing-hero__sub">
+                    {{ $productName }} brings client work, tasks, and billing into one organized workspace—so you always
+                    know what’s next.
+                </p>
 
-<!-- WHY OPTIC HUB -->
-<section class="section" id="why">
-  <div class="container container--narrow copy">
-    <div class="eyebrow">Why Optic Hub</div>
-    <h2 class="h2">From chaos to client clarity—fast.</h2>
-    <ul>
-      <li><strong>All your work, organized.</strong> Clients, files, tasks and billing -- together at last. </li>
-      <li><strong>Built for creatives. </strong> Simple, intuitive flows that feel familiar (not enterprise bloat). </li>
-      <li><strong>Peace of mind. </strong> See what's due, what's next, and what's done -- without the mental load. </li>
-    </ul>
-  </div>
-</section>
+                <div class="marketing-hero__actions">
+                    @if ($isLoggedIn)
+                        <a href="{{ route('admin.dashboard') }}" class="oh-cta-primary">
+                            Go to your dashboard
+                        </a>
+                    @else
+                        <a href="{{ route('trial.show') }}" class="oh-cta-primary">
+                            Start your free 14-day trial
+                        </a>
+                    @endif
 
-<!-- CORE VALUE POINTS (SCANNABLE) -->
-<section class="section section--white section--scannable">
-  <div class="container container--narrow copy">
-    <h2 class="h2">Zero-setup templates for projects & retainers</h2>
-    <ul class="clean">
-      <li><span class="icon-check"></span> Calendar that actually mirrors your week</li>
-      <li><span class="icon-check"></span> One-click invoices & paid status tracking</li>
-      <li><span class="icon-check"></span> Notes & files right on the client record</li>
-      <li><span class="icon-check"></span> Clean client portal (fewer emails, faster approvals)</li>
-      <li><span class="icon-check"></span> Light, fast, and friendly on mobile</li>
-    </ul>
-  </div>
-</section>
+                    <a href="#demo" class="oh-cta-secondary">
+                        Book a demo
+                    </a>
+                </div>
 
-<!-- FEATURES GRID -->
-<section class="section section--brand" id="features">
-  <div class="container">
-    <h2 class="h2">Tools that bring clarity to your day.</h2>
-    <p class="copy"> Everything you need to manage clients, projects, and payments—without the complexity.</p>
-    <div class="cards">
-      <article id="clients" class="card feature">
-        <div class="feature__icon" aria-hidden="true"><i class="fa fa-solid fa-users"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Clients & Contacts</h3>
-          <p class="copy"> Keep every client detail, file, and note in one clean record.</p>
-          <p class="feature__tagline">
-            Know every client by name.
-          </p>
-          <a class="link link--tiny" href="/features#clients">Learn more →</a>
+                <p class="marketing-hero__meta">
+                    14-day free trial. No credit card required. Cancel anytime.
+                </p>
+            </div>
 
+            {{-- RIGHT: Preview card --}}
+            <aside class="marketing-hero__preview" aria-label="Snapshot of a day inside {{ $productName }}">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs font-semibold tracking-[0.16em] text-[rgb(var(--ui-text-subtle))] uppercase">
+                        Today
+                    </div>
+                    <span class="badge-pill badge-pill--progress">
+                        Client work
+                    </span>
+                </div>
+
+                {{-- Line items --}}
+                <div class="space-y-2.5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-[0.78rem] font-semibold text-[rgb(var(--ui-text))]">
+                                Website strategy session
+                            </p>
+                            <p class="text-[0.7rem] text-[rgb(var(--ui-text-subtle))]">
+                                Client: Maple Studio · 2:00pm
+                            </p>
+                        </div>
+                        <span class="badge-pill badge-pill--progress">
+                            In progress
+                        </span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-[0.78rem] font-semibold text-[rgb(var(--ui-text))]">
+                                Brand refresh concepts
+                            </p>
+                            <p class="text-[0.7rem] text-[rgb(var(--ui-text-subtle))]">
+                                Draft review due tomorrow
+                            </p>
+                        </div>
+                        <span class="badge-pill badge-pill--ontime">
+                            On track
+                        </span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-[0.78rem] font-semibold text-[rgb(var(--ui-text))]">
+                                Invoice INV-1003
+                            </p>
+                            <p class="text-[0.7rem] text-[rgb(var(--ui-text-subtle))]">
+                                Waiting on client payment
+                            </p>
+                        </div>
+                        <span class="badge-pill badge-pill--due">
+                            Due soon
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Footer stats --}}
+                <div class="marketing-hero__preview-footer">
+                    <div>
+                        <div class="marketing-hero__preview-label">Invoices paid</div>
+                        <div class="marketing-hero__preview-value">84%</div>
+                    </div>
+                    <div>
+                        <div class="marketing-hero__preview-label">Active projects</div>
+                        <div class="marketing-hero__preview-value">7</div>
+                    </div>
+                </div>
+            </aside>
         </div>
+    </section>
 
-      </article>
+    <!-- WHY -->
+    <section class="section section--why" id="why">
+        <div class="container why-layout">
+            {{-- Left: narrative --}}
+            <div class="why-main copy">
+                <p class="eyebrow">Why {{ $productName }}</p>
+                <h2 class="h2 mb-4">
+                    From chaos to client clarity—fast.
+                </h2>
 
-      <article id="projects" class="card feature">
-        <div class="feature__icon feature__icon--accent" aria-hidden="true"><i class="fa fa-solid fa-list-check"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Projects and Tasks</h3>
-          <p class="copy">
-            Plan, assign, and check off work without the clutter.
-          </p>
-          <p class="feature__tagline">
-            Focus on progress, not lists.
-          </p>
-          <a class="link link--tiny" href="/features#projects">Learn more →</a>
+                <p class="mb-3">
+                    {{ $productName }} gives service-based teams one calm place for clients, projects, and payments—without
+                    heavyweight “enterprise” bloat or a maze of disconnected tools.
+                </p>
+
+                <ul class="clean why-list">
+                    <li><strong>All your work, organized.</strong> Clients, files, tasks, and billing live in one place
+                        instead of five different tools.
+                    </li>
+                    <li><strong>Built for real client work.</strong> Flows that match how service businesses actually
+                        work—not generic CRM pipelines.</li>
+                    <li><strong>Nothing slips through.</strong> See what’s due, what’s blocked, and what’s done—without
+                        mental notes or spreadsheets.</li>
+                </ul>
+            </div>
+
+            {{-- Right: three “reasons” mini-cards --}}
+            <div class="why-grid">
+                <article class="why-tile">
+                    <div class="why-tile__icon">
+                        <span class="dot dot--blue"></span>
+                    </div>
+                    <div>
+                        <h3 class="why-tile__title">Calmer workdays</h3>
+                        <p class="why-tile__body">
+                            See calls, deadlines, and invoices in one view so your team isn’t living in email.
+                        </p>
+                    </div>
+                </article>
+
+                <article class="why-tile">
+                    <div class="why-tile__icon">
+                        <span class="dot dot--green"></span>
+                    </div>
+                    <div>
+                        <h3 class="why-tile__title">Clients feel taken care of</h3>
+                        <p class="why-tile__body">
+                            A clear portal and next steps mean fewer “just checking in” messages.
+                        </p>
+                    </div>
+                </article>
+
+                <article class="why-tile">
+                    <div class="why-tile__icon">
+                        <span class="dot dot--purple"></span>
+                    </div>
+                    <div>
+                        <h3 class="why-tile__title">You stay in control</h3>
+                        <p class="why-tile__body">
+                            Track work, cash flow, and follow-ups without spreadsheets; get nudges before things slip.
+                        </p>
+                    </div>
+                </article>
+            </div>
         </div>
-      </article>
+    </section>
 
-      <article id="calendar" class="card feature">
-        <div class="feature__icon" aria-hidden="true"><i class="fa fa-solid fa-calendar-days"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Calendar & Scheduling</h3>
-          <p class="copy">
-            Deadlines and meetings sync automatically to your week view.
-          </p>
-          <p class="feature__tagline">
-            See your week, not your stress.
-          </p>
-          <a class="link link--tiny" href="/features#calendar">Learn more →</a>
+    <!-- FEATURES (lighter rows with merged template highlights) -->
+    <section class="section section--white" id="features">
+        <div class="container container--narrow">
+            <div class="feature-head">
+                <h2 class="h2">Everything you need to run client work—without the clutter.</h2>
+                <p class="copy feature-sub">The essentials for client work, arranged in the order you actually need them.
+                </p>
+            </div>
+
+            <div class="space-y-6 divide-y divide-[rgb(var(--ui-border))]">
+                <div class="pt-1 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">When you need context, it’s already there.</h3>
+                        <p class="copy">Clients, files, and notes stay together so you don’t hunt across tools.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">You always know what’s next—and what’s blocked.</h3>
+                        <p class="copy">Stages and tasks stay clear, with owners and due dates front and center.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-calendar-week"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">Your schedule reflects real work—not wishful planning.</h3>
+                        <p class="copy">Deadlines, meetings, and stages mirror your week so plans stay realistic.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">Get paid without chasing clients.</h3>
+                        <p class="copy">Invoices and payment status sit next to the work, so you know where money stands.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-handshake"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">Clients stay informed without check-ins.</h3>
+                        <p class="copy">Approvals, uploads, and payments live in one portal so updates aren’t stuck in email.</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <div
+                        class="h-9 w-9 rounded-lg bg-[rgba(var(--ui-primary),0.08)] text-[rgb(var(--ui-primary))] grid place-items-center flex-shrink-0">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="h4">Do the setup once—reuse it every time.</h3>
+                        <p class="copy">Templates and automations keep recurring projects consistent without extra steps.</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="meta feature-foot">
+                {{ $productName }} keeps your client workflow organized—clients, projects, billing, and collaboration—in
+                one calm place.
+            </p>
         </div>
-      </article>
+    </section>
 
-      <article id="invoices" class="card feature">
-        <div class="feature__icon feature__icon--accent" aria-hidden="true"><i class="fa fa-solid fa-file-invoice-dollar"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Estimates & Invoices</h3>
-          <p class="copy">
-            Send quotes, track payments, and get paid faster with Stripe.
-          </p>
-          <p class="feature__tagline">
-            No chasing payments.
-          </p>
-          <a class="link link--tiny" href="/features#invoices">Learn more →</a>
+    {{-- USE CASES — simplified to three --}}
+    <section class="section section--white" id="use-cases">
+        <div class="container">
+            <header class="uc-head">
+                <p class="uc-eyebrow">Who it's for</p>
+                <h2 class="h2">Built for solo operators and small studios.</h2>
+                <p class="copy uc-lead">
+                    Designers, photographers, freelancers, and small studios use Renlo to manage client work, deadlines, and
+                    payments—without juggling tools or losing context.
+                </p>
+            </header>
+
+            <div class="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-3">
+                <article class="card usecase">
+                    <h3 class="h4 uc-title">Studios & Agencies</h3>
+                    <p class="copy uc-body">Plan projects, share portals, and keep approvals moving without chaos.</p>
+                    <ul class="uc-bullets">
+                        <li>Branded proposals & invoices</li>
+                        <li>Project stages with due dates</li>
+                    </ul>
+                </article>
+                <article class="card usecase">
+                    <h3 class="h4 uc-title">Freelancers</h3>
+                    <p class="copy uc-body">Track clients and cash flow in one place, no spreadsheets required.</p>
+                    <ul class="uc-bullets">
+                        <li>Tasks and next steps in one view</li>
+                        <li>Invoices & paid status at a glance</li>
+                    </ul>
+                </article>
+                <article class="card usecase">
+                    <h3 class="h4 uc-title">Trades & Services</h3>
+                    <p class="copy uc-body">Quote, schedule, and collect on time with a clean client experience.</p>
+                    <ul class="uc-bullets">
+                        <li>On-site notes and photos</li>
+                        <li>Simple invoices & receipts</li>
+                    </ul>
+                </article>
+            </div>
         </div>
-      </article>
+    </section>
 
-      <article id="portal" class="card feature">
-        <div class="feature__icon" aria-hidden="true"><i class="fa fa-solid fa-handshake"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Client Portal</h3>
-          <p class="copy">
-            Clients can review, approve, and upload—all in one place.
-          </p>
-          <p class="feature__tagline">
-            Fewer emails. Faster approvals.
-          </p>
-          <a class="link link--tiny" href="/features#portal">Learn more →</a>
+    {{-- HOW IT WORKS (lighter, 3 steps) --}}
+    <section class="section section--white" id="how-it-works">
+        <div class="container container--narrow">
+            <header class="how-head">
+                <h2 class="h2">From signup to your first project—fast.</h2>
+                <p class="copy how-lead">
+                    A guided setup gets you to your first organized client flow fast. Prefer a walkthrough? Book a call
+                    anytime.
+                </p>
+            </header>
+
+            <div class="grid gap-4 md:grid-cols-3">
+                <div class="card card--glass">
+                    <p class="how-step__label">Step 1</p>
+                    <h4 class="h4 how-step__title">Start your trial</h4>
+                    <p class="copy how-step__body">Create your workspace and import clients—or begin fresh with calm
+                        defaults.</p>
+                </div>
+                <div class="card card--glass">
+                    <p class="how-step__label">Step 2</p>
+                    <h4 class="h4 how-step__title">Pick a template</h4>
+                    <p class="copy how-step__body">Choose a simple pipeline for projects, retainers, or jobs with tasks
+                        pre-set.</p>
+                </div>
+                <div class="card card--glass">
+                    <p class="how-step__label">Step 3</p>
+                    <h4 class="h4 how-step__title">Work in flow</h4>
+                    <p class="copy how-step__body">Tasks, files, and billing stay together—clients see a clean portal from
+                        day one.</p>
+                </div>
+            </div>
         </div>
-      </article>
+    </section>
 
-      <article id="templates" class="card feature">
-        <div class="feature__icon feature__icon--accent" aria-hidden="true"><i class="fa fa-solid fa-wand-magic-sparkles"></i></div>
-        <div class="feature__body">
-          <h3 class="h4">Templates & Automations</h3>
-          <p class="copy">
-            Save recurring projects and let Optic Hub handle the routine.
-          </p>
-          <p class="feature__tagline">
-            Do the work once, repeat the wins. </p>
-          <a class="link link--tiny" href="/features#automations">Learn more →</a>
+    {{-- DEMO (ANCHOR ONLY; PLACE YOUR SCHEDULER/FORM HERE) --}}
+    <section class="section section--white" id="demo">
+        <div class="container container--narrow">
+            <div class="demo-card">
+                <div class="demo-copy">
+                    <p class="eyebrow">Optional walkthrough</p>
+                    <h2 class="h2">See how the work actually flows.</h2>
+                    <p class="lead copy">
+                        We’ll walk through a real workspace and show how client work moves from inquiry to payment—so you
+                        can decide if {{ $productName }} fits your workflow.
+                    </p>
+                    <div class="btn-row">
+                        <a class="btn btn--secondary" href="#demo">
+                            Book a live demo
+                        </a>
+                        <a class="btn btn--ghost" href="{{ route('trial.show') }}">
+                            Explore on your own
+                        </a>
+                    </div>
+                </div>
+
+                <div class="demo-meta">
+                    <div class="demo-tag">30–40 minutes</div>
+                    <p>We’ll cover projects, billing, and client portal. No hard pitch.</p>
+                </div>
+            </div>
+            {{-- your scheduler embed / form can live below this card if you want --}}
         </div>
-      </article>
+    </section>
 
-    </div>
+    <!-- PRICING -->
+    <section class="section section--brand" id="pricing">
+        <div class="container container--narrow">
+            <h2 class="h2 text-center mb-2">Simple pricing. No contracts.</h2>
+            <p class="copy text-center mb-8">
+                One clear plan for solo operators and small studios. No tiers, no surprises.
+            </p>
+            @include('partials.pricing-card')
 
-    <!-- Roadmap callouts (optional) -->
-    <div class="copy" style="margin-top:20px">
-      <p class="meta">
-        Optic Hub keeps your creative workflow organized—clients, projects, billing, and collaboration—all in one place.
-      </p>
-    </div>
-  </div>
-</section>
-
-
-<!-- USE CASES — CREATIVES FOCUS -->
-<section class="section" id="use-cases">
-  <div class="container section--brand">
-    <p class="eyebrow">Who it's for</p>
-    <h2 class="h2">Made for creatives who wear all the hats.</h2>
-    <p class="copy">Designers, photographers, videographers, and small studios use Optic Hub to keep
-      inquiries, projects, and payments in one calm place—so work keeps moving.</p>
-
-    <div class="usecases">
-      <article class="card usecase" data-uc="design-web-studio">
-        <a class="usecase__link" href="/features#projects" aria-label="Learn more: Projects & Tasks"></a>
-        <div class="usecase__badge"><i class="fa-solid fa-palette" aria-hidden="true"></i>Design & Web Studios</div>
-        <h3 class="h4"> Ship projects without the scramble </h3>
-        <p class="copy"> Capture project requests, plan next steps, and keep approvals moving.</p>
-        <ul class="clean">
-          <li>Branded proposals & invoices</li>
-          <li>Project stages with due dates</li>
-        </ul>
-      </article>
-
-      <article class="card usecase" data-uc="photographers">
-        <a class="usecase__link" href="/features#invoices" aria-label="Learn more: Estimates & Invoices"></a>
-        <span class="usecase__badge"><i class="fa-solid fa-camera" aria-hidden="true"></i> Photographers</span>
-        <h3 class="h4">From inquiry to paid gallery—clean.</h3>
-        <p class="copy">Book sessions, track edits, and send invoices without switching tools.</p>
-        <ul class="clean">
-          <li>Packages, deposits, confirmations</li>
-          <li>Portal updates (fewer emails)</li>
-        </ul>
-      </article>
-
-      <article class="card usecase" data-uc="creators-coaches">
-        <a class="usecase__link" href="/features#templates" aria-label="Learn more: Templates & Automations"></a>
-        <span class="usecase__badge"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i> Creators & Coaches</span>
-        <h3 class="h4">Packages that sell, workflows that repeat.</h3>
-        <p class="copy">Productize services and let templates do the busywork.</p>
-        <ul class="clean">
-          <li>Service packages & retainers</li>
-          <li>Recurring tasks & reminders</li>
-        </ul>
-      </article>
-
-      <!-- Trades & Services -->
-      <article class="card usecase" data-uc="trades-services">
-        <a class="usecase__link" href="/features#invoices" aria-label="Learn more: Estimates & Invoices"></a>
-        <span class="usecase__badge"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Trades & Services</span>
-        <h3 class="h4">Jobs, estimates, and scheduling—together.</h3>
-        <p class="copy">Track site visits, send quotes, and collect payments on time.</p>
-        <ul class="clean">
-          <li>On-site notes and photos</li>
-          <li>Simple invoices & receipts</li>
-        </ul>
-      </article>
-
-      <!-- Freelances & Solopreneurs -->
-      <article class="card usecase" data-uc="freelancers">
-        <a class="usecase__link" href="/features#portal" aria-label="Learn more: Client Portal"></a>
-        <span class="usecase__badge"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Freelancers & Solopreneurs</span>
-        <h3 class="h4">Stay on top of clients and cash flow—without the spreadsheet shuffle.</h3>
-        <p class="copy">Keep projects moving and payments predictable—without the spreadsheet shuffle.</p>
-        <ul class="clean">
-          <li>Invoices & paid status at a glance</li>
-          <li>Tasks and next steps in one view</li>
-        </ul>
-      </article>
-      <!-- Studio Lead / Team -->
-      <article class="card usecase" data-uc="studio-lead">
-        <a class="usecase__link" href="/features#overview" aria-label="Learn more"></a>
-        <span class="usecase__badge"><i class="fa-solid fa-people-group" aria-hidden="true"></i> Studio Lead</span>
-        <h3 class="h4">See workload at a glance. Ship on time.</h3>
-        <p class="copy">One view of people, projects, and payments—no spreadsheet chaos.</p>
-        <ul class="clean">
-          <li>Team assignments & capacity</li>
-          <li>Milestones & timelines</li>
-        </ul>
-      </article>
-    </div>
-
-
-    <div class="card">
-      <div class="eyebrow">Suggested pipeline</div>
-      <div class="copy" style="margin-top:10px;">
-        <span class="badge">Inquiry</span>
-        <span class="badge">Discovery</span>
-        <span class="badge">Proposal Sent</span>
-        <span class="badge">In Production</span>
-        <span class="badge">Delivered / Archived</span>
-      </div>
-
-      <div class="btn-row" style="margin-top:12px;">
-        <a class="btn btn--primary" href="/trial/start">Start Free Trial</a>
-        <a class="btn btn--ghost" href="#demo">Book a Demo</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-
-<!-- HOW IT WORKS -->
-<section class="section section--white" id="how-it-works">
-  <div class="container container--narrow">
-    <h2 class="h2">From signup to your first lead in under 10 minutes.</h2>
-    <p class="copy" style="margin-bottom:12px">
-      A guided setup walks you through the essentials so you’re ready to capture your first inquiry fast.
-      Prefer a personal touch? You can schedule a walkthrough call anytime.
-    </p>
-    <ol class="timeline">
-      <li class="timeline__step">
-        <div class="timeline__dot">1</div>
-        <div class="card card--glass timeline__card">
-          <h4 class="h4">Start Free Trial</h4>
-          <p class="copy">Import clients or begin fresh.</p>
+            <p class="meta text-center mt-6">
+                Team plans for multi-user workspaces coming soon. Limited early Lifetime Deal may be offered at launch.
+            </p>
         </div>
-      </li>
-      <li class="timeline__step">
-        <div class="timeline__dot">2</div>
-        <div class="card card--glass timeline__card">
-          <h4 class="h4">Pick a Template</h4>
-          <p class="copy">Project, retainer, or job—pre-built for you.</p>
+    </section>
+
+    {{-- FINAL CTA --}}
+    <section class="section cta cta--band" id="cta">
+        <div class="container container--narrow cta-inner">
+            <div class="cta-copy">
+                <h2 class="h2">Ready to trade chaos for clarity?</h2>
+                <p class="lead copy">
+                    Join designers, photographers, and studios who run calm, focused businesses with {{ $productName }}.
+                </p>
+            </div>
+            <div class="cta-actions">
+                <a class="btn btn--primary btn--lg" href="{{ route('trial.show') }}">
+                    Start your 14-day free trial
+                </a>
+                <a class="btn btn--ghost btn--lg" href="#demo">
+                    Book a demo instead
+                </a>
+            </div>
         </div>
-      </li>
-      <li class="timeline__step">
-        <div class="timeline__dot">3</div>
-        <div class="card card--glass timeline__card">
-          <h4 class="h4">Work in Flow</h4>
-          <p class="copy">Tasks, files, billing—all synced to your calendar.</p>
-        </div>
-      </li>
-      <li class="timeline__step">
-        <div class="timeline__dot">4</div>
-        <div class="card card--glass timeline__card">
-          <h4 class="h4">Share the Portal</h4>
-          <p class="copy">Keep clients updated without email threads.</p>
-        </div>
-      </li>
-    </ol>
-
-    <blockquote class="card card--glass quote copy" style="margin-top:14px">
-      “We went from missed calls and sticky notes to a clean pipeline with next steps for every lead. It paid for itself in the first week.”
-      <br><small>— Beta user, home services</small>
-    </blockquote>
-  </div>
-</section>
-
-<!-- DEMO (ANCHOR ONLY; PLACE YOUR SCHEDULER/FORM HERE) -->
-<section class="section section--white" id="demo">
-  <div class="container container--narrow copy">
-    <div class="eyebrow">Optional Walkthrough</div>
-    <h2 class="h2">See the calm, not just the features.</h2>
-    <p class="lead copy">A clean, intuitive dashboard that turns “Where is that?” into “Done.”</p>
-    <a class="btn btn--ghost" href="#demo">Book a Demo</a>
-    <!-- Embed your scheduler or contact form here -->
-  </div>
-</section>
-
-<!-- PRICING -->
-<section class="section section--brand" id="pricing">
-  <div class="container container--narrow">
-    <h2 class="h2">Simple pricing. No contracts.</h2>
-
-    <div class="pricing__wrap">
-      <div class="card card--pricing">
-        <div class="card__header">
-          <p class="amount">$49</p>
-          <span class="per">/month</span>
-        </div>
-
-        <ul class="clean bullets">
-          <li>Full access to every core feature</li>
-          <li>14-day free trial — no credit card required</li>
-          <li>Month-to-month billing — cancel anytime</li>
-          <li>Secure checkout powered by Stripe</li>
-        </ul>
-
-        <p class="copy" style="color: var(--optic-secondary-text); margin-top:8px;">
-          One simple plan. No tiers, no add-ons, no surprises.
-        </p>
-
-        <div class="btn-row" style="margin-top:16px;">
-          <a class="btn btn--primary btn--glow" href="/trial/start">Start Your 14-Day Free Trial</a>
-          <a class="btn btn--ghost" href="#demo">Book a Demo</a>
-        </div>
-      </div>
-    </div>
-
-
-    <div class="copy" style="margin-top:16px;">
-      <p class="meta">Team plans coming soon for multi-user workspaces. Limited early Lifetime Deal may be offered at launch.</p>
-    </div>
-  </div>
-</section>
-
-<!-- FINAL CTA -->
-<section class="section cta" id="cta">
-  <div class="container container--narrow">
-    <h2 class="h2">Ready to trade chaos for clarity?</h2>
-    <p class="lead copy">
-      Join designers, photographers, and studios who run calm, focused businesses with Optic Hub.
-    </p>
-    <div class="btn-row">
-      <a class="btn btn--primary" href="/trial/start">Start Free Trial</a>
-      <a class="btn btn--ghost" href="#demo">Book a Demo</a>
-    </div>
-  </div>
-</section>
+    </section>
 @endsection

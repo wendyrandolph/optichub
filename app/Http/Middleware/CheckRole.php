@@ -12,34 +12,28 @@ class CheckRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * Usage in routes:
+     *   ->middleware(['auth:admin', CheckRole::class . ':admin,super_admin,provider,guard=admin'])
      */
-    public function handle(Request $request, Closure $next, ...$roles): Response
+    // app/Http/Middleware/CheckRole.php
+    public function handle($request, \Closure $next, ...$params)
     {
-        // 1. Check if the user is authenticated
-        if (!Auth::check()) {
-            return redirect('/login'); // Should not happen for a logged-in user, but good check
+        $guard = null;
+        $roles = [];
+        foreach ($params as $p) {
+            if (is_string($p) && str_starts_with($p, 'guard=')) $guard = substr($p, 6);
+            else $roles[] = $p;
         }
 
-        // --- DEBUG LINE 1: See the User's role and the required roles ---
-        $user = Auth::user();
-        $userRole = $user->role; // Get the role attribute from the authenticated user
+        $user = $guard ? auth($guard)->user()
+            : (auth('admin')->user() ?? auth('client')->user() ?? auth()->user());
 
-        // Use error_log to ensure visibility if Laravel's logger isn't configured for screen output
-        error_log("DEBUG: User ID: " . $user->id);
-        error_log("DEBUG: User Role from Model: " . $userRole);
-        error_log("DEBUG: Required Roles: " . implode(', ', $roles));
-        // -----------------------------------------------------------------
+        if (! $user) {
+            return redirect()->route('login');
+        }
 
-        // 2. Check if the user's role is in the list of allowed roles
-        if (!in_array($userRole, $roles)) {
-
-            // --- DEBUG LINE 2: Log the block before throwing the error ---
-            error_log("DEBUG: BLOCKING ACCESS. Role '{$userRole}' is not in required list.");
-            // -------------------------------------------------------------
-
-            // The 403 error is thrown here
-            abort(403, 'Unauthorized action.');
+        if (! in_array($user->role, $roles, true)) {
+            abort(403); // or redirect()->route('marketing.home')
         }
 
         return $next($request);

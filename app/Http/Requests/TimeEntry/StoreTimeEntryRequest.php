@@ -22,18 +22,14 @@ class StoreTimeEntryRequest extends FormRequest
   public function rules(): array
   {
     return [
-      // Ensure necessary IDs exist in their respective tables
       'user_id' => ['required', 'exists:users,id'],
       'project_id' => ['required', 'exists:projects,id'],
-      'task_id' => ['required', 'exists:tasks,id'],
+      'task_id' => ['nullable', 'exists:tasks,id'],
+      'date' => ['nullable', 'date'],
+      'hours' => ['required', 'numeric', 'gt:0'],
+      'hourly_rate' => ['nullable', 'numeric', 'min:0'],
       'notes' => ['nullable', 'string', 'max:500'],
-
-      // Time fields must be present and follow a datetime format
-      'start_time' => ['required', 'date_format:Y-m-d H:i:s'],
-      'end_time' => ['required', 'date_format:Y-m-d H:i:s', 'after:start_time'],
-
-      // Optional: If you track billable status
-      'is_billable' => ['nullable', 'boolean'],
+      'billable' => ['nullable', 'boolean'],
     ];
   }
 }

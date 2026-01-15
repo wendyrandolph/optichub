@@ -4,192 +4,235 @@
 
 @section('content')
     @php
-        // Resolve tenant (model or scalar → id)
-        $tp = request()->route('tenant') ?? ($tenant ?? auth()->user()->tenant_id);
-        $tenantId = $tp instanceof \App\Models\Tenant ? $tp->getKey() : (int) $tp;
-
-        $stages = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contract Signed', 'Lost'];
+        $tenantId = $tenant->id ?? ($tenant ?? request()->route('tenant'));
+        $tenantId = $tenantId instanceof \App\Models\Tenant ? $tenantId->id : (int) $tenantId;
+        $stages = ['new', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
     @endphp
-
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
-        {{-- Page Header --}}
-        <header class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-semibold text-text-base">Add New Opportunity</h1>
-                <p class="text-sm text-text-subtle mt-1">Record a new potential deal or client engagement.</p>
+    <div class="oh-page max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="space-y-1">
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Pipeline</p>
+                <h1 class="text-2xl font-semibold text-text-base">New Opportunity</h1>
+                <p class="text-sm text-text-subtle">Create a pipeline record and set the next follow-up.</p>
             </div>
-            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}"
-                class="inline-flex items-center h-10 px-4 rounded-lg text-sm bg-surface-card/60 hover:bg-surface-card/90 text-text-base transition">
-                <i class="fa fa-arrow-left mr-2 text-xs"></i> Back to Opportunities
-            </a>
+            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">Cancel</a>
         </header>
 
-        {{-- Flash / Error Messages --}}
-        @if (session('success'))
-            <div class="p-3 rounded-lg bg-green-50 border border-green-200 text-green-800">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div
-                class="p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800">
-                <ul class="list-disc pl-5">
-                    @foreach ($errors->all() as $e)
-                        <li>{{ $e }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        {{-- Form Card --}}
-        <section class="rounded-xl bg-surface-card/70 border border-border-default/60 shadow-card p-6 space-y-5">
+        <section class="oh-card p-6 space-y-6">
+            @if ($errors->any())
+                <div class="rounded-xl bg-rose-50 text-rose-800 p-3 ring-1 ring-rose-200 text-sm">
+                    <div class="font-semibold mb-1">Please fix the following:</div>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             <form method="POST" action="{{ route('tenant.opportunities.store', ['tenant' => $tenantId]) }}"
-                class="space-y-5" id="oppForm">
+                class="space-y-6">
                 @csrf
 
-                {{-- Title --}}
-                <div>
-                    <label for="title" class="block text-sm font-medium text-text-subtle">
-                        Title <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="title" name="title" required value="{{ old('title') }}"
-                        class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                    border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                </div>
-
-                {{-- Organization --}}
-                <div>
-                    <label for="organization_id" class="block text-sm font-medium text-text-subtle">Organization</label>
-                    <select id="organization_id" name="organization_id"
-                        class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                     border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                        <option value="">— None —</option>
-                        @foreach ($organizations as $org)
-                            @php
-                                $orgId = $org->id ?? $org['id'];
-                                $orgName = $org->name ?? ($org['name'] ?? 'Unnamed Org');
-                            @endphp
-                            <option value="{{ $orgId }}" @selected(old('organization_id') == $orgId)>{{ $orgName }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Stage --}}
-                <div>
-                    <label for="stage" class="block text-sm font-medium text-text-subtle">Stage</label>
-                    <select id="stage" name="stage"
-                        class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                     border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                        @foreach ($stages as $s)
-                            <option value="{{ $s }}" @selected(old('stage') == $s)>{{ $s }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Money + Probability row --}}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {{-- Estimated Value --}}
+                {{-- Basics --}}
+                <div class="space-y-3">
                     <div>
-                        <label for="estimated_value" class="block text-sm font-medium text-text-subtle">Estimated
-                            Value</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle text-xs">$</span>
-                            <input type="number" step="0.01" min="0" id="estimated_value" name="estimated_value"
-                                value="{{ old('estimated_value') }}"
-                                class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base pl-6 pr-3 text-sm
-                        border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                        </div>
+                        <h2 class="text-sm font-semibold text-text-base">Basics</h2>
+                        <p class="text-xs text-text-subtle mt-1">Core details for tracking the opportunity.</p>
                     </div>
-
-                    {{-- Probability --}}
-                    <div>
-                        <label for="probability" class="block text-sm font-medium text-text-subtle">Probability (%)</label>
-                        <div class="relative">
-                            <input type="number" step="1" min="0" max="100" id="probability"
-                                name="probability" value="{{ old('probability', 50) }}"
-                                class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                        border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-text-subtle text-xs">%</span>
-                        </div>
-                        <p class="mt-1 text-xs text-text-subtle">How likely you are to win this deal.</p>
-                    </div>
-
-                    {{-- Expected Revenue (calculated) --}}
-                    <div>
-                        <label for="expected_revenue_display" class="block text-sm font-medium text-text-subtle">Expected
-                            Revenue</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle text-xs">$</span>
-                            <input type="text" id="expected_revenue_display" readonly
-                                value="{{ old('expected_revenue') ? number_format((float) old('expected_revenue'), 2) : '' }}"
-                                class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base pl-6 pr-3 text-sm
-                        border border-border-default focus:outline-none">
-                        </div>
-                        {{-- Real field posted to server --}}
-                        <input type="hidden" id="expected_revenue" name="expected_revenue"
-                            value="{{ old('expected_revenue') }}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Title</span>
+                            <input name="title" required value="{{ old('title') }}"
+                                class="oh-input h-10">
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Stage</span>
+                            <select name="stage" id="oppStage"
+                                class="oh-select h-10">
+                                @foreach ($stages as $s)
+                                    <option value="{{ $s }}" @selected(old('stage', 'new') === $s)>{{ ucfirst($s) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Estimated value</span>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle text-xs">$</span>
+                                <input type="number" step="0.01" min="0" name="estimated_value"
+                                    value="{{ old('estimated_value') }}"
+                                    class="oh-input h-10 pl-6 pr-3">
+                            </div>
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Expected close date</span>
+                            <input type="date" name="expected_close_date" value="{{ old('expected_close_date') }}"
+                                class="oh-input h-10">
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
                     </div>
                 </div>
 
-                {{-- Expected Close Date --}}
-                <div>
-                    <label for="close_date" class="block text-sm font-medium text-text-subtle">Expected Close Date</label>
-                    <input type="date" id="close_date" name="close_date" value="{{ old('close_date') }}"
-                        class="mt-1 w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                    border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                {{-- Link --}}
+                <div class="space-y-3">
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">People & Company</h2>
+                        <p class="text-xs text-text-subtle mt-1">Connect the opportunity to the right people and company.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Owner</span>
+                            <select name="owner_id"
+                                class="oh-select h-10">
+                                <option value="">Unassigned</option>
+                                @foreach ($owners ?? [] as $u)
+                                    @php
+                                        $ownerName =
+                                            trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?:
+                                            $u->username ?? 'User';
+                                    @endphp
+                                    <option value="{{ $u->id }}" @selected(old('owner_id') == $u->id)>{{ $ownerName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Lead</span>
+                            <select name="lead_id" id="oppLead"
+                                class="oh-select h-10">
+                                <option value="">None</option>
+                                @foreach ($leads ?? [] as $l)
+                                    @php
+                                        $leadCompanyId = $l->company_id ?? null;
+                                        $leadCompanyName = $l->company->company_name ?? '';
+                                    @endphp
+                                    <option value="{{ $l->id }}" data-company-id="{{ $leadCompanyId }}"
+                                        data-company-name="{{ $leadCompanyName }}" @selected(old('lead_id') == $l->id)>
+                                        {{ $l->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="text-[11px] text-text-subtle">Auto-fills company when the lead has one.</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Company (optional)</span>
+                            <select name="company_id" id="oppCompany"
+                                class="oh-select h-10">
+                                <option value="">None</option>
+                                @foreach ($companies ?? [] as $c)
+                                    <option value="{{ $c->id }}" @selected(old('company_id') == $c->id)>
+                                        {{ $c->company_name }}</option>
+                                @endforeach
+                            </select>
+                            <span class="text-[11px] text-text-subtle">Leave blank if not a client yet.</span>
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Follow-up --}}
+                <div class="space-y-3">
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Follow-up</h2>
+                        <p class="text-xs text-text-subtle mt-1">This drives reminders and pipeline.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Next step</span>
+                            <input name="next_step" value="{{ old('next_step') }}"
+                                class="oh-input h-10">
+                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Next follow-up</span>
+                            <input type="datetime-local" name="next_followup_at" id="oppFollowup"
+                                value="{{ old('next_followup_at') }}"
+                                class="oh-input h-10">
+                            <span class="text-[11px] text-text-subtle">Required unless stage is Won/Lost.</span>
+                        </label>
+                    </div>
                 </div>
 
                 {{-- Notes --}}
-                <div>
-                    <label for="notes" class="block text-sm font-medium text-text-subtle">Notes</label>
-                    <textarea id="notes" name="notes" rows="4"
-                        class="mt-1 w-full rounded-lg bg-surface-card text-text-base px-3 py-2 text-sm
-                       border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">{{ old('notes') }}</textarea>
+                <div class="space-y-2">
+                    <h2 class="text-sm font-semibold text-text-base">Notes</h2>
+                    <label class="grid gap-1 text-sm">
+                        <span class="text-text-subtle">Internal notes</span>
+                        <textarea name="notes" rows="4" class="oh-textarea">{{ old('notes') }}</textarea>
+                        <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                    </label>
                 </div>
 
-                {{-- Actions --}}
-                <div class="flex items-center justify-between pt-3">
+                {{-- Lost reason (conditional) --}}
+                <div id="lostReasonBlock" class="space-y-2 hidden">
+                    <h2 class="text-sm font-semibold text-text-base">Lost reason</h2>
+                    <textarea name="lost_reason" rows="2"
+                        class="w-full rounded-lg bg-surface-card text-text-base px-3 py-2 text-sm border border-border-default focus:ring-1 focus:ring-brand-primary">{{ old('lost_reason') }}</textarea>
+                </div>
+
+                {{-- After saving --}}
+                <details class="rounded-lg border border-border-default/70 bg-surface-card/60 p-4">
+                    <summary class="text-sm font-semibold text-text-base cursor-pointer">After saving…</summary>
+                    <div class="mt-3 space-y-2 text-sm text-text-base">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="create_followup_task" value="1"
+                                {{ old('create_followup_task') ? 'checked' : '' }}>
+                            <span>Create a follow-up task (placeholder)</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="add_activity_note" value="1"
+                                {{ old('add_activity_note') ? 'checked' : '' }}>
+                            <span>Log an activity note: “Opportunity created”</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-text-subtle">
+                            <input type="checkbox" disabled>
+                            <span>Send internal notification (coming soon)</span>
+                        </label>
+                    </div>
+                </details>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
                     <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}"
-                        class="inline-flex items-center h-10 px-4 rounded-lg text-sm
-                bg-surface-card/60 hover:bg-surface-card/90 text-text-base transition">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                        class="inline-flex items-center h-10 px-5 rounded-lg text-sm font-medium text-white
-                     bg-gradient-to-b from-brand-primary to-blue-700 hover:brightness-110 transition">
-                        Save Opportunity
-                    </button>
+                        class="oh-btn">Cancel</a>
+                    <button type="submit" class="oh-btn oh-btn--primary">Save</button>
                 </div>
             </form>
         </section>
-
-        {{-- Auto-calc expected revenue --}}
-        @push('scripts')
-            <script>
-                (function() {
-                    const valueEl = document.getElementById('estimated_value');
-                    const probEl = document.getElementById('probability');
-                    const expDisp = document.getElementById('expected_revenue_display');
-                    const expReal = document.getElementById('expected_revenue');
-
-                    function calc() {
-                        const v = parseFloat(valueEl?.value || '0');
-                        const p = Math.min(100, Math.max(0, parseFloat(probEl?.value || '0')));
-                        const est = (isFinite(v) ? v : 0) * (isFinite(p) ? p : 0) / 100;
-                        expDisp.value = est ? est.toFixed(2) : '';
-                        expReal.value = est ? est.toFixed(2) : '';
-                    }
-
-                    valueEl?.addEventListener('input', calc);
-                    probEl?.addEventListener('input', calc);
-                    calc(); // init on load
-                })();
-            </script>
-        @endpush
-
-        </section>
-
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const leadSelect = document.getElementById('oppLead');
+            const companySelect = document.getElementById('oppCompany');
+            const stageSelect = document.getElementById('oppStage');
+            const lostBlock = document.getElementById('lostReasonBlock');
+            const followup = document.getElementById('oppFollowup');
+
+            function syncCompany() {
+                const option = leadSelect?.options[leadSelect.selectedIndex];
+                const companyId = option?.dataset.companyId;
+                if (companyId) {
+                    companySelect.value = companyId;
+                }
+            }
+
+            function toggleLost() {
+                if (!stageSelect) return;
+                const isLost = stageSelect.value === 'lost';
+                lostBlock?.classList.toggle('hidden', !isLost);
+                if (followup) {
+                    followup.disabled = stageSelect.value === 'won';
+                }
+            }
+
+            leadSelect?.addEventListener('change', syncCompany);
+            stageSelect?.addEventListener('change', toggleLost);
+            toggleLost();
+        });
+    </script>
+@endpush

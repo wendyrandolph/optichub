@@ -21,13 +21,20 @@ class UpdateOpportunityRequest extends FormRequest
   public function rules(): array
   {
     return [
-      // Use 'sometimes' so fields are optional, but if present, they must be valid
-      'name' => ['sometimes', 'required', 'string', 'max:255'],
-      'organization_id' => ['sometimes', 'required', 'exists:organizations,id'],
-      'status' => ['sometimes', 'required', 'string', 'in:new,qualified,proposal,won,lost'],
-      'amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
-      'close_date' => ['sometimes', 'nullable', 'date'],
+      'title' => ['sometimes', 'required', 'string', 'max:255'],
+      'stage' => ['sometimes', 'required', 'string', 'in:new,qualified,proposal,negotiation,won,lost'],
+      'estimated_value' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+      'expected_close_date' => ['sometimes', 'nullable', 'date'],
+      'probability' => ['sometimes', 'nullable', 'integer', 'between:0,100'],
+      'owner_id' => ['sometimes', 'nullable', 'exists:users,id'],
+      'lead_id' => ['sometimes', 'required', 'exists:leads,id'],
+      'company_id' => ['sometimes', 'nullable', 'exists:client_companies,id'],
       'notes' => ['sometimes', 'nullable', 'string'],
+      'next_step' => ['sometimes', 'nullable', 'string'],
+      'next_followup_at' => ['sometimes', 'nullable', 'date', 'required_unless:stage,won,lost'],
+      'lost_reason' => ['sometimes', 'nullable', 'string', 'required_if:stage,lost'],
+      'create_followup_task' => ['sometimes', 'boolean'],
+      'add_activity_note' => ['sometimes', 'boolean'],
     ];
   }
 }

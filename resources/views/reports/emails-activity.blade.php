@@ -14,7 +14,7 @@
                     {{ $summary['inbound'] ?? 0 }}</p>
             </div>
             <form method="GET" class="flex gap-2"
-                action="{{ route('tenant.admin.reports.emails.activity', ['tenant' => $tenantParam]) }}">
+                action="{{ route('tenant.reports.emails.activity', ['tenant' => $tenantParam]) }}">
                 <select name="range" class="oh-select">
                     @foreach (['wtd' => 'WTD', 'mtd' => 'MTD', 'qtd' => 'QTD', 'ytd' => 'YTD', 'last30' => 'Last 30'] as $k => $v)
                         <option value="{{ $k }}" @selected(($filters['range'] ?? 'last30') === $k)>{{ $v }}</option>

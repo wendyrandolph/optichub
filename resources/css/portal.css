@@ -1,0 +1,41 @@
+
+/* resources/css/marketing.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Map your legacy classes to Tailwind utilities */
+/* resources/css/dashboard.css
+   Optic Hub — Admin Dashboard styles
+   - No @tailwind directives here (partial)
+   - Uses your CSS variables + Tailwind @apply
+*/
+
+@layer components {
+/* Fade in + slide up on page load */
+  /* Slight hover lift for cards */
+.card-lift {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border-color: rgba(37, 99, 235, 0.16); /* soft brand-ish blue */
+}
+
+}
+
+@keyframes fadeInUpSoft {
+  from {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUpSoft 220ms ease-out;
+  animation-fill-mode: both;
+}

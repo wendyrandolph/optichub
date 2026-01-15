@@ -54,6 +54,7 @@ class Kernel extends HttpKernel
     'tenant' => \App\Http\Middleware\ResolveTenant::class,
 
     'trial.only' => \App\Http\Middleware\TrialOnly::class,
+    'tenant.access' => \App\Http\Middleware\EnsureTenantAccess::class,
 
   ];
 
@@ -66,11 +67,14 @@ class Kernel extends HttpKernel
     'auth' => \App\Http\Middleware\Authenticate::class,
     'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
     'can' => \Illuminate\Auth\Middleware\Authorize::class,
-    'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
     'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
     'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     'trial.only' => \App\Http\Middleware\TrialOnly::class,
     'tenant' => \App\Http\Middleware\ResolveTenant::class,
     'apikey' => \App\Http\Middleware\ApiKeyAuth::class,
+    'tenant.access' => \App\Http\Middleware\EnsureTenantAccess::class,
+    'platform_owner' => \App\Http\Middleware\EnsurePlatformOwner::class,
+    'tenant.activity' => \App\Http\Middleware\TrackTenantActivity::class,
+    'nocache' => \App\Http\Middleware\NoCache::class,
   ];
 }

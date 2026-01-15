@@ -63,4 +63,62 @@ class EmailController extends Controller
       ->route('tenant.emails.index', ['tenant' => $tenant->id])
       ->with('success', 'Email sent and logged.');
   }
+
+  public function edit(Tenant $tenant, Email $email)
+  {
+    if ($email->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    return view('emails.edit', [
+      'tenant' => $tenant->id,
+      'email' => $email,
+    ]);
+  }
+
+  public function update(Request $request, Tenant $tenant, Email $email)
+  {
+    if ($email->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    $data = $request->validate([
+      'subject' => 'required|string|max:255',
+      'recipient_email' => 'required|email',
+      'recipient_name' => 'nullable|string|max:255',
+      'body' => 'nullable|string',
+    ]);
+
+    $email->update($data);
+
+    return redirect()
+      ->route('tenant.emails.show', ['tenant' => $tenant->id, 'email' => $email->id])
+      ->with('success', 'Email log updated.');
+  }
+
+  public function show(Tenant $tenant, Email $email)
+  {
+    if ($email->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    return view('emails.show', [
+      'tenant' => $tenant->id,
+      'email' => $email,
+    ]);
+  }
+
+  public function destroy(Tenant $tenant, Email $email)
+  {
+    // Ensure tenant scoping
+    if ($email->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    $email->delete();
+
+    return redirect()
+      ->route('tenant.emails.index', ['tenant' => $tenant->id])
+      ->with('success', 'Email deleted.');
+  }
 }

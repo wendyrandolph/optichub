@@ -1,293 +1,349 @@
-{{-- resources/views/invoices/create.blade.php --}}
-@extends('layouts.app')
+@php
+    $isTrades = request()->routeIs('tenant.trades.invoices.*');
+    $layout = $layout ?? ($isTrades ? 'layouts.trades' : 'layouts.app');
+    $section = $section ?? ($isTrades ? 'trades-content' : 'content');
+    $routePrefix = $routePrefix ?? ($isTrades ? 'tenant.trades.invoices' : 'tenant.invoices');
+@endphp
+
+@extends($layout)
 
 @section('title', 'Create Invoice')
 
-@section('content')
-    @php
-        // Prefer a passed $tenant model; otherwise fall back to current user's tenant_id
-$tenantId = request()->route('tenant') ?? auth()->user()->tenant_id;
-    @endphp
+@php
+    $tenantId = request()->route('tenant');
+    $statusValue = old('status', 'draft');
+    $statusPill = match ($statusValue) {
+        'paid' => 'oh-pill oh-pill--success',
+        'overdue' => 'oh-pill oh-pill--danger',
+        'sent' => 'oh-pill oh-pill--info',
+        default => 'oh-pill',
+    };
+@endphp
 
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {{-- Page header --}}
-        <div class="mb-6">
-            <p class="text-[11px] uppercase tracking-wider text-text-subtle">Billing</p>
-            <h1 class="text-2xl font-semibold text-text-base">Create Invoice</h1>
-            <p class="text-sm text-text-subtle">Issue a new invoice and add line items below.</p>
+@section($section)
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {{-- Header card --}}
+        <div class="oh-card p-5 border border-border-default bg-surface-card shadow-card space-y-3">
+            <a href="{{ route($routePrefix . '.index', ['tenant' => $tenantId]) }}"
+                class="oh-link-underline inline-flex self-start items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
+                <i class="fa-solid fa-arrow-left text-[10px] mr-2"></i> Back to invoices
+            </a>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div class="space-y-1">
+                    <p class="text-[11px] uppercase tracking-wider text-text-subtle">Billing</p>
+                    <h1 class="text-2xl font-semibold text-text-base">Create invoice</h1>
+                    <p class="text-sm text-text-subtle">Set the basics; you can add line items and notes after saving.</p>
+                </div>
+                <span class="{{ $statusPill }} text-[11px] px-3 py-1">{{ ucfirst($statusValue) }}</span>
+            </div>
         </div>
 
-        {{-- Validation errors --}}
-        @if ($errors->any())
-            <div class="mb-4 rounded-lg border border-rose-300/60 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('tenant.invoices.store', ['tenant' => $tenantId]) }}"
-            class="rounded-2xl border border-border-default bg-surface-card shadow-card overflow-hidden">
+        {{-- Form --}}
+        <form action="{{ route($routePrefix . '.store', ['tenant' => $tenantId]) }}" method="POST"
+            class="oh-card border border-border-default/70 shadow-card">
             @csrf
+            @if (!empty($prefillTradeJobId))
+                <input type="hidden" name="trade_job_id" value="{{ $prefillTradeJobId }}">
+            @endif
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
+                {{-- Left column --}}
+                <div class="xl:col-span-2 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Client</span>
+                            <select name="contact_id" class="oh-select h-10">
+                                @foreach ($clients as $client)
+                                    <option value="{{ $client->id }}" @selected(old('contact_id', $prefillContactId ?? null) == $client->id)>
+                                        {{ trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? '')) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('contact_id')
+                                <p class="text-xs text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Invoice number</span>
+                            <input type="text" name="invoice_number" value="{{ old('invoice_number') }}"
+                                class="oh-input h-10">
+                            @error('invoice_number')
+                                <p class="text-xs text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </label>
+                    </div>
 
-            {{-- Section: Basics --}}
-            <div class="px-6 py-5 border-b border-border-default/70 bg-surface-accent">
-                <h2 class="text-base font-semibold text-text-base">Invoice details</h2>
-            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Issue date</span>
+                            <input type="date" name="issue_date" value="{{ old('issue_date', now()->toDateString()) }}"
+                                class="oh-input h-10">
+                        </label>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Due date</span>
+                            <input type="date" name="due_date" value="{{ old('due_date', now()->addDays(14)->toDateString()) }}"
+                                class="oh-input h-10">
+                        </label>
+                    </div>
 
-            <div class="px-6 py-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Client --}}
                     <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Client <span class="text-rose-500">*</span></span>
-                        <select id="client_id" name="client_id" required
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3">
-                            <option value="">Choose a client…</option>
-                            @foreach ($clients as $client)
-                                @php
-                                    $clientName = trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? ''));
-                                @endphp
-                                <option value="{{ $client->id }}" @selected(old('client_id') == $client->id)>
-                                    {{ $clientName !== '' ? $clientName : "Client #{$client->id}" }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('client_id')
-                            <small class="text-rose-600">{{ $message }}</small>
-                        @enderror
-                    </label>
-
-                    {{-- Invoice Number --}}
-                    <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Invoice Number <span class="text-rose-500">*</span></span>
-                        <input id="invoice_number" type="text" name="invoice_number" required
-                            value="{{ old('invoice_number') }}"
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3">
-                        @error('invoice_number')
-                            <small class="text-rose-600">{{ $message }}</small>
-                        @enderror
-                    </label>
-
-                    {{-- Issue Date --}}
-                    <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Issue Date <span class="text-rose-500">*</span></span>
-                        <input id="issue_date" type="date" name="issue_date" required value="{{ old('issue_date') }}"
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3">
-                        @error('issue_date')
-                            <small class="text-rose-600">{{ $message }}</small>
-                        @enderror
-                    </label>
-
-                    {{-- Due Date --}}
-                    <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Due Date <span class="text-rose-500">*</span></span>
-                        <input id="due_date" type="date" name="due_date" required value="{{ old('due_date') }}"
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3">
-                        @error('due_date')
-                            <small class="text-rose-600">{{ $message }}</small>
-                        @enderror
-                    </label>
-
-                    {{-- Status --}}
-                    <label class="grid gap-1 text-sm md:col-span-2">
                         <span class="text-text-subtle">Status</span>
-                        <select id="status" name="status"
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3">
-                            @foreach (['Draft', 'Sent', 'Paid'] as $status)
-                                <option value="{{ $status }}" @selected(old('status') === $status)>{{ $status }}
-                                </option>
-                            @endforeach
+                        <select name="status" class="oh-select h-10">
+                            @php $st = $statusValue; @endphp
+                            <option value="draft" @selected($st === 'draft')>Draft</option>
+                            <option value="sent" @selected($st === 'sent')>Sent</option>
+                            <option value="paid" @selected($st === 'paid')>Paid</option>
+                            <option value="overdue" @selected($st === 'overdue')>Overdue</option>
                         </select>
                         @error('status')
-                            <small class="text-rose-600">{{ $message }}</small>
+                            <p class="text-xs text-rose-500">{{ $message }}</p>
                         @enderror
                     </label>
 
-                    {{-- Notes --}}
-                    <label class="grid gap-1 text-sm md:col-span-2">
-                        <span class="text-text-subtle">Notes</span>
-                        <textarea id="notes" name="notes" rows="4"
-                            class="rounded-lg bg-surface-card text-text-base border border-border-default px-3 py-2">{{ old('notes') }}</textarea>
-                        @error('notes')
-                            <small class="text-rose-600">{{ $message }}</small>
-                        @enderror
-                    </label>
-                </div>
-            </div>
-
-            {{-- Section: Line items --}}
-            <div class="px-6 py-5 border-t border-border-default/70 bg-surface-accent">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-text-base">Line items</h2>
-                    <button type="button" id="add-item-btn"
-                        class="inline-flex items-center h-9 px-3 rounded-lg text-sm font-medium text-white
-                       bg-gradient-to-b from-brand-primary to-blue-700 shadow-card hover:brightness-110">
-                        <i class="fa-solid fa-plus mr-2"></i> Add item
-                    </button>
-                </div>
-            </div>
-
-            <div class="px-6 pt-4 pb-2">
-                <div class="hidden md:grid grid-cols-12 gap-3 text-xs text-text-subtle px-2 mb-2">
-                    <div class="col-span-6">Description</div>
-                    <div class="col-span-2 text-right">Qty</div>
-                    <div class="col-span-2 text-right">Unit Price</div>
-                    <div class="col-span-2 text-right">Line Total</div>
-                </div>
-
-                @php
-                    $items = old('items', [['description' => '', 'quantity' => 1, 'unit_price' => '']]);
-                @endphp
-
-                <div id="line-items" data-next-index="{{ max(1, count($items)) }}" class="space-y-2">
-                    @foreach ($items as $i => $item)
-                        <div class="item-row grid grid-cols-12 gap-3 items-center rounded-lg border border-border-default bg-surface-card px-3 py-3"
-                            data-row="{{ $i }}">
-                            <input type="text" name="items[{{ $i }}][description]" placeholder="Description"
-                                value="{{ $item['description'] ?? '' }}"
-                                class="col-span-12 md:col-span-6 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3"
-                                required>
-
-                            <input type="number" name="items[{{ $i }}][quantity]" placeholder="Qty"
-                                min="1" value="{{ $item['quantity'] ?? 1 }}"
-                                class="col-span-6 md:col-span-2 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3 text-right"
-                                required>
-
-                            <input type="number" step="0.01" name="items[{{ $i }}][unit_price]"
-                                placeholder="Unit Price" value="{{ $item['unit_price'] ?? '' }}"
-                                class="col-span-6 md:col-span-2 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3 text-right"
-                                required>
-
-                            <div
-                                class="col-span-8 md:col-span-1 text-right text-sm tabular-nums text-text-subtle md:col-start-11">
-                                <span class="js-line-total">—</span>
-                            </div>
-
-                            <button type="button"
-                                class="col-span-4 md:col-span-1 justify-self-end md:justify-self-auto
-                           inline-flex items-center justify-center h-9 w-9 rounded-md border border-border-default bg-surface-accent text-text-base js-remove-item"
-                                title="Remove" aria-label="Remove line item">
-                                <i class="fa-solid fa-xmark"></i>
+                    {{-- Line items --}}
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-text-base">Line items</h3>
+                            <button type="button" class="oh-btn oh-btn--secondary" id="add-line-item">
+                                <i class="fa-solid fa-plus text-[12px] mr-1"></i> Add line item
                             </button>
                         </div>
-                    @endforeach
+                        <div class="overflow-hidden rounded-xl border border-border-default/70">
+                            <table class="min-w-full text-sm" id="line-items-table">
+                                <thead class="bg-[rgba(var(--surface-muted)/.6)] text-text-subtle">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-medium">Item</th>
+                                        <th class="px-3 py-2 text-right font-medium w-24">Qty</th>
+                                        <th class="px-3 py-2 text-right font-medium w-32">Rate</th>
+                                        <th class="px-3 py-2 text-right font-medium w-32">Total</th>
+                                        <th class="px-3 py-2 text-right font-medium w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="line-items-body">
+                                    @php $oldItems = old('items', []); @endphp
+                                    @forelse ($oldItems as $idx => $item)
+                                        <tr class="border-t border-border-default/60">
+                                            <td class="px-3 py-2 align-top">
+                                                <input type="hidden" name="items[{{ $idx }}][id]" value="{{ $item['id'] ?? '' }}">
+                                                <input type="hidden" name="items[{{ $idx }}][position]" value="{{ $idx }}" class="position-input">
+                                                <input type="text" name="items[{{ $idx }}][name]" value="{{ $item['name'] ?? '' }}" placeholder="Item name"
+                                                    class="oh-input h-9 w-full mb-1">
+                                                <textarea name="items[{{ $idx }}][description]" rows="2" placeholder="Description (optional)"
+                                                    class="oh-input w-full text-xs">{{ $item['description'] ?? '' }}</textarea>
+                                            </td>
+                                            <td class="px-3 py-2 align-top">
+                                                <input type="number" step="0.01" min="0" name="items[{{ $idx }}][quantity]" value="{{ $item['quantity'] ?? 1 }}"
+                                                    class="oh-input h-9 w-full text-right item-qty">
+                                            </td>
+                                            <td class="px-3 py-2 align-top">
+                                                <input type="number" step="0.01" min="0" name="items[{{ $idx }}][unit_price]" value="{{ $item['unit_price'] ?? 0 }}"
+                                                    class="oh-input h-9 w-full text-right item-rate">
+                                            </td>
+                                            <td class="px-3 py-2 align-top text-right">
+                                                <div class="item-total text-sm font-semibold text-text-base">—</div>
+                                            </td>
+                                            <td class="px-3 py-2 align-top text-right">
+                                                <button type="button" class="oh-icon-btn remove-line">
+                                                    <i class="fa-regular fa-trash-can text-[12px]"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        {{-- start empty; JS adds rows --}}
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Totals --}}
-                <div class="mt-4 flex items-center justify-end">
-                    <div class="w-full max-w-sm rounded-xl border border-border-default bg-surface-card px-4 py-3">
-                        <dl class="grid grid-cols-2 gap-y-1 text-sm">
-                            <dt class="text-text-subtle">Subtotal</dt>
-                            <dd class="text-right tabular-nums" id="subtotal">$0.00</dd>
+                {{-- Right column --}}
+                <div class="space-y-4">
+                    <label class="grid gap-1 text-sm">
+                        <span class="text-text-subtle">Notes (optional)</span>
+                        <textarea name="notes" rows="5" class="oh-input">{{ old('notes', $prefillNotes ?? null) }}</textarea>
+                    </label>
+                    <div class="rounded-lg border border-border-default/70 bg-surface-card/80 p-3 text-xs text-text-subtle space-y-1">
+                        <div><strong>Draft:</strong> internal until sent.</div>
+                        <div><strong>Sent:</strong> shared with client; edits may notify them.</div>
+                        <div><strong>Paid:</strong> marked complete; balance closed.</div>
+                        <div><strong>Overdue:</strong> due date passed; follow up.</div>
+                    </div>
 
-                            {{-- If you add tax later, drop more rows here --}}
-
-                            <dt class="font-semibold text-text-base mt-1">Total</dt>
-                            <dd class="text-right font-semibold tabular-nums mt-1" id="grandTotal">$0.00</dd>
-                        </dl>
+                    {{-- Totals --}}
+                    <div class="rounded-xl border border-border-default/80 bg-surface-card/80 p-4 space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-text-subtle">Subtotal</span>
+                            <span id="subtotal-display" class="font-semibold text-text-base">$0.00</span>
+                        </div>
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Tax rate (%)</span>
+                            <input type="number" step="0.01" min="0" name="tax_rate" value="{{ old('tax_rate') }}"
+                                class="oh-input h-10 tax-rate">
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Discount type</span>
+                                <select name="discount_type" class="oh-select h-10 discount-type">
+                                    @php $dt = old('discount_type', 'none'); @endphp
+                                    <option value="none" @selected($dt === 'none')>None</option>
+                                    <option value="percent" @selected($dt === 'percent')>Percent</option>
+                                    <option value="fixed" @selected($dt === 'fixed')>Fixed</option>
+                                </select>
+                            </label>
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Discount value</span>
+                                <input type="number" step="0.01" min="0" name="discount_value" value="{{ old('discount_value') }}"
+                                    class="oh-input h-10 discount-value">
+                            </label>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-text-subtle">Tax total</span>
+                            <span id="tax-display" class="text-text-base">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-base font-semibold">
+                            <span>Total</span>
+                            <span id="total-display">$0.00</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {{-- Actions --}}
-            <div
-                class="px-6 py-4 border-t border-border-default/70 bg-surface-accent flex items-center justify-end gap-3 rounded-b-2xl">
-                <a href="{{ route('tenant.invoices.index', ['tenant' => $tenantId]) }}"
-                    class="inline-flex items-center h-10 px-4 rounded-lg text-sm font-medium border border-border-default bg-surface-card text-text-base hover:brightness-110">
-                    Cancel
-                </a>
-                <button type="submit"
-                    class="inline-flex items-center h-10 px-4 rounded-lg text-sm font-medium text-white
-                     bg-gradient-to-b from-brand-primary to-blue-700 shadow-card hover:brightness-110">
-                    Create Invoice
-                </button>
+            <div class="flex flex-wrap justify-end gap-3 px-6 py-4 border-t border-border-default/70 bg-surface-accent">
+                <a href="{{ route($routePrefix . '.index', ['tenant' => $tenantId]) }}" class="oh-btn">Cancel</a>
+                @if ($statusValue === 'draft')
+                    <button type="submit" class="oh-btn">Send invoice</button>
+                @endif
+                <button type="submit" class="oh-btn oh-btn--primary">Save invoice</button>
             </div>
         </form>
     </div>
 
-    {{-- Line item template --}}
     <template id="line-item-template">
-        <div class="item-row grid grid-cols-12 gap-3 items-center rounded-lg border border-border-default bg-surface-card px-3 py-3"
-            data-row="__INDEX__">
-            <input type="text" name="items[__INDEX__][description]" placeholder="Description"
-                class="col-span-12 md:col-span-6 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3"
-                required>
-
-            <input type="number" name="items[__INDEX__][quantity]" placeholder="Qty" min="1" value="1"
-                class="col-span-6 md:col-span-2 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3 text-right"
-                required>
-
-            <input type="number" step="0.01" name="items[__INDEX__][unit_price]" placeholder="Unit Price"
-                class="col-span-6 md:col-span-2 h-10 rounded-md bg-surface-card text-text-base border border-border-default px-3 text-right"
-                required>
-
-            <div class="col-span-8 md:col-span-1 text-right text-sm tabular-nums text-text-subtle md:col-start-11">
-                <span class="js-line-total">—</span>
-            </div>
-
-            <button type="button"
-                class="col-span-4 md:col-span-1 justify-self-end md:justify-self-auto inline-flex items-center justify-center h-9 w-9 rounded-md border border-border-default bg-surface-accent text-text-base js-remove-item"
-                title="Remove" aria-label="Remove line item">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
+        <tr class="border-t border-border-default/60">
+            <td class="px-3 py-2 align-top">
+                <input type="hidden" name="__IDX__[id]" value="">
+                <input type="hidden" name="__IDX__[position]" value="__POS__" class="position-input">
+                <input type="text" name="__IDX__[name]" placeholder="Item name" class="oh-input h-9 w-full mb-1">
+                <textarea name="__IDX__[description]" rows="2" placeholder="Description (optional)" class="oh-input w-full text-xs"></textarea>
+            </td>
+            <td class="px-3 py-2 align-top">
+                <input type="number" step="0.01" min="0" name="__IDX__[quantity]" value="1" class="oh-input h-9 w-full text-right item-qty">
+            </td>
+            <td class="px-3 py-2 align-top">
+                <input type="number" step="0.01" min="0" name="__IDX__[unit_price]" value="0" class="oh-input h-9 w-full text-right item-rate">
+            </td>
+            <td class="px-3 py-2 align-top text-right">
+                <div class="item-total text-sm font-semibold text-text-base">—</div>
+            </td>
+            <td class="px-3 py-2 align-top text-right">
+                <button type="button" class="oh-icon-btn remove-line">
+                    <i class="fa-regular fa-trash-can text-[12px]"></i>
+                </button>
+            </td>
+        </tr>
     </template>
 
     @push('scripts')
         <script>
-            function money(n) {
-                return '$' + (Number(n || 0).toFixed(2));
-            }
-
-            function recalcRow(row) {
-                const qty = parseFloat(row.querySelector('[name*="[quantity]"]').value || 0);
-                const price = parseFloat(row.querySelector('[name*="[unit_price]"]').value || 0);
-                const total = qty * price;
-                row.querySelector('.js-line-total').textContent = total ? money(total) : '—';
-                return total;
-            }
-
-            function recalcAll() {
-                let sum = 0;
-                document.querySelectorAll('#line-items .item-row').forEach(r => sum += recalcRow(r));
-                document.getElementById('subtotal').textContent = money(sum);
-                document.getElementById('grandTotal').textContent = money(sum);
-            }
-
             document.addEventListener('DOMContentLoaded', () => {
-                const container = document.getElementById('line-items');
-                const tmpl = document.getElementById('line-item-template');
-                const addBtn = document.getElementById('add-item-btn');
+                const body = document.getElementById('line-items-body');
+                const tmpl = document.getElementById('line-item-template').innerHTML;
+                const addBtn = document.getElementById('add-line-item');
+                const taxInput = document.querySelector('.tax-rate');
+                const discountType = document.querySelector('.discount-type');
+                const discountValue = document.querySelector('.discount-value');
+                const subtotalEl = document.getElementById('subtotal-display');
+                const taxEl = document.getElementById('tax-display');
+                const totalEl = document.getElementById('total-display');
 
-                // Initial calc (for old() values)
-                recalcAll();
+                let idx = body.querySelectorAll('tr').length;
 
-                // Add item
-                addBtn?.addEventListener('click', () => {
-                    const next = parseInt(container.dataset.nextIndex || '1', 10);
-                    const html = tmpl.innerHTML.replaceAll('__INDEX__', String(next));
-                    container.insertAdjacentHTML('beforeend', html);
-                    container.dataset.nextIndex = String(next + 1);
-                    recalcAll();
-                });
+                function format(n) {
+                    return `$${Number(n || 0).toFixed(2)}`;
+                }
 
-                // Remove + live calc
-                container?.addEventListener('click', e => {
-                    const btn = e.target.closest('.js-remove-item');
-                    if (btn) {
-                        const row = btn.closest('.item-row');
+                function renumber() {
+                    body.querySelectorAll('tr').forEach((row, i) => {
+                        row.querySelectorAll('input, textarea').forEach(input => {
+                            input.name = input.name.replace(/items\\[[0-9]+\\]/, `items[${i}]`);
+                            const pos = row.querySelector('.position-input');
+                            if (pos) pos.value = i;
+                        });
+                    });
+                }
+
+                function recalc() {
+                    let subtotal = 0;
+                    body.querySelectorAll('tr').forEach(row => {
+                        const qty = parseFloat(row.querySelector('.item-qty')?.value || 0);
+                        const rate = parseFloat(row.querySelector('.item-rate')?.value || 0);
+                        const lineTotal = qty * rate;
+                        subtotal += lineTotal;
+                        const totalCell = row.querySelector('.item-total');
+                        if (totalCell) totalCell.textContent = format(lineTotal);
+                    });
+                    const taxRate = parseFloat(taxInput?.value || 0);
+                    const discountTypeVal = discountType?.value || 'none';
+                    const discountVal = parseFloat(discountValue?.value || 0);
+                    const taxTotal = taxRate ? subtotal * (taxRate / 100) : 0;
+                    let discount = 0;
+                    if (discountTypeVal === 'percent') {
+                        discount = (subtotal + taxTotal) * (discountVal / 100);
+                    } else if (discountTypeVal === 'fixed') {
+                        discount = discountVal;
+                    }
+                    const total = Math.max(0, subtotal + taxTotal - discount);
+                    subtotalEl.textContent = format(subtotal);
+                    taxEl.textContent = format(taxTotal);
+                    totalEl.textContent = format(total);
+                }
+
+                function addRow(data = {}) {
+                    let rowHtml = tmpl.replace(/__IDX__/g, `items[${idx}]`).replace(/__POS__/g, idx);
+                    const temp = document.createElement('tbody');
+                    temp.innerHTML = rowHtml.trim();
+                    const row = temp.firstChild;
+                    // apply data
+                    row.querySelectorAll('input, textarea').forEach(input => {
+                        const key = input.name.match(/\\[(\\w+)\\]$/)?.[1];
+                        if (key && data[key] !== undefined) {
+                            input.value = data[key];
+                        }
+                    });
+                    body.appendChild(row);
+                    idx++;
+                    renumber();
+                    recalc();
+                }
+
+                addBtn?.addEventListener('click', () => addRow());
+
+                body.addEventListener('click', (e) => {
+                    if (e.target.closest('.remove-line')) {
+                        e.preventDefault();
+                        const row = e.target.closest('tr');
                         row?.remove();
-                        recalcAll();
+                        renumber();
+                        recalc();
                     }
                 });
 
-                container?.addEventListener('input', e => {
-                    const row = e.target.closest('.item-row');
-                    if (row) recalcRow(row);
-                    recalcAll();
+                body.addEventListener('input', (e) => {
+                    if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-rate') || e.target === taxInput || e.target === discountType || e.target === discountValue) {
+                        recalc();
+                    }
                 });
+                taxInput?.addEventListener('input', recalc);
+                discountType?.addEventListener('change', recalc);
+                discountValue?.addEventListener('input', recalc);
+
+                // seed existing rows if none present
+                if (body.querySelectorAll('tr').length === 0) {
+                    addRow();
+                } else {
+                    recalc();
+                }
             });
         </script>
     @endpush

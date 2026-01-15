@@ -1,5 +1,5 @@
 @extends('layouts.marketing')
-@section('title', 'Optic Hub - Contact')
+@section('title', 'Renlo - Contact')
 
 @section('content')
 @php

@@ -1,0 +1,114 @@
+@layer components {
+  .oh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    height: 2.25rem; /* 36px */
+    padding: 0 0.8rem;
+    border-radius: 0.75rem;
+
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+
+    /* token-based */
+    color: rgb(var(--text));
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border) / 0.7);
+
+    /* premium: subtle highlight + restrained shadow */
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55),
+      0 8px 20px rgba(15, 23, 42, 0.06);
+
+    transition:
+      transform 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 180ms ease,
+      color 160ms ease;
+    text-decoration: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* calmer hover (no stark bg flip) */
+  .oh-btn:hover {
+    background: rgb(var(--surface-muted));
+    border-color: rgb(var(--border) / 0.85);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6),
+      0 10px 26px rgba(15, 23, 42, 0.08);
+  }
+
+  .oh-btn:active {
+    transform: translateY(0.5px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55),
+      0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  /* consistent, theme-safe focus */
+  .oh-btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px rgb(var(--surface)),
+      0 0 0 4px rgb(var(--brand-primary) / 0.35),
+      0 10px 26px rgba(15, 23, 42, 0.08);
+  }
+
+  /* PRIMARY */
+  .oh-btn--primary {
+    color: white;
+    background: rgb(var(--brand-primary));
+    border-color: rgb(var(--brand-primary));
+    box-shadow:
+      0 10px 22px rgba(var(--brand-primary) / 0.18),
+      0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* premium primary hover: tiny lift + slight tone shift, not a hard swap */
+  .oh-btn--primary:hover {
+    background: rgb(var(--brand-primary) / 0.92);
+    border-color: rgb(var(--brand-primary) / 0.92);
+    transform: translateY(-0.5px);
+    box-shadow:
+      0 14px 30px rgba(var(--brand-primary) / 0.22),
+      0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .oh-btn--primary:active {
+    transform: translateY(0.5px);
+    background: rgb(var(--brand-primary) / 0.86);
+    border-color: rgb(var(--brand-primary) / 0.86);
+    box-shadow:
+      0 9px 18px rgba(var(--brand-primary) / 0.2),
+      0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* GHOST (for Reset / tertiary actions) */
+  .oh-btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: rgb(var(--text));
+  }
+
+  .oh-btn--ghost:hover {
+    background: rgb(var(--surface-muted));
+    border-color: rgb(var(--border) / 0.65);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55),
+      0 8px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Optional: compact version for filter bars */
+  .oh-btn--sm {
+    height: 2rem; /* 32px */
+    padding: 0 0.65rem;
+    border-radius: 0.65rem;
+    font-size: 0.8125rem;
+  }
+}

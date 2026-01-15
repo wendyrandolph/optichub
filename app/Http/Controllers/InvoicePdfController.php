@@ -30,16 +30,7 @@ class InvoicePdfController extends Controller
   {
     // 1. Authorization Check (Ensures the user can view this invoice)
     $this->authorize('view', $invoice);
-
-    // 2. Data Retrieval (Eager load relationships, replacing manual model lookups)
-    // This is much cleaner than the old method:
-    // $invoice = $invoiceModel->getById($id);
-    // $items = $itemModel->getByInvoiceId($id);
-    // $client = $clientModel->find($invoice['client_id']);
     $invoice->load(['client', 'items']);
-
-    // 3. HTML Rendering (Using Laravel's View facade instead of ob_start/require)
-    // We pass the Eloquent model object directly to the Blade view.
     $html = view('invoices.pdf', [
       'invoice' => $invoice,
       // $invoice->items and $invoice->client are available automatically

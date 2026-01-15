@@ -9,75 +9,99 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class OrganizationController extends Controller
 {
-  public function __construct()
+  /**
+   * Handle BOTH:
+   * - Provider view:  GET /admin/tenants              (admin.tenants.index)
+   * - Tenant view:    GET /{tenant}/companies      (tenant.companies.index)
+   */
+  public function index(Request $request, Tenant $tenant = null)
   {
-    $this->middleware('auth');
-    // If you have a TenantPolicy that covers these abilities, you can also do:
-    // $this->authorizeResource(Tenant::class, 'organization');
-    // (Works because the resource param is {organization})
-  }
+    // -------------------------------------------------
+    // 1. PROVIDER MODE → /admin/tenants
+    // -------------------------------------------------
+    if ($request->routeIs('admin.tenants.*')) {
+      // List all tenants (your SaaS customers)
+      $tenants = Tenant::orderBy('created_at', 'desc')->paginate(20);
 
-  /** GET /{tenant}/organizations */
-  public function index(\App\Models\Tenant $tenant)
-  {
-    $q  = request('q');
-    $so = request('sort', 'recent');
+      // Simple KPIs based on the current page collection
+      $collection = $tenants->getCollection();
 
-    // Base list (tweak the visibility logic as needed)
-    $orgsQuery = \App\Models\Tenant::query()
-      ->when($q, fn($qb) => $qb->where(function ($w) use ($q) {
-        $w->where('name', 'like', "%{$q}%")
-          ->orWhere('industry', 'like', "%{$q}%")
-          ->orWhere('location', 'like', "%{$q}%");
-      }));
+      $kpis = [
+        'total'         => $tenants->total(), // total in paginator
+        'active'        => $collection->where('subscription_status', 'active')->count(),
+        'trialing'      => $collection->where('subscription_status', 'trialing')->count(),
+        'with_branding' => $collection->filter(function ($t) {
+          return !empty($t->primary_color) ||
+            !empty($t->secondary_color) ||
+            !empty($t->accent_color) ||
+            !empty($t->logo_path);
+        })->count(),
+      ];
 
-    $orgs = (clone $orgsQuery)
-      ->when($so === 'name_asc',  fn($qb) => $qb->orderBy('name'))
-      ->when($so === 'name_desc', fn($qb) => $qb->orderByDesc('name'))
-      ->when($so === 'city_asc',  fn($qb) => $qb->orderBy('location'))
-      ->when($so === 'recent',    fn($qb) => $qb->latest('updated_at'))
-      ->paginate(20);
+      return view('admin.tenants.index', [
+        'tenants' => $tenants,
+        'kpis'    => $kpis,
+      ]);
+    }
 
-    // KPIs (overall – not filtered by search/sort)
-    $all = \App\Models\Tenant::query();
+    // -------------------------------------------------
+    // 2. TENANT MODE → /{tenant}/companies
+    //    route: tenant.companies.index
+    //    Here {tenant} is bound to App\Models\Tenant by id
+    // -------------------------------------------------
+    if (! $tenant) {
+      abort(404, 'Tenant not found.');
+    }
 
-    $total        = (clone $all)->count();
-    $updated30    = (clone $all)->where('updated_at', '>=', Carbon::now()->subDays(30))->count();
-    $withSite     = (clone $all)->whereNotNull('website')->where('website', '!=', '')->count();
-    $withPhone    = (clone $all)->whereNotNull('phone')->where('phone', '!=', '')->count();
-    $byIndustry   = (clone $all)->select('industry', DB::raw('COUNT(*) as c'))
-      ->groupBy('industry')->orderByDesc('c')->limit(6)->pluck('c', 'industry');
+    $query = Tenant::where('id', $tenant->id);
 
-    return view('organizations.index', [
-      'tenant'         => $tenant,
-      'organizations'  => $orgs,
-      'kpis'           => [
-        'total'      => $total,
-        'updated30'  => $updated30,
-        'with_site'  => $withSite,
-        'with_phone' => $withPhone,
-        'by_industry' => $byIndustry,
-      ],
+    if ($search = $request->get('q')) {
+      $query->where(function ($q) use ($search) {
+        $q->where('name', 'like', "%{$search}%")
+          ->orWhere('industry', 'like', "%{$search}%")
+          ->orWhere('location', 'like', "%{$search}%");
+      });
+    }
+
+    $companies = $query->orderBy('name')->paginate(25);
+
+    $orgCollection = $companies->getCollection();
+
+    $kpis = [
+      'total'       => $companies->total(),
+      'updated30'   => 0,         // you can wire these up later if you like
+      'with_site'   => $orgCollection->whereNotNull('website')->count(),
+      'with_phone'  => $orgCollection->whereNotNull('phone')->count(),
+      'by_industry' => $orgCollection
+        ->groupBy('industry')
+        ->map->count()
+        ->sortDesc(),
+    ];
+
+    return view('tenant.companies.index', [
+      'companies' => $companies,
+      'kpis'          => $kpis,
     ]);
   }
 
-
-  /** GET /{tenant}/organizations/create */
+  /** GET /{tenant}/companies/create */
   public function create(Tenant $tenant): View
   {
     $this->authorize('create', Tenant::class);
 
-    return view('organizations.create', [
+    return view('tenant.companies.create', [
       'tenant' => $tenant,
     ]);
   }
 
-  /** POST /{tenant}/organizations */
+  /** POST /{tenant}/companies */
   public function store(StoreOrganizationRequest $request, Tenant $tenant): RedirectResponse
   {
     $this->authorize('create', Tenant::class);
@@ -88,66 +112,121 @@ class OrganizationController extends Controller
       // Create a new "organization" (which is a Tenant record in your world)
       $organization = Tenant::create($data);
 
-      return Redirect::route('tenant.organizations.show', [
+      return Redirect::route('tenant.companies.show', [
         'tenant'       => $tenant,         // model or id
         'organization' => $organization,   // model or id
       ])->with('success', 'Organization created successfully.');
     } catch (\Throwable $e) {
-      Log::error('[organizations.store] ' . $e->getMessage());
+      Log::error('[companies.store] ' . $e->getMessage());
 
-      return Redirect::route('tenant.organizations.create', [
+      return Redirect::route('tenant.companies.create', [
         'tenant' => $tenant,
       ])->withInput()->with('error', 'Failed to create organization.');
     }
   }
 
-  /** GET /{tenant}/organizations/{organization} */
-  public function show(Tenant $tenant, Tenant $organization): View
+  /** GET /{tenant}/companies/{organization} */
+  public function show(Request $request, Tenant $tenant)
   {
-    $this->authorize('view', $organization);
+    // PROVIDER: admin.tenants.show  (no {organization} in route)
+    if ($request->routeIs('admin.tenants.show')) {
+      // Here, $tenant is the SaaS tenant (workspace)
+      // Reuse the premium tenant show page we built.
 
-    // Example eager loads if you have these relationships on Tenant:
-    // $organization->load(['clients.projects.payments']);
+      $hasBranding = !empty($tenant->primary_color)
+        || !empty($tenant->secondary_color)
+        || !empty($tenant->accent_color)
+        || !empty($tenant->logo_path);
 
-    // If those relationships live on Tenant-as-Organization:
-    $clients    = method_exists($organization, 'clients') ? $organization->clients : collect();
-    $projects   = $clients->flatMap(fn($c) => $c->projects ?? collect());
-    $totalPaid  = $projects->flatMap(fn($p) => $p->payments ?? collect())->sum('amount');
+      $status = strtolower($tenant->subscription_status ?? 'inactive');
+      $statusLabel = match ($status) {
+        'active'    => 'Active',
+        'trialing'  => 'Trialing',
+        'paused'    => 'Paused',
+        'canceled'  => 'Canceled',
+        default     => ucfirst($status),
+      };
 
-    return view('organizations.show', [
-      'tenant'        => $tenant,
-      'organization'  => $organization,
-      'clients'       => $clients,
-      'projects'      => $projects,
-      'totalPaid'     => $totalPaid,
-    ]);
-  }
+      $stats = [
+        'clients'   => method_exists($tenant, 'contacts') ? $tenant->contacts()->count() : null,
+        'projects'  => method_exists($tenant, 'projects') ? $tenant->projects()->count() : null,
+        'invoices'  => method_exists($tenant, 'invoices') ? $tenant->invoices()->count() : null,
+        'users'     => method_exists($tenant, 'users') ? $tenant->users()->count() : null,
+      ];
 
-  /** GET /{tenant}/organizations/{organization}/edit */
-  public function edit(Tenant $tenant, Tenant $organization): View
-  {
-    $this->authorize('update', $organization);
+      return view('admin.tenants.show', [
+        'tenant'      => $tenant,
+        'hasBranding' => $hasBranding,
+        'status'      => $status,
+        'statusLabel' => $statusLabel,
+        'stats'       => $stats,
+      ]);
+    }
 
-    return view('organizations.edit', [
-      'tenant'        => $tenant,
-      'organization'  => $organization,
-    ]);
-  }
+    // TENANT: tenant.companies.show  (has {tenant} + {organization})
+    if (! $organization) {
+      abort(404, 'Organization not found.');
+    }
 
-  /** PUT/PATCH /{tenant}/organizations/{organization} */
-  public function update(UpdateOrganizationRequest $request, Tenant $tenant, Tenant $organization): RedirectResponse
-  {
-    $this->authorize('update', $organization);
+    // Optional safety: enforce that org belongs to tenant
+    if ($organization->tenant_id !== $tenant->id) {
+      abort(404, 'This organization does not belong to this tenant.');
+    }
 
-    $organization->update($request->validated());
-
-    return Redirect::route('tenant.organizations.show', [
+    return view('tenant.companies.show', [
       'tenant'       => $tenant,
       'organization' => $organization,
-    ])->with('success', 'Organization updated successfully.');
+    ]);
   }
 
-  /** DELETE /{tenant}/organizations/{organization} */
+  /** GET /{tenant}/companies/{organization}/edit */
+  public function edit(Tenant $tenant)
+  {
+    $planOptions = [
+      'starter'    => 'Starter',
+      'pro'        => 'Pro',
+      'studio'     => 'Studio',
+      'enterprise' => 'Enterprise',
+    ];
+
+    $statusOptions = [
+      'active'    => 'Active',
+      'trialing'  => 'Trialing',
+      'paused'    => 'Paused',
+      'canceled'  => 'Canceled',
+    ];
+
+    return view('admin.tenants.edit', [
+      'tenant'        => $tenant,
+      'planOptions'   => $planOptions,
+      'statusOptions' => $statusOptions,
+    ]);
+  }
+
+
+  /** PUT/PATCH /{tenant}/companies/{organization} */
+  public function update(Request $request, Tenant $tenant)
+  {
+    $data = $request->validate([
+      'name'               => 'required|string|max:255',
+      'website'            => 'nullable|string|max:255',
+      'subscription_status' => 'required|string|in:active,trialing,paused,canceled',
+      'plan_name'          => 'nullable|string|max:100',
+      'primary_color'      => 'nullable|string|max:20',
+      'secondary_color'    => 'nullable|string|max:20',
+      'accent_color'       => 'nullable|string|max:20',
+
+    ]);
+
+
+    $tenant->update($data);
+
+    return redirect()->route('admin.tenants.show', $tenant)
+      ->with('success', 'Tenant updated successfully.');
+  }
+
+
+  /** DELETE /{tenant}/companies/{organization} */
   public function destroy(Tenant $tenant, Tenant $organization): RedirectResponse
   {
     $this->authorize('delete', $organization);
@@ -167,13 +246,13 @@ class OrganizationController extends Controller
 
       $organization->delete();
 
-      return Redirect::route('tenant.organizations.index', [
+      return Redirect::route('tenant.companies.index', [
         'tenant' => $tenant,
       ])->with('success', 'Organization deleted.');
     } catch (\Throwable $e) {
-      Log::error('[organizations.destroy] ' . $e->getMessage());
+      Log::error('[companies.destroy] ' . $e->getMessage());
 
-      return Redirect::route('tenant.organizations.show', [
+      return Redirect::route('tenant.companies.show', [
         'tenant'       => $tenant,
         'organization' => $organization,
       ])->with('error', 'Delete failed: ' . $e->getMessage());

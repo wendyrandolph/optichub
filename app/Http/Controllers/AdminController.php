@@ -90,6 +90,47 @@ class AdminController extends Controller
   }
 
   // ----------------------------------------------------------------------
+  // PROFILE (current admin user)
+  // ----------------------------------------------------------------------
+
+  public function profile()
+  {
+    $user = auth('admin')->user();
+    abort_unless($user, 403);
+
+    return view('admin.profile', compact('user'));
+  }
+
+  public function updateProfile(Request $request)
+  {
+    $user = auth('admin')->user();
+    abort_unless($user, 403);
+
+    $data = $request->validate([
+      'first_name' => ['nullable', 'string', 'max:100'],
+      'last_name' => ['nullable', 'string', 'max:100'],
+      'username' => ['nullable', 'string', 'max:150', 'unique:users,username,' . $user->id],
+      'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+      'password' => ['nullable', 'confirmed', 'min:8'],
+    ]);
+
+    $user->first_name = $data['first_name'] ?? $user->first_name;
+    $user->last_name = $data['last_name'] ?? $user->last_name;
+    if (!empty($data['username'])) {
+      $user->username = $data['username'];
+    }
+    $user->email = $data['email'];
+
+    if (!empty($data['password'])) {
+      $user->password = \Illuminate\Support\Facades\Hash::make($data['password']);
+    }
+
+    $user->save();
+
+    return Redirect::route('admin.profile')->with('success', 'Profile updated.');
+  }
+
+  // ----------------------------------------------------------------------
   // DASHBOARD
   // ----------------------------------------------------------------------
 
@@ -100,6 +141,12 @@ class AdminController extends Controller
       $user     = Auth::user();
       $userId   = $user->id ?? null;
       $tenantId = $user->tenant_id ?? null;
+      $teamMemberId = null;
+      if ($userId) {
+        $teamMemberId = \App\Models\TeamMember::where('tenant_id', $tenantId)
+          ->where('user_id', $userId)
+          ->value('id');
+      }
 
       $orgType  = $request->session()->get('organization_type');
       $userRole = $request->session()->get('role');
@@ -120,9 +167,49 @@ class AdminController extends Controller
         default => $now->clone()->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay(),
       };
 
-      // Data lookups (tenant scoping handled by global scopes on models)
-      $tasksDueToday   = \App\Models\Task::forUser($userId)->dueToday()->get();
-      $assignedTasks   = \App\Models\Task::forUser($userId)->assigned()->get();
+      // Data lookups (tenant scoped)
+      $tasksDueToday = \App\Models\Task::query()
+        ->where('tenant_id', $tenantId)
+        ->dueToday()
+        ->when($userId, fn($q) => $q->where(function ($qq) use ($userId, $teamMemberId) {
+          $qq->where(function ($qq3) use ($userId, $teamMemberId) {
+            $qq3->where('assign_type', 'admin')
+              ->whereIn('assign_id', array_filter([$userId, $teamMemberId]));
+          })
+          ->orWhere(function ($qq2) use ($userId) {
+            $qq2->whereNull('assign_type')->where('user_id', $userId);
+          });
+        }))
+        ->orderBy('due_date')
+        ->take(10)
+        ->get(['id', 'title', 'status', 'due_date', 'assign_type', 'assign_id', 'user_id']);
+      $tasksDueTodayCount = $tasksDueToday->count();
+
+      $assignedTasks = \App\Models\Task::query()
+        ->where('tenant_id', $tenantId)
+        ->when($userId, fn($q) => $q->where(function ($qq) use ($userId, $teamMemberId) {
+          $qq->where(function ($qq3) use ($userId, $teamMemberId) {
+            $qq3->where('assign_type', 'admin')
+              ->whereIn('assign_id', array_filter([$userId, $teamMemberId]));
+          })
+          ->orWhere(function ($qq2) use ($userId) {
+            $qq2->whereNull('assign_type')->where('user_id', $userId);
+          });
+        }))
+        ->orderByRaw("FIELD(status, 'in_progress','todo','open','completed','archived')")
+        ->orderBy('due_date')
+        ->latest()
+        ->take(15)
+        ->get(['id', 'title', 'status', 'due_date', 'assign_type', 'assign_id', 'user_id']);
+
+      // KPI rollups (fallbacks if not provided)
+      $activeTenants = $activeTenants ?? \App\Models\Tenant::count();
+      $serviceClients = $serviceClients ?? \App\Models\Contact::where('tenant_id', $tenantId)->count();
+      $crmClients = $crmClients ?? $serviceClients;
+      $openProjects = $openProjects ?? \App\Models\Project::where('tenant_id', $tenantId)
+        ->whereNotIn('status', ['closed', 'completed'])
+        ->count();
+      $projectsInProgress = $projectsInProgress ?? $openProjects;
       $timeLoggedToday = method_exists(\App\Models\TimeEntry::class, 'forUser')
         ? \App\Models\TimeEntry::forUser($userId)->loggedToday()->sum('hours') : 0;
 
@@ -218,6 +305,12 @@ class AdminController extends Controller
         'isAdmin'         => $isAdmin,
         'tasksDueToday'   => $tasksDueToday,
         'assignedTasks'   => $assignedTasks,
+        'tasksDueTodayCount' => $tasksDueTodayCount ?? 0,
+        'activeTenants'      => $activeTenants,
+        'serviceClients'     => $serviceClients,
+        'crmClients'         => $crmClients,
+        'openProjects'       => $openProjects,
+        'projectsInProgress' => $projectsInProgress,
         'timeLoggedToday' => $timeLoggedToday,
         'recentProjects'  => $recentProjects,
 

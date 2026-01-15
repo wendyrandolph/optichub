@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\RecurringInvoiceController;
 use App\Http\Controllers\ClientInvoiceController;
 use App\Http\Controllers\PublicInvoiceController;
+use App\Http\Controllers\Tenant\SubscriptionInvoiceController;
 use App\Http\Middleware\CheckRole;
 
 /*
@@ -14,28 +16,39 @@ use App\Http\Middleware\CheckRole;
 |--------------------------------------------------------------------
 */
 
-Route::middleware(['web', 'auth', 'tenant', CheckRole::class . ':provider,admin,super_admin,superadmin'])
-  ->prefix('{tenant}')
-  ->whereNumber('tenant')       // you’re using IDs, not slugs
-  ->as('tenant.')
-  ->scopeBindings()
-  ->group(function () {
 
-    // Index / list
-    Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+// Index / list
+Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
 
-    // Create
-    Route::get('invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
-    Route::post('invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+// Create
+Route::get('invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+Route::post('invoices', [InvoiceController::class, 'store'])->name('invoices.store');
 
-    // Show / PDF
-    Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
-    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
+// Edit/Update
+Route::get('invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
+Route::put('invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
 
-    // Send, Delete (POST/DELETE)
-    Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
-    Route::delete('invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
-  });
+// Show / PDF
+Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+  ->name('invoices.pdf');
+
+
+// Send, Delete (POST/DELETE)
+Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
+Route::delete('invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+
+// Recurring invoices
+Route::get('invoices/recurring', [RecurringInvoiceController::class, 'index'])->name('invoices.recurring.index');
+Route::get('invoices/recurring/create', [RecurringInvoiceController::class, 'create'])->name('invoices.recurring.create');
+Route::post('invoices/recurring', [RecurringInvoiceController::class, 'store'])->name('invoices.recurring.store');
+Route::post('invoices/recurring/{recurring}/toggle', [RecurringInvoiceController::class, 'toggle'])
+  ->name('invoices.recurring.toggle');
+
+// Platform subscription invoices (for the tenant's own Optic Hub billing)
+Route::get('subscription/invoices', [SubscriptionInvoiceController::class, 'index'])
+  ->name('subscription.invoices.index');
+
 
 /*
 |--------------------------------------------------------------------
@@ -44,16 +57,11 @@ Route::middleware(['web', 'auth', 'tenant', CheckRole::class . ':provider,admin,
 | Names: tenant.client_invoices.*
 |--------------------------------------------------------------------
 */
-Route::middleware(['web', 'auth', 'tenant', CheckRole::class . ':client'])
-  ->prefix('{tenant}')
-  ->whereNumber('tenant')
-  ->as('tenant.')
-  ->scopeBindings()
-  ->group(function () {
-    Route::get('my-invoices', [ClientInvoiceController::class, 'index'])->name('client_invoices.index');
-    Route::get('my-invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client_invoices.show');
-    Route::get('my-invoices/{invoice}/pdf', [ClientInvoiceController::class, 'pdf'])->name('client_invoices.pdf');
-  });
+
+Route::get('my-invoices', [ClientInvoiceController::class, 'index'])->name('client_invoices.index');
+Route::get('my-invoices/{invoice}', [ClientInvoiceController::class, 'show'])->name('client_invoices.show');
+Route::get('my-invoices/{invoice}/pdf', [ClientInvoiceController::class, 'pdf'])->name('client_invoices.pdf');
+
 
 /*
 |--------------------------------------------------------------------

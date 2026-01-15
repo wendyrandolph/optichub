@@ -34,7 +34,7 @@ return new class extends Migration
             $table->boolean('must_change_password')->default(true);
 
             // Other ID columns you had
-            $table->unsignedBigInteger('client_id')->nullable();
+            $table->unsignedBigInteger('contact_id')->nullable();
             $table->unsignedBigInteger('admin_id')->nullable();
 
             // === Laravel Timestamps ===

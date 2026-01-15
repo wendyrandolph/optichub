@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Client;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // Ensure you have a LoginActivity Model defined if you use logLogin/getLoginStats
@@ -36,9 +37,10 @@ class User extends Authenticatable
     'password',
     'tenant_id',
     'role', // Added 'role' to fillable for easy creation
-    'client_id',
+    'contact_id',
     'admin_id',
     'must_change_password',
+    'hired_at',
   ];
 
   /**
@@ -60,17 +62,70 @@ class User extends Authenticatable
     'email_verified_at' => 'datetime',
     'is_beta' => 'boolean',
     'must_change_password' => 'boolean',
+    'hired_at' => 'date',
   ];
 
-  // --- RELATIONSHIPS ---
+  public function isPlatformOwner(): bool
+  {
+    $tenantId = $this->tenant_id ?? null;
+    $role     = strtolower($this->role ?? '');
 
+    return $tenantId === (int) config('optichub.platform_tenant_id')
+      && in_array($role, ['provider', 'super_admin', 'superadmin'], true);
+  }
+
+
+
+  // --- RELATIONSHIPS ---
   /**
    * Get the login activities for the user.
    */
+  // If you prefer the name "client" instead:
+  public function client()
+  {
+    return $this->belongsTo(Client::class, 'contact_id');
+  }
   public function loginActivities(): HasMany
   {
     return $this->hasMany(ActivityLog::class, 'user_id');
   }
+
+  public function contact()
+  {
+    return $this->belongsTo(Contact::class);
+  }
+  // nice to have
+  public function tenant()
+  {
+    return $this->belongsTo(Tenant::class);
+  }
+  public function company()
+  {
+    return optional($this->contact)->company();
+  } // via contact
+
+  public function techShifts(): HasMany
+  {
+    return $this->hasMany(TechShift::class, 'user_id');
+  }
+
+  public function tradeJobTimers(): HasMany
+  {
+    return $this->hasMany(TradeJobTimer::class, 'user_id');
+  }
+
+  public function tradePtoRequests(): HasMany
+  {
+    return $this->hasMany(TradePtoRequest::class, 'user_id');
+  }
+
+  public function tradePtoBalances(): HasMany
+  {
+    return $this->hasMany(TradePtoBalance::class, 'user_id');
+  }
+
+
+
 
   // --- SCOPES (for multi-tenancy) ---
 
@@ -92,7 +147,7 @@ class User extends Authenticatable
 
   /**
    * Find a user by username and dynamically generate a 'name' attribute.
-   * Requires 'admin_id' and 'client_id' to be set.
+   * Requires 'admin_id' and 'contact_id' to be set.
    *
    * @param string $username
    * @return static|null
@@ -111,7 +166,7 @@ class User extends Authenticatable
                 ) AS full_name
             ")
       ->leftJoin('admins', 'users.admin_id', '=', 'admins.id')
-      ->leftJoin('clients', 'users.client_id', '=', 'clients.id')
+      ->leftJoin('clients', 'users.contact_id', '=', 'clients.id')
       ->where('users.username', $username)
       ->first();
   }
@@ -165,7 +220,7 @@ class User extends Authenticatable
   // --- BUSINESS LOGIC (Refactored from raw SQL) ---
 
   /**
-   * Finds a client user by their client_id, ensuring multi-tenancy.
+   * Finds a client user by their contact_id, ensuring multi-tenancy.
    *
    * @param int $clientId
    * @param int $tenantId (Required to enforce the organization filter)
@@ -174,8 +229,8 @@ class User extends Authenticatable
   public static function findByClientId(int $clientId, int $tenantId): ?self
   {
     // Combines where clauses with the tenant scope.
-    return static::where('client_id', $clientId)
-      ->where('role', 'client') // Optional: assuming client_id implies 'client' role
+    return static::where('contact_id', $clientId)
+      ->where('role', 'client') // Optional: assuming contact_id implies 'client' role
       ->forTenant($tenantId)
       ->first();
   }
@@ -196,7 +251,7 @@ class User extends Authenticatable
 
 
   /**
-   * Checks if a user for the given client_id exists within the tenant.
+   * Checks if a user for the given contact_id exists within the tenant.
    *
    * @param int $clientId
    * @param int $tenantId
@@ -205,14 +260,14 @@ class User extends Authenticatable
   public static function clientUserExists(int $clientId, int $tenantId): bool
   {
     return static::where('role', 'client')
-      ->where('client_id', $clientId)
+      ->where('contact_id', $clientId)
       ->forTenant($tenantId)
       ->exists();
   }
 
 
   /**
-   * Gets an array of client_ids for all client users within the tenant.
+   * Gets an array of contact_ids for all client users within the tenant.
    *
    * @param int $tenantId
    * @return array<int>
@@ -222,7 +277,7 @@ class User extends Authenticatable
     // Use pluck() to get an array of values for a single column.
     return static::where('role', 'client')
       ->forTenant($tenantId)
-      ->pluck('client_id')
+      ->pluck('contact_id')
       ->toArray();
   }
 
@@ -243,7 +298,7 @@ class User extends Authenticatable
       'email'                => $email,
       'password'             => $hashedPassword, // Should be pre-hashed
       'role'                 => 'client',
-      'client_id'            => $clientId,
+      'contact_id'            => $clientId,
       'tenant_id'            => $tenantId,
       'must_change_password' => true,
       'first_name'           => '', // Satisfy NOT NULL
@@ -399,6 +454,12 @@ class User extends Authenticatable
     }
     return $try;
   }
+  public function isTech(): bool
+  {
+    $role = strtolower((string) ($this->role ?? ''));
+    return in_array($role, ['tech', 'lead_tech', 'lead tech', 'lead-tech'], true);
+  }
+
 
   private function usernameExists(string $username): bool
   {

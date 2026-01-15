@@ -13,7 +13,7 @@
 
         $th = function ($key, $label) use ($sort, $dir, $tenantParam, $window, $status, $assignee, $qText, $filters) {
             $next = $sort === $key && $dir === 'asc' ? 'desc' : 'asc';
-            $url = route('tenant.admin.reports.tasks.due', [
+            $url = route('tenant.reports.tasks.due', [
                 'tenant' => $tenantParam,
                 'sort' => $key,
                 'dir' => $next,
@@ -35,7 +35,7 @@
         };
     @endphp
 
-    <x-reports.back-button :tenant="$tenant" />
+    <x-reports.back-button :tenant="$tenant" exportType="tasks_due" />
 
     {{-- Header / Filters --}}
     <div class="oh-card mb-4">
@@ -45,7 +45,7 @@
                 <p class="text-sm text-text-subtle">Overdue, today, and upcoming windows</p>
             </div>
 
-            <form method="GET" action="{{ route('tenant.admin.reports.tasks.due', ['tenant' => $tenantParam]) }}"
+            <form method="GET" action="{{ route('tenant.reports.tasks.due', ['tenant' => $tenantParam]) }}"
                 class="flex flex-wrap items-center gap-2">
                 <select name="window" class="oh-select"
                     onchange="document.querySelectorAll('[data-custom-range]').forEach(el=>el.classList.toggle('hidden', this.value!=='custom'))">
@@ -78,7 +78,7 @@
 
                 <button class="oh-btn bg-brand-primary text-white">Apply</button>
                 <a class="oh-btn oh-btn--ghost"
-                    href="{{ route('tenant.admin.reports.tasks.due', ['tenant' => $tenantParam]) }}">Reset</a>
+                    href="{{ route('tenant.reports.tasks.due', ['tenant' => $tenantParam]) }}">Reset</a>
 
 
             </form>

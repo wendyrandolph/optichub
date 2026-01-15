@@ -2,109 +2,84 @@
 
 namespace App\Models;
 
-use App\Traits\HasTenantScope;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Collection;
+use App\Traits\HasTenantScope;
+use App\Models\User;
+use App\Models\Service;
 
-/**
- * Eloquent Model for the 'client_companies' table.
- * Replaces the procedural ClientCompany class, leveraging Eloquent and tenancy features.
- */
 class ClientCompany extends Model
 {
-  // Use the Factory and the tenant scoping trait for automatic multi-tenancy filtering
-  use HasFactory, HasTenantScope;
+  use HasTenantScope;
+  use \App\Traits\FormatsPhone;
 
   protected $table = 'client_companies';
 
-  // The fields that can be mass-assigned. 
-  // The tenant_id will be automatically populated via the HasTenantScope trait.
   protected $fillable = [
     'tenant_id',
     'company_name',
     'industry',
+    'client_status',
     'website',
     'phone',
     'address',
     'notes',
+    'account_owner_id',
+    'primary_contact_id',
+    'billing_type',
+    'maintenance_plan',
+    'renewal_date',
+    'preferred_communication',
+    'timezone',
   ];
 
-  /**
-   * Define the relationship to the organization (tenant).
-   */
-  public function organization()
+  public function tenant()
   {
-    return $this->belongsTo(Organization::class, 'tenant_id');
+    return $this->belongsTo(Tenant::class);
   }
 
-  // --- Explicit Static Wrappers to Match Legacy API ---
-
-  /**
-   * Replaces the procedural getAll($limit, $offset) method using Eloquent.
-   * The HasTenantScope trait automatically filters by tenant_id.
-   */
-  public static function getAll(?int $limit = null, ?int $offset = null): Collection
+  public function contacts()
   {
-    $query = static::orderBy('company_name', 'asc');
-
-    if ($limit !== null) {
-      $query->limit($limit);
-    }
-
-    if ($offset !== null) {
-      $query->offset($offset);
-    }
-
-    return $query->get();
+    return $this->hasMany(Contact::class, 'client_company_id');
   }
 
-  /**
-   * Replaces the procedural getById($id) method using Eloquent.
-   * find() automatically respects the HasTenantScope.
-   */
-  public static function getById(int $id): ?self
+  public function primaryContact()
   {
-    return static::find($id);
+    return $this->belongsTo(Contact::class, 'primary_contact_id');
   }
 
-  /**
-   * Replaces the procedural create($data) method, returning the ID of the new record.
-   */
-  public static function createCompany(array $data): int
+  public function accountOwner()
   {
-    // The HasTenantScope trait automatically sets the tenant_id before saving.
-    $company = static::query()->create($data);
-    return $company->id;
+    return $this->belongsTo(User::class, 'account_owner_id');
   }
 
-  /**
-   * Replaces the procedural update($id, $data) method.
-   */
-  public static function updateCompany(int $id, array $data): bool
+  public function projects()
   {
-    // Find the company (tenant scoped) and update it.
-    $company = static::find($id);
-
-    if (!$company) {
-      return false;
-    }
-
-    return $company->update($data);
+    return $this->hasMany(Project::class, 'client_company_id');
   }
 
-  /**
-   * Replaces the procedural delete($id) method.
-   */
-  public static function deleteCompany(int $id): bool
+  public function services()
   {
-    // Find the company (tenant scoped) and delete it.
-    $company = static::find($id);
+    return $this->hasMany(Service::class, 'company_id');
+  }
 
-    if (!$company) {
-      return false;
-    }
+  public function serviceLocations()
+  {
+    return $this->hasMany(ServiceLocation::class, 'client_company_id');
+  }
 
-    return (bool)$company->delete();
+  public function tradeJobs()
+  {
+    return $this->hasMany(TradeJob::class, 'company_id');
+  }
+
+  // Convenience so you can call $company->name
+  public function getNameAttribute(): string
+  {
+    return $this->company_name;
+  }
+
+  public function getPhoneFormattedAttribute(): ?string
+  {
+    return $this->formatPhone($this->attributes['phone'] ?? null);
   }
 }

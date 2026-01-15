@@ -14,17 +14,39 @@ class Task extends Model
     'tenant_id',
     'user_id',
     'project_id',
-    'client_id',
+    'contact_id',
     'phase_id',
     'title',
     'description',
     'due_date',
+    'assign_type',
+    'assign_id',
     'status',    // e.g. 'todo','in_progress','completed','archived' (up to you)
     'priority',  // e.g. 'low','medium','high'
+    'client_visible',
+    'requires_approval',
+    'approval_status',
+    'approval_note',
+    'approval_decided_at',
+    'approval_decided_by',
+    'started_at',
+    'completed_at',
+    'archived_at',
+    'hours_spent',
+    'worked_seconds',
+    'timer_started_at',
   ];
 
   protected $casts = [
     'due_date' => 'date',
+    'started_at' => 'datetime',
+    'completed_at' => 'datetime',
+    'archived_at' => 'datetime',
+    'approval_decided_at' => 'datetime',
+    'hours_spent' => 'decimal:2',
+    'timer_started_at' => 'datetime',
+    'client_visible' => 'boolean',
+    'requires_approval' => 'boolean',
   ];
 
   public function tenant(): BelongsTo
@@ -37,6 +59,11 @@ class Task extends Model
     return $this->belongsTo(User::class)->withDefault([
       'display_name' => 'Unassigned',
     ]);
+  }
+
+  public function teamMember(): BelongsTo
+  {
+    return $this->belongsTo(\App\Models\TeamMember::class, 'assign_id');
   }
 
   public function project(): BelongsTo

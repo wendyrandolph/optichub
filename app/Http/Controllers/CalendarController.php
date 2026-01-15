@@ -26,8 +26,16 @@ class CalendarController extends Controller
    */
   public function index()
   {
-    // Replaces $this->view('calendar/index');
-    return view('calendar.index');
+    $tenantId = auth()->user()?->tenant_id ?? (tenant('id') ?? null);
+    $members = \App\Models\User::where('tenant_id', $tenantId)
+      ->orderBy('last_name')
+      ->select('id', 'first_name', 'last_name', 'username')
+      ->get();
+    $projects = \App\Models\Project::where('tenant_id', $tenantId)
+      ->orderBy('project_name')
+      ->get(['id', 'project_name']);
+
+    return view('calendar.index', compact('members', 'projects'));
   }
 
   /**

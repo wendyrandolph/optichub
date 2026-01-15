@@ -13,8 +13,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Optic Hub'),
-    'version' => env('APP_VERSION', '1.0.0'),
+    'name' => env('APP_NAME', 'Renlo'),
+    'version' => env('APP_VERSION', '1.0.1'),
 
     /*
     |--------------------------------------------------------------------------
@@ -28,7 +28,8 @@ return [
     */
 
     'env' => env('APP_ENV', 'production'),
-
+    'root_domain' => env('APP_ROOT_DOMAIN', parse_url(env('APP_URL'), PHP_URL_HOST)),
+    'port' => env('APP_PORT'),
 
     /*
     |--------------------------------------------------------------------------
@@ -138,7 +139,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL', 'http://127.0.0.1.nip.io'),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,0 +1,407 @@
+@layer components {
+  .oh-form {
+    @apply space-y-5;
+  }
+  .oh-field {
+    @apply space-y-1.5;
+  }
+
+  .oh-label {
+    @apply text-xs font-semibold;
+    color: rgb(var(--text));
+  }
+
+  .oh-help {
+    @apply text-xs;
+    color: rgb(var(--text-subtle));
+  }
+
+  .oh-input,
+  .oh-select,
+  .oh-textarea {
+    @apply w-full rounded-xl px-3 text-sm transition outline-none;
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    border: 1px solid rgb(var(--border) / 0.7);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+  }
+
+  .oh-input,
+  .oh-select {
+    height: 2.5rem; /* 40px */
+  }
+
+  .oh-textarea {
+    @apply py-2.5;
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  .oh-input:focus,
+  .oh-select:focus,
+  .oh-textarea:focus {
+    border-color: rgb(var(--brand-primary) / 0.7);
+    box-shadow: 0 0 0 3px rgb(var(--brand-primary) / 0.18);
+  }
+
+  .oh-form-grid {
+    @apply grid gap-4 sm:gap-5 grid-cols-1 lg:grid-cols-2;
+  }
+
+  .oh-divider {
+    border-top: 1px solid rgb(var(--border) / 0.65);
+  }
+
+  .oh-sticky-actions {
+    @apply sticky bottom-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3;
+    background: linear-gradient(
+      to top,
+      rgb(var(--bg) / 0.96),
+      rgb(var(--bg) / 0.72),
+      rgb(var(--bg) / 0)
+    );
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgb(var(--border) / 0.55);
+  }
+
+  /* Muted chip text */
+  .oh-chip-muted {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs;
+    background: rgb(var(--surface-muted));
+    color: rgb(var(--text-subtle));
+    border: 1px solid rgb(var(--border) / 0.6);
+  }
+
+  /* Pills */
+  /* Base pill */
+  .oh-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ring-1 select-none;
+    background: rgb(var(--surface-muted));
+    color: rgb(var(--text-subtle));
+    --tw-ring-color: rgb(var(--border) / 0.55);
+  }
+
+  /* Active (for toggle chips) */
+  .oh-pill.is-active,
+  .oh-pill[aria-pressed='true'] {
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    --tw-ring-color: rgb(var(--brand-primary) / 0.35);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Status pills (token-based) */
+  .oh-pill--brand {
+    background: rgba(var(--brand-primary) / 0.1);
+    color: rgb(var(--brand-primary));
+    --tw-ring-color: rgba(var(--brand-primary) / 0.28);
+  }
+  .oh-pill--secondary {
+    background: rgba(var(--brand-secondary) / 0.1);
+    color: rgb(var(--brand-secondary));
+    --tw-ring-color: rgba(var(--brand-secondary) / 0.28);
+  }
+  .oh-pill--accent {
+    background: rgba(var(--brand-accent) / 0.12);
+    color: rgb(var(--brand-accent));
+    --tw-ring-color: rgba(var(--brand-accent) / 0.28);
+  }
+  .oh-pill--success {
+    background: rgba(var(--status-success) / 0.12);
+    color: rgb(var(--status-success));
+    --tw-ring-color: rgba(var(--status-success) / 0.25);
+  }
+  .oh-pill--danger {
+    background: rgba(var(--status-danger) / 0.12);
+    color: rgb(var(--status-danger));
+    --tw-ring-color: rgba(var(--status-danger) / 0.25);
+  }
+
+  /* Neutral / “scheduled” style */
+  .oh-pill--muted {
+    background: rgb(var(--surface-muted));
+    color: rgb(var(--text-subtle));
+    --tw-ring-color: rgb(var(--border) / 0.55);
+  }
+
+  .oh-provider-banner {
+    @apply relative;
+    background: rgb(var(--surface-muted));
+    box-shadow: none;
+    --tw-ring-color: rgb(var(--border) / 0.5);
+  }
+
+  .oh-provider-banner::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: 3px;
+    border-radius: 999px;
+    background: rgb(var(--brand-primary));
+    opacity: 0.9;
+  }
+
+  .oh-card--soft {
+    background: color-mix(
+      in oklab,
+      rgb(var(--surface)) 88%,
+      rgb(var(--surface-muted))
+    );
+    --tw-ring-color: rgb(var(--border) / 0.5);
+  }
+
+  .oh-stat {
+    @apply rounded-xl p-3 ring-1;
+    background: rgb(var(--surface));
+    --tw-ring-color: rgb(var(--border) / 0.55);
+  }
+  .oh-stat__label {
+    @apply text-[11px] font-semibold uppercase tracking-wide;
+    color: rgb(var(--text-subtle));
+  }
+  .oh-stat__value {
+    @apply mt-1 text-xl font-semibold tracking-tight tabular-nums;
+    color: rgb(var(--text));
+  }
+
+  .oh-table-wrap {
+    @apply overflow-x-auto rounded-xl ring-1 p-2;
+    --tw-ring-color: rgb(var(--border) / 0.55);
+    background: rgb(var(--surface));
+  }
+  .oh-table {
+    @apply w-full text-sm;
+    color: rgb(var(--text));
+  }
+
+  /* Icon-only buttons */
+  .oh-icon-btn {
+    @apply inline-flex items-center justify-center rounded-lg transition;
+    height: 2.25rem;
+    width: 2.25rem;
+    background: rgb(var(--surface-muted));
+    color: rgb(var(--text-subtle));
+    border: 1px solid rgb(var(--border) / 0.75);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+  .oh-icon-btn:hover {
+    background: color-mix(
+      in oklab,
+      rgb(var(--surface)) 88%,
+      rgb(var(--surface-muted))
+    );
+    color: rgb(var(--text));
+    border-color: rgb(var(--border));
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Lightweight tooltip */
+  .oh-tooltip {
+    position: relative;
+  }
+  .oh-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 10px);
+    transform: translate(6px, 0);
+    white-space: nowrap;
+    background: rgb(var(--text));
+    color: rgb(var(--surface));
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.16);
+  }
+  .oh-tooltip::before {
+    content: '';
+    position: absolute;
+    inset-inline-end: 6px;
+    top: calc(100% + 4px);
+    width: 8px;
+    height: 8px;
+    background: rgb(var(--text));
+    clip-path: polygon(50% 100%, 0 0, 100% 0);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .oh-tooltip:hover::after,
+  .oh-tooltip:hover::before {
+    opacity: 1;
+  }
+  .oh-tooltip:hover::after {
+    transform: translate(6px, 6px);
+  }
+  .oh-tooltip::after,
+  .oh-tooltip::before {
+    z-index: 9999;
+  }
+
+  .oh-tooltip {
+    position: relative;
+    z-index: 50;
+    pointer-events: auto;
+  }
+  .oh-tooltip:hover {
+    z-index: 12000;
+  }
+
+  /* Ensure hovered row + actions stack above neighbors */
+  .oh-leads-table table tr {
+    position: relative;
+  }
+  .oh-leads-table table tr:hover {
+    z-index: 2000;
+  }
+
+  /* Lift buttons with tooltips above neighboring rows */
+  .oh-leads-table .oh-icon-btn {
+    position: relative;
+    z-index: 3000;
+  }
+
+  .approval-panel-row .oh-input {
+    @apply h-9;
+  }
+  .oh-table thead th {
+    @apply text-left text-[11px] font-semibold uppercase tracking-wide px-4 py-3;
+    color: rgb(var(--text-subtle));
+    background: color-mix(
+      in oklab,
+      rgb(var(--surface)) 85%,
+      rgb(var(--surface-muted))
+    );
+    border-bottom: 1px solid rgb(var(--border) / 0.6);
+    white-space: nowrap;
+  }
+  .oh-table tbody td {
+    @apply px-4 py-3 align-top;
+    border-bottom: 1px solid rgb(var(--border) / 0.45);
+  }
+  .oh-table tbody tr:hover td {
+    background: color-mix(
+      in oklab,
+      rgb(var(--surface)) 88%,
+      rgb(var(--surface-muted))
+    );
+  }
+
+  .oh-link {
+    @apply inline-flex items-center gap-2 font-medium;
+    color: rgb(var(--brand-primary));
+  }
+  .oh-link:hover {
+    color: rgb(var(--brand-secondary));
+  }
+
+  .oh-btn--success {
+    background: rgb(var(--status-success));
+    color: #fff;
+    border-color: rgb(var(--status-success));
+  }
+  .oh-btn--success:hover {
+    filter: brightness(0.95);
+  }
+
+  /* Unified buttons */
+  .oh-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid transparent;
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+  }
+  .oh-btn--primary {
+    background: rgb(var(--brand-primary));
+    color: #fff;
+    border-color: rgb(var(--brand-primary));
+  }
+  .oh-btn--secondary {
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    border-color: rgb(var(--border) / 0.7);
+  }
+  .oh-btn--ghost {
+    background: transparent;
+    color: rgb(var(--text));
+    border-color: transparent;
+  }
+  .oh-btn--danger {
+    background: rgba(var(--status-danger) / 0.12);
+    color: rgb(var(--status-danger));
+    border-color: rgba(var(--status-danger) / 0.35);
+  }
+  .oh-btn:disabled,
+  .oh-btn[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .oh-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--brand-primary) / 0.25);
+  }
+
+  .oh-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    width: 2.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(var(--border) / 0.7);
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    transition: background 150ms ease, box-shadow 150ms ease;
+  }
+  .oh-icon-btn:hover {
+    background: rgb(var(--surface-accent));
+  }
+  .oh-icon-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--brand-primary) / 0.25);
+  }
+
+  /* Shared underline hover link */
+  .oh-link-underline {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .oh-link-underline::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    height: 2px;
+    width: 0;
+    background: rgb(var(--brand-accent));
+    transform: translateX(-50%);
+    transition: width 180ms ease;
+    opacity: 0.85;
+  }
+  .oh-link-underline:hover::after,
+  .oh-link-underline:focus-visible::after {
+    width: 100%;
+  }
+
+  .oh-chip {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold border transition;
+    background: rgb(var(--surface));
+    color: rgb(var(--text-subtle));
+    border-color: rgb(var(--border) / 0.7);
+  }
+  .oh-chip[aria-pressed='true'],
+  .oh-chip.is-active {
+    background: rgba(var(--brand-primary) / 0.12);
+    color: rgb(var(--text));
+    border-color: rgba(var(--brand-primary) / 0.3);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+}

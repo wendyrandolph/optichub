@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Contact extends Model
 {
     use HasFactory; // HasTenantScope; // Use the HasTenantScope trait
+    use \App\Traits\FormatsPhone;
 
     protected $table = 'contacts';
 
@@ -37,6 +38,11 @@ class Contact extends Model
         'status',
     ];
 
+    public function getPhoneFormattedAttribute(): ?string
+    {
+        return $this->formatPhone($this->attributes['phone'] ?? null);
+    }
+
     // --- RELATIONSHIPS ---
 
     /**
@@ -46,7 +52,7 @@ class Contact extends Model
     /** The client’s portal login user (role = client). */
     public function userAccount(): HasOne
     {
-        return $this->hasOne(User::class, 'client_id', 'id')
+        return $this->hasOne(User::class, 'contact_id', 'id')
             ->where('role', 'client');
     }
 
@@ -70,24 +76,51 @@ class Contact extends Model
     {
         return trim(($this->firstName ?? '') . ' ' . ($this->lastName ?? ''));
     }
+    public function projects()
+    {
+        // assumes invoice-style files are stored in an uploads table
+        // with a contact_id column
+        return $this->hasMany(Project::class, 'contact_id');
+    }
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
     /**
      * A Client belongs to a Client Company.
      * Assuming the model name for the company is ClientCompany.
      */
-    public function company(): BelongsTo
+    public function company()
     {
-        // You'll need to define the ClientCompany model separately
         return $this->belongsTo(ClientCompany::class, 'client_company_id');
     }
 
-    /**
-     * Get the projects associated with this client.
-     */
-    public function projects(): HasMany
+    // Optional helper
+    public function getCompanyNameAttribute(): ?string
     {
-        // This relationship automatically respects the tenant_id filtering
-        return $this->hasMany(Project::class, 'client_id');
+        return $this->company?->company_name;
     }
+
+    public function user()
+    {
+        return $this->hasOne(User::class);
+    }
+
+    public function uploads()
+    {
+        return $this->hasMany(Upload::class, 'contact_id');
+    }
+
+    public function serviceLocations()
+    {
+        return $this->hasMany(ServiceLocation::class, 'client_id');
+    }
+
+    public function tradeJobs()
+    {
+        return $this->hasMany(TradeJob::class, 'client_id');
+    }
+
 
     // --- SCOPES ---
 

@@ -7,9 +7,11 @@ use App\Models\User;
 
 class InvoicePolicy
 {
-  public function before(User $user, $ability)
+  public function before(User $user, $ability): ?bool
   {
-    return in_array(strtolower((string)$user->role), ['super_admin', 'superadmin', 'provider'], true) ? true : null;
+    return in_array(strtolower((string) $user->role), ['super_admin', 'superadmin', 'provider'], true)
+      ? true
+      : null;
   }
 
   public function viewAny(User $user): bool
@@ -17,9 +19,9 @@ class InvoicePolicy
     return !empty($user->tenant_id);
   }
 
-  public function view(User $user, invoice $invoice): bool
+  public function view(User $user, Invoice $invoice): bool
   {
-    return $user->tenant_id === $invoice->tenant_id;
+    return (int) $user->tenant_id === (int) $invoice->tenant_id;
   }
 
   public function create(User $user): bool
@@ -27,13 +29,13 @@ class InvoicePolicy
     return !empty($user->tenant_id);
   }
 
-  public function update(User $user, invoice $invoice): bool
+  public function update(User $user, Invoice $invoice): bool
   {
-    return $user->tenant_id === $invoice->tenant_id;
+    return (int) $user->tenant_id === (int) $invoice->tenant_id;
   }
 
-  public function delete(User $user, invoice $invoice): bool
+  public function delete(User $user, Invoice $invoice): bool
   {
-    return $user->tenant_id === $invoice->tenant_id;
+    return (int) $user->tenant_id === (int) $invoice->tenant_id;
   }
 }

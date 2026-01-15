@@ -71,7 +71,7 @@ class ReportsController extends Controller
       'status' => ['nullable', Rule::in(['sent', 'overdue', 'draft', 'paid', 'void'])],
       'sort'   => ['nullable', Rule::in(['due_date', 'number', 'client', 'balance_due', 'created_at'])],
       'dir'    => ['nullable', Rule::in(['asc', 'desc'])],
-      'range'  => ['nullable', Rule::in(['wtd', 'mtd', 'qtd', 'ytd', 'last30'])],
+      'range'  => ['nullable', Rule::in(['wtd', 'mtd', 'qtd', 'ytd', 'last30', 'all'])],
       'q'      => ['nullable', 'string', 'max:100'],
       'min'    => ['nullable', 'numeric'],
       'max'    => ['nullable', 'numeric'],
@@ -80,7 +80,7 @@ class ReportsController extends Controller
     $status = $r->input('status');      // default to sent+overdue if null
     $sort   = $r->input('sort', 'due_date');
     $dir    = $r->input('dir', 'asc');
-    $range  = $r->input('range', 'wtd');
+    $range  = $r->input('range', 'all');
     $qText  = trim((string) $r->input('q', ''));
     $min    = $r->input('min');
     $max    = $r->input('max');
@@ -91,6 +91,7 @@ class ReportsController extends Controller
       'qtd'    => [now()->firstOfQuarter(), now()],
       'ytd'    => [now()->startOfYear(),   now()],
       'last30' => [now()->subDays(30),     now()],
+      'all'    => [null, null],
       default  => [now()->startOfWeek(),   now()],
     };
 
@@ -117,7 +118,7 @@ class ReportsController extends Controller
     // ----- base query (shared) -----
     $base = DB::table('invoices')
       ->where('tenant_id', $tenant->id)
-      ->whereBetween($dueCol, [$start, $end])
+      ->when($start && $end, fn($q) => $q->whereBetween($dueCol, [$start, $end]))
       ->when(
         $status,
         fn($q) => $q->where('status', $status),
@@ -176,12 +177,19 @@ class ReportsController extends Controller
 
     $labels = [];
     $amounts = [];
-    $cursor = $start->copy()->startOfDay();
-    while ($cursor->lte($end)) {
-      $k = $cursor->format('Y-m-d');
-      $labels[]  = $cursor->format('M d');
-      $amounts[] = (float) ($byDay[$k]->total ?? 0);
-      $cursor->addDay();
+    if ($start && $end) {
+      $cursor = $start->copy()->startOfDay();
+      while ($cursor->lte($end)) {
+        $k = $cursor->format('Y-m-d');
+        $labels[]  = $cursor->format('M d');
+        $amounts[] = (float) ($byDay[$k]->total ?? 0);
+        $cursor->addDay();
+      }
+    } else {
+      foreach ($byDay as $day => $row) {
+        $labels[] = \Carbon\Carbon::parse($day)->format('M d');
+        $amounts[] = (float) ($row->total ?? 0);
+      }
     }
 
     $invoicesConfig = [
@@ -676,7 +684,6 @@ class ReportsController extends Controller
     $ownerIdCol = $hasProj('owner_id') ? 'owner_id' : null;
     $lastCol    = $hasProj('last_activity_at') ? 'last_activity_at' : ($hasProj('updated_at') ? 'updated_at' : 'created_at');
 
-    $today = now()->toDateString();
 
     // Base query
     $base = DB::table('projects')->where('projects.tenant_id', $tenant->id);
@@ -701,18 +708,17 @@ class ReportsController extends Controller
     }
 
     // Stale days expression (MySQL): DATEDIFF(today, lastCol)
-    $staleExpr = "GREATEST(DATEDIFF(?, `projects`.`$lastCol`), 0)";
-    $bind = [$today];
+    $staleExpr = "GREATEST(DATEDIFF(CURDATE(), `projects`.`$lastCol`), 0)";
 
     // Apply stale windows
     $q = (clone $base);
     if ($minDays !== null) {
-      $q->whereRaw("$staleExpr >= ?", array_merge($bind, [(int)$minDays]));
+      $q->whereRaw("$staleExpr >= ?", [(int) $minDays]);
     } else {
-      $q->whereRaw("$staleExpr >= ?", array_merge($bind, [$baseline]));
+      $q->whereRaw("$staleExpr >= ?", [$baseline]);
     }
     if ($maxDays !== null) {
-      $q->whereRaw("$staleExpr <= ?", array_merge($bind, [(int)$maxDays]));
+      $q->whereRaw("$staleExpr <= ?", [(int) $maxDays]);
     }
 
     // Select fields
@@ -753,10 +759,7 @@ class ReportsController extends Controller
       ->withQueryString();
     // one placeholder per $staleExpr; AVG + MAX => 2 total placeholders
     $totalsRow = (clone $q)
-      ->selectRaw(
-        "COUNT(*) as cnt, AVG($staleExpr) as avg_stale, MAX($staleExpr) as max_stale",
-        array_merge($bind, $bind) // ⬅️ two dates, not three
-      )
+      ->selectRaw("COUNT(*) as cnt, AVG($staleExpr) as avg_stale, MAX($staleExpr) as max_stale")
       ->first();
 
     $totals = [
@@ -769,7 +772,7 @@ class ReportsController extends Controller
     $buckets = ['15–30' => 0, '31–60' => 0, '61–90' => 0, '90+' => 0];
 
     $forChart = (clone $q)
-      ->selectRaw("$staleExpr as stale_days", $bind)
+      ->selectRaw("$staleExpr as stale_days")
       ->get();
 
     foreach ($forChart as $row) {
@@ -809,6 +812,332 @@ class ReportsController extends Controller
         'qText'    => $qText,
         'sort'     => $sort,
         'dir'      => $dir,
+      ],
+    ]);
+  }
+
+  // ------------------------------------------------------------------------- // 
+  // ---------------------- Pipeline Aging Report ---------------------------- // 
+  // ------------------------------------------------------------------------- // 
+  public function pipelineAging(Request $r, Tenant $tenant)
+  {
+    $this->authorize('view', $tenant);
+
+    $range = (int) $r->input('range', 90);
+    $range = in_array($range, [30, 60, 90], true) ? $range : 90;
+    $ownerId = $r->input('owner_id');
+    $leadStatus = $r->input('status');
+    $oppStage = $r->input('stage_id');
+    $minAge = (int) $r->input('min_age_days', 0);
+
+    $buckets = [
+      '0–7' => [0, 7],
+      '8–14' => [8, 14],
+      '15–30' => [15, 30],
+      '31–60' => [31, 60],
+      '61+' => [61, null],
+    ];
+
+    $leadAgeExpr = 'GREATEST(DATEDIFF(CURDATE(), COALESCE(status_changed_at, updated_at, created_at)), 0)';
+    $leadRows = DB::table('leads')
+      ->where('tenant_id', $tenant->id)
+      ->when($ownerId, fn($q) => $q->where('owner_id', (int) $ownerId))
+      ->when($leadStatus, fn($q) => $q->where('status', $leadStatus))
+      ->whereRaw("$leadAgeExpr >= ?", [$minAge])
+      ->whereRaw("COALESCE(status_changed_at, updated_at, created_at) >= ?", [now()->subDays($range)])
+      ->select('status', DB::raw("$leadAgeExpr as age"))
+      ->get();
+
+    $oppAgeExpr = 'GREATEST(DATEDIFF(CURDATE(), COALESCE(stage_changed_at, updated_at, created_at)), 0)';
+    $oppRows = DB::table('opportunities')
+      ->where('tenant_id', $tenant->id)
+      ->when($ownerId, fn($q) => $q->where('owner_id', (int) $ownerId))
+      ->when($oppStage, fn($q) => $q->where('stage', $oppStage))
+      ->whereRaw("$oppAgeExpr >= ?", [$minAge])
+      ->whereRaw("COALESCE(stage_changed_at, updated_at, created_at) >= ?", [now()->subDays($range)])
+      ->select('stage', DB::raw("$oppAgeExpr as age"))
+      ->get();
+
+    $leadStats = $leadRows->groupBy(fn($r) => strtolower((string) $r->status ?: 'unknown'))
+      ->map(function ($group) {
+        $count = $group->count();
+        $avg = $count ? round($group->avg('age'), 1) : 0;
+        return ['count' => $count, 'avg' => $avg];
+      })
+      ->sortKeys();
+
+    $oppStats = $oppRows->groupBy(fn($r) => strtolower((string) $r->stage ?: 'unknown'))
+      ->map(function ($group) {
+        $count = $group->count();
+        $avg = $count ? round($group->avg('age'), 1) : 0;
+        return ['count' => $count, 'avg' => $avg];
+      })
+      ->sortKeys();
+
+    $bucketCounts = function ($rows) use ($buckets) {
+      $counts = array_fill_keys(array_keys($buckets), 0);
+      foreach ($rows as $row) {
+        $age = (int) $row->age;
+        foreach ($buckets as $label => [$min, $max]) {
+          if ($age < $min) {
+            continue;
+          }
+          if ($max === null || $age <= $max) {
+            $counts[$label]++;
+            break;
+          }
+        }
+      }
+      return $counts;
+    };
+
+    $leadBuckets = $bucketCounts($leadRows);
+    $oppBuckets = $bucketCounts($oppRows);
+
+    $owners = DB::table('users')
+      ->where('tenant_id', $tenant->id)
+      ->select('id', DB::raw("
+        COALESCE(
+          NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''),
+          username,
+          email
+        ) as name
+      "))
+      ->orderBy('name')
+      ->get();
+
+    $leadStatuses = DB::table('leads')
+      ->where('tenant_id', $tenant->id)
+      ->whereNotNull('status')
+      ->distinct()
+      ->orderBy('status')
+      ->pluck('status')
+      ->filter()
+      ->values();
+
+    $oppStages = DB::table('opportunities')
+      ->where('tenant_id', $tenant->id)
+      ->whereNotNull('stage')
+      ->distinct()
+      ->orderBy('stage')
+      ->pluck('stage')
+      ->filter()
+      ->values();
+
+    $leadConfig = [
+      'type' => 'bar',
+      'data' => [
+        'labels' => array_keys($leadBuckets),
+        'datasets' => [[
+          'label' => 'Leads',
+          'data' => array_values($leadBuckets),
+          '_brand' => 'primary',
+        ]],
+      ],
+      'options' => [
+        'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]],
+      ],
+    ];
+
+    $oppConfig = [
+      'type' => 'bar',
+      'data' => [
+        'labels' => array_keys($oppBuckets),
+        'datasets' => [[
+          'label' => 'Opportunities',
+          'data' => array_values($oppBuckets),
+          '_brand' => 'secondary',
+        ]],
+      ],
+      'options' => [
+        'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]],
+      ],
+    ];
+
+    return view('reports.pipeline-aging', [
+      'tenant' => $tenant->id,
+      'leadStats' => $leadStats,
+      'oppStats' => $oppStats,
+      'leadConfig' => $leadConfig,
+      'oppConfig' => $oppConfig,
+      'leadBuckets' => $leadBuckets,
+      'oppBuckets' => $oppBuckets,
+      'bucketRanges' => $buckets,
+      'owners' => $owners,
+      'leadStatuses' => $leadStatuses,
+      'oppStages' => $oppStages,
+      'filters' => [
+        'range' => $range,
+        'owner_id' => $ownerId,
+        'status' => $leadStatus,
+        'stage_id' => $oppStage,
+        'min_age_days' => $minAge,
+      ],
+    ]);
+  }
+
+  // ------------------------------------------------------------------------- // 
+  // ---------------------- WIP / Workload Report ---------------------------- // 
+  // ------------------------------------------------------------------------- // 
+  public function wip(Request $r, Tenant $tenant)
+  {
+    $this->authorize('view', $tenant);
+
+    $taskRows = DB::table('tasks')
+      ->leftJoin('users', 'users.id', '=', 'tasks.user_id')
+      ->where('tasks.tenant_id', $tenant->id)
+      ->whereIn('tasks.status', ['todo', 'in_progress'])
+      ->selectRaw("
+        COALESCE(
+          NULLIF(TRIM(CONCAT(users.first_name, ' ', users.last_name)), ''),
+          users.username,
+          'Unassigned'
+        ) as name
+      ")
+      ->selectRaw("COALESCE(users.id, 0) as user_id")
+      ->selectRaw('COUNT(*) as cnt')
+      ->groupBy('name', 'user_id')
+      ->orderByDesc('cnt')
+      ->get();
+
+    $ownerCol = Schema::hasColumn('projects', 'project_manager_id') ? 'project_manager_id' : 'user_id';
+    $projectRows = DB::table('projects')
+      ->leftJoin('users', "projects.$ownerCol", '=', 'users.id')
+      ->where('projects.tenant_id', $tenant->id)
+      ->whereNotIn('projects.status', ['completed', 'cancelled', 'closed'])
+      ->selectRaw("
+        COALESCE(
+          NULLIF(TRIM(CONCAT(users.first_name, ' ', users.last_name)), ''),
+          users.username,
+          'Unassigned'
+        ) as name
+      ")
+      ->selectRaw("COALESCE(users.id, 0) as owner_id")
+      ->selectRaw('COUNT(*) as cnt')
+      ->groupBy('name', 'owner_id')
+      ->orderByDesc('cnt')
+      ->get();
+
+    $taskConfig = [
+      'type' => 'bar',
+      'data' => [
+        'labels' => $taskRows->pluck('name')->all(),
+        'datasets' => [[
+          'label' => 'Open Tasks',
+          'data' => $taskRows->pluck('cnt')->map(fn($v) => (int) $v)->all(),
+          '_brand' => 'primary',
+        ]],
+      ],
+      'options' => [
+        'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]],
+      ],
+    ];
+
+    $projectConfig = [
+      'type' => 'bar',
+      'data' => [
+        'labels' => $projectRows->pluck('name')->all(),
+        'datasets' => [[
+          'label' => 'Active Projects',
+          'data' => $projectRows->pluck('cnt')->map(fn($v) => (int) $v)->all(),
+          '_brand' => 'secondary',
+        ]],
+      ],
+      'options' => [
+        'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]],
+      ],
+    ];
+
+    return view('reports.wip', [
+      'tenant' => $tenant->id,
+      'taskRows' => $taskRows,
+      'projectRows' => $projectRows,
+      'taskConfig' => $taskConfig,
+      'projectConfig' => $projectConfig,
+    ]);
+  }
+
+  // ------------------------------------------------------------------------- // 
+  // ---------------------- Throughput Report -------------------------------- // 
+  // ------------------------------------------------------------------------- // 
+  public function throughput(Request $r, Tenant $tenant)
+  {
+    $this->authorize('view', $tenant);
+
+    $weeks = 8;
+    $start = now()->startOfWeek()->subWeeks($weeks - 1)->startOfDay();
+    $end = now()->endOfWeek()->endOfDay();
+
+    $taskRows = DB::table('tasks')
+      ->where('tenant_id', $tenant->id)
+      ->where('status', 'completed')
+      ->whereBetween('updated_at', [$start, $end])
+      ->select('updated_at')
+      ->get();
+
+    $oppRows = DB::table('opportunities')
+      ->where('tenant_id', $tenant->id)
+      ->whereRaw('LOWER(stage) = ?', ['won'])
+      ->whereBetween('updated_at', [$start, $end])
+      ->select('updated_at')
+      ->get();
+
+    $bucketize = function ($rows) use ($start, $weeks) {
+      $counts = [];
+      $cursor = $start->copy();
+      for ($i = 0; $i < $weeks; $i++) {
+        $counts[$cursor->format('Y-m-d')] = 0;
+        $cursor->addWeek();
+      }
+      foreach ($rows as $row) {
+        $key = Carbon::parse($row->updated_at)->startOfWeek()->format('Y-m-d');
+        if (array_key_exists($key, $counts)) {
+          $counts[$key]++;
+        }
+      }
+      return $counts;
+    };
+
+    $taskCounts = $bucketize($taskRows);
+    $oppCounts = $bucketize($oppRows);
+
+    $labels = [];
+    $taskSeries = [];
+    $oppSeries = [];
+    foreach ($taskCounts as $weekStart => $count) {
+      $labels[] = Carbon::parse($weekStart)->format('M j');
+      $taskSeries[] = $count;
+      $oppSeries[] = $oppCounts[$weekStart] ?? 0;
+    }
+
+    $throughputConfig = [
+      'type' => 'bar',
+      'data' => [
+        'labels' => $labels,
+        'datasets' => [
+          [
+            'label' => 'Tasks Completed',
+            'data' => $taskSeries,
+            '_brand' => 'primary',
+          ],
+          [
+            'label' => 'Opportunities Won',
+            'data' => $oppSeries,
+            '_brand' => 'secondary',
+          ],
+        ],
+      ],
+      'options' => [
+        'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]],
+      ],
+    ];
+
+    return view('reports.throughput', [
+      'tenant' => $tenant->id,
+      'throughputConfig' => $throughputConfig,
+      'range' => [
+        'start' => $start->toDateString(),
+        'end' => $end->toDateString(),
       ],
     ]);
   }
@@ -1222,7 +1551,7 @@ class ReportsController extends Controller
     $type = $r->get('type', 'invoices'); // which dataset
     $rows = app(\App\Services\Reports\ExportService::class)->get($tenant, $type, $r->all());
 
-    $filename = "optic-hub-{$type}-" . now()->format('Ymd-His') . ".csv";
+    $filename = "renlo-{$type}-" . now()->format('Ymd-His') . ".csv";
     return response()->streamDownload(function () use ($rows) {
       $out = fopen('php://output', 'w');
       if (!empty($rows)) {

@@ -24,7 +24,7 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->unsignedBigInteger('project_id')->nullable()->index();
-            $table->unsignedBigInteger('client_id')->nullable()->index();
+            $table->unsignedBigInteger('contact_id')->nullable()->index();
 
             $table->string('title');
             $table->text('description')->nullable();

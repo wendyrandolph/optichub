@@ -1,0 +1,65 @@
+@layer components {
+  /* ---------- FEATURE GRID ---------- */
+
+  .feature-head {
+    max-width: 42rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .feature-sub {
+    margin-top: 0.4rem;
+  }
+
+  .cards--features {
+    margin-top: 1.5rem;
+  }
+
+  .cards--features .card.feature {
+    border-radius: 18px;
+    padding: 1.1rem 1.1rem;
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    box-shadow: 0 6px 20px rgba(var(--text), 0.05);
+  }
+
+  .cards--features .feature__icon {
+    border-radius: 18px;
+    background: rgba(var(--ui-primary), 0.08);
+    color: rgb(var(--ui-primary));
+  }
+
+  .cards--features .feature__icon--accent {
+    background: rgba(var(--ui-primary), 0.08);
+  }
+
+  .feature-foot {
+    margin-top: 1.5rem;
+  }
+
+  .marketing .cards {
+    @apply grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8;
+  }
+
+  .marketing .feature {
+    @apply grid grid-cols-[auto_1fr] gap-4 items-start;
+  }
+
+  .marketing .feature__icon {
+    @apply w-11 h-11 rounded-xl flex items-center justify-center text-xl;
+    background: rgba(var(--ui-primary), 0.08);
+    color: rgb(var(--ui-primary));
+  }
+
+  .marketing .feature__icon--accent {
+    background: radial-gradient(
+      circle at 30% 0,
+      rgb(var(--surface)) 0,
+      rgb(var(--brand-secondary)) 60%,
+      rgb(var(--brand-primary)) 100%
+    );
+  }
+
+  .marketing .feature__tagline {
+    @apply text-xs uppercase tracking-wide text-[rgb(var(--text-subtle))];
+  }
+}

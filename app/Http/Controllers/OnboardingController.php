@@ -2,262 +2,333 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-//use App\Models\Organization;
-use App\Models\OnboardingToken;
-use App\Services\ApiKeyService;
-use App\Http\Requests\Onboarding\SetPasswordRequest; // NEW: For password validation
-use App\Http\Requests\Onboarding\RequestLinkRequest; // NEW: For email validation
-use App\Http\Requests\Onboarding\UpdateCompanyRequest; // NEW: For company validation
-use App\Mail\OnboardingLinkMailable; // NEW: For sending the link
+use App\Models\Tenant;
+use App\Models\ClientCompany;
+use App\Models\Project;
+use App\Models\Contact;
+use App\Services\TenantProvisioner;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class OnboardingController extends Controller
 {
-  protected ApiKeyService $apiKeyService;
-
-  public function __construct(ApiKeyService $apiKeyService)
+  protected function currentTenant(): ?Tenant
   {
-    // Middleware will be applied in routes/web.php or using ->middleware() in the routes.
-    $this->apiKeyService = $apiKeyService;
-  }
+    $user = Auth::guard('admin')->user();
 
-  // ----- Step 0: Set password (public via token) -----
-
-  /**
-   * Show the set password form after token validation.
-   * Replaces setPasswordForm()
-   */
-  public function setPasswordForm(Request $request): View
-  {
-    $token = $request->query('token');
-
-    // Eloquent/Service handles token lookup and expiration check
-    $onboardingToken = OnboardingToken::findValid($token);
-
-    if (!$onboardingToken) {
-      return view('onboarding.expired');
+    if (! $user) {
+      return null;
     }
 
-    return view('onboarding.set_password', [
-      'token' => $token,
+    return $user->tenant ?? null;
+  }
+
+  // STEP 1: Welcome
+  public function welcome()
+  {
+    $user   = Auth::guard('admin')->user();
+    $tenant = $this->currentTenant();
+
+    return view('onboarding.welcome', compact('user', 'tenant'));
+  }
+
+  public function storeWorkspace(Request $request)
+  {
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
+    }
+
+    $data = $request->validate([
+      'workspace_type' => ['required', 'in:creative,trades'],
+    ]);
+
+    $tenant->update([
+      'workspace_type' => $data['workspace_type'],
+    ]);
+
+    if ($data['workspace_type'] === 'trades') {
+      app(TenantProvisioner::class)->applyTradesDefaults($tenant);
+    }
+
+    return redirect()->route('onboarding.brand');
+  }
+
+  // STEP 2: Brand colors
+  // STEP 2: Brand colors
+  public function brand()
+  {
+    $tenant = $this->currentTenant();
+
+    return view('onboarding.brand', [
+      'tenant' => $tenant,
+
+      'primary_color' => blank($tenant->primary_color)
+        ? '#1C2E70'
+        : $tenant->primary_color,
+
+      'secondary_color' => blank($tenant->secondary_color)
+        ? '#8FAF9A'
+        : $tenant->secondary_color,
+
+      'accent_color' => blank($tenant->accent_color)
+        ? '#9A8FBF'
+        : $tenant->accent_color,
     ]);
   }
 
-  /**
-   * Handle the password submission and log the user in.
-   * Replaces handleSetPassword() - uses Form Request for validation
-   */
-  public function handleSetPassword(SetPasswordRequest $request)
+  public function storeBrand(Request $request)
   {
-    $token = $request->input('token');
-    $validated = $request->validated();
-
-    $onboardingToken = OnboardingToken::findValid($token);
-
-    // This check acts as a final fail-safe for an expired/invalid token
-    if (!$onboardingToken) {
-      return Redirect::route('onboarding.expired');
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
     }
 
-    $user = User::find($onboardingToken->user_id);
+    $data = $request->validate([
+      'primary_color'   => ['required', 'string', 'max:20'],
+      'secondary_color' => ['required', 'string', 'max:20'],
+      'accent_color'    => ['required', 'string', 'max:20'],
+    ]);
 
-    DB::beginTransaction();
-    try {
-      // 1. Update User password
-      $user->password = Hash::make($validated['password']);
-      $user->must_change_password = false;
-      $user->save();
+    $tenant->update($data);
 
-      // 2. Mark Token as used
-      $onboardingToken->used_at = now();
-      $onboardingToken->save();
-
-      DB::commit();
-
-      // 3. Login the user (Replaces Auth::loginByUserId)
-      Auth::login($user);
-
-      // 4. Redirect to the next step
-      return Redirect::route('onboarding.company');
-    } catch (\Throwable $e) {
-      DB::rollBack();
-      Log::error('[onboarding] set-password failed: ' . $e->getMessage());
-
-      // Redirect back with an error flash message
-      return Redirect::back()->withInput()->withErrors(['general' => 'We couldn’t set your password. Please try again.']);
-    }
+    return redirect()->route('onboarding.logo');
   }
-  /**
-   * Show the company setup form.
-   * Replaces companyForm() - uses middleware for auth checks
-   */
-  public function companyForm(): View
+
+  // STEP 3: Logo upload
+  public function logo()
   {
-    // Middleware ('auth', 'can:onboard') should enforce access
-    $tenantId = Auth::user()->tenant_id;
+    $tenant = $this->currentTenant();
 
-    // Eloquent handles the lookup
-    $org = Organization::find($tenantId);
+    return view('onboarding.logo', compact('tenant'));
+  }
 
-    return view('onboarding.company', [
-      'org' => $org,
+  public function storeLogo(Request $request)
+  {
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
+    }
+
+    $data = $request->validate([
+      'logo' => ['nullable', 'image', 'max:2048'], // 2 MB
+    ]);
+
+    if ($request->hasFile('logo')) {
+      $path = $request->file('logo')->store('tenant-logos', 'public');
+      $tenant->update(['logo_path' => $path]);
+    }
+
+    return redirect()->route('onboarding.client');
+  }
+
+  public function client()
+  {
+    $tenant = $this->currentTenant();
+
+    return view('onboarding.client', [
+      'tenant' => $tenant,
     ]);
   }
 
-
-  /** * Save organization basics and continue.
-   * Replaces handleCompany() - uses Form Request for validation
-   */
-  public function handleCompany(UpdateCompanyRequest $request)
+  public function storeClient(Request $request)
   {
-    $validated = $request->validated();
-    $orgId = Auth::user()->tenant_id;
-
-    $org = Organization::find($orgId);
-
-    // Update with validated data
-    $ok = $org->update($validated);
-
-    if (!$ok) {
-      return Redirect::back()->withErrors(['general' => 'We couldn’t save your company info. Please try again.']);
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
     }
 
-    return Redirect::route('onboarding.api-key');
+    // 1) Persist tenant preference
+    $defaultType = $request->input('default_client_type', 'person');
+    if (! in_array($defaultType, ['person', 'company'], true)) {
+      $defaultType = 'person';
+    }
+    $promptSetting = $request->input('client_type_prompt', 'use_default');
+    if (! in_array($promptSetting, ['use_default', 'ask_each_time'], true)) {
+      $promptSetting = 'use_default';
+    }
+    $tenant->update([
+      'default_client_type' => $defaultType,
+      'client_type_prompt'  => $promptSetting,
+    ]);
+
+    // 2) Effective client type
+    $effectiveType = $promptSetting === 'ask_each_time'
+      ? $request->input('client_type', $defaultType)
+      : $defaultType;
+    $effectiveType = $effectiveType === 'company' ? 'company' : 'person';
+
+    // 3) Validation
+    $rules = [
+      'default_client_type' => ['required', 'in:person,company'],
+      'client_type_prompt'  => ['required', 'in:use_default,ask_each_time'],
+      'client_type'         => ['nullable', 'in:person,company'],
+      'contact_first_name'  => ['required', 'string', 'max:80'],
+      'contact_last_name'   => ['required', 'string', 'max:80'],
+      'contact_email'       => ['nullable', 'email', 'max:120', 'required_without:contact_phone'],
+      'contact_phone'       => ['nullable', 'string', 'max:50', 'required_without:contact_email'],
+    ];
+
+    if ($effectiveType === 'company') {
+      $rules = array_merge($rules, [
+        'company_name' => ['required', 'string', 'max:255'],
+        'industry'     => ['nullable', 'string', 'max:255'],
+        'website'      => ['nullable', 'string', 'max:255'],
+        'phone'        => ['nullable', 'string', 'max:50'],
+      ]);
+    }
+
+    $data = $request->validate($rules);
+
+    // 4) Create company if needed
+    $companyId = null;
+    if ($effectiveType === 'company') {
+      $company = ClientCompany::create([
+        'tenant_id'    => $tenant->id,
+        'client_type'  => 'company',
+        'company_name' => $data['company_name'],
+        'industry'     => $data['industry'] ?? null,
+        'website'      => $data['website'] ?? null,
+        'phone'        => $data['phone'] ?? null,
+      ]);
+      $companyId = $company->id;
+    } else {
+      $displayName = trim(($data['contact_first_name'] ?? '') . ' ' . ($data['contact_last_name'] ?? ''));
+      $company = ClientCompany::create([
+        'tenant_id'    => $tenant->id,
+        'client_type'  => 'person',
+        'company_name' => $displayName !== '' ? $displayName : 'Client',
+        'industry'     => $data['industry'] ?? null,
+        'website'      => $data['website'] ?? null,
+        'phone'        => $data['phone'] ?? null,
+      ]);
+      $companyId = $company->id;
+    }
+
+    // 5) Create primary contact (always)
+    Contact::create([
+      'tenant_id'         => $tenant->id,
+      'client_company_id' => $companyId,
+      'firstName'         => $data['contact_first_name'],
+      'lastName'          => $data['contact_last_name'],
+      'email'             => $data['contact_email'],
+      'phone'             => $data['contact_phone'],
+      'status'            => 'active',
+    ]);
+
+    return redirect()->route('onboarding.project');
   }
 
-
-  // ----- Step 2: API key (auth) -----
-
-  /** * Show existing keys and the form to generate a new key.
-   * Replaces apiKeyForm()
-   */
-  public function apiKeyForm(): View
+  // STEP 5: First project
+  public function project()
   {
-    $tenantId = Auth::user()->tenant_id;
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
+    }
 
-    // Eloquent/Model Scope handles the lookup
-    $keys = ApiKey::listActiveByTenant($tenantId);
+    $contacts = Contact::where('tenant_id', $tenant->id)->with('company')->orderBy('firstName')->get();
 
-    // Use Laravel's session helpers for flash data
-    $newPlainKey = session('flash_new_key');
+    if ($contacts->isEmpty()) {
+      return redirect()
+        ->route('onboarding.client')
+        ->with('status', 'Add a client contact first — projects must be linked to a client.');
+    }
 
-    // Data is passed directly to the view; session is cleared by Laravel automatically
-    return view('onboarding.api_key', [
-      'keys' => $keys,
-      'newPlainKey' => $newPlainKey,
+    return view('onboarding.project', [
+      'tenant' => $tenant,
+      'contacts' => $contacts,
     ]);
   }
 
-  /**
-   * Generate a new API key using a dedicated service.
-   * Replaces handleApiKey()
-   */
-  public function handleApiKey()
+  public function storeProject(Request $request)
   {
-    $tenantId = Auth::user()->tenant_id;
-
-    try {
-      // Use Dependency Injected Service to handle key creation and hashing
-      $plainKey = $this->apiKeyService->issue(
-        $tenantId,
-        'Website Integration',
-        ['leads:write', 'events:read']
-      );
-
-      // Flash the plain key (show it once)
-      session()->flash('flash_new_key', $plainKey);
-
-      return Redirect::route('onboarding.api-key');
-    } catch (\Throwable $e) {
-      Log::error('[apiKey] issue failed: ' . $e->getMessage());
-
-      // Redirect back with an error
-      return Redirect::route('onboarding.api-key')->withErrors(['general' => 'We could not create an API key. Please try again.']);
+    $tenant = $this->currentTenant();
+    if (! $tenant) {
+      abort(403);
     }
+
+    $data = $request->validate([
+      'project_name' => ['required', 'string', 'max:255'],
+      'contact_id'  => [
+        'required',
+        'integer',
+        Rule::exists('contacts', 'id')->where('tenant_id', $tenant->id),
+      ],
+      'description' => ['nullable', 'string'],
+    ]);
+
+    $contact = Contact::where('tenant_id', $tenant->id)->findOrFail($data['contact_id']);
+    $companyId = $contact->client_company_id;
+
+    Project::create([
+      'tenant_id'        => $tenant->id,
+      'contact_id'       => $data['contact_id'],
+      'client_company_id'=> $companyId,
+      'project_name'     => $data['project_name'],
+      'status'           => 'open',
+      'description'      => $data['description'] ?? null,
+    ]);
+
+    return redirect()->route('onboarding.team');
   }
 
+  // STEP 6: Team (light touch)
+  public function team()
+  {
+    $tenant = $this->currentTenant();
+    $user   = Auth::guard('admin')->user();
 
-  // ----- Step 3: Finish (auth) -----
+    $isTrial = false;
+    if ($tenant) {
+      $isTrial = ($tenant->subscription_status === 'trialing')
+        || ($tenant->trial_ends_at && now()->lt($tenant->trial_ends_at));
+    }
 
-  /**
-   * Marks onboarding complete and redirects to the dashboard.
-   * Replaces finish()
-   */
+    return view('onboarding.team', [
+      'tenant' => $tenant,
+      'user' => $user,
+      'isTrial' => $isTrial,
+    ]);
+  }
+
+  public function storeTeam(Request $request)
+  {
+    $tenant = $this->currentTenant();
+    $isTrial = ($tenant->subscription_status === 'trialing')
+      || ($tenant->trial_ends_at && now()->lt($tenant->trial_ends_at));
+
+    // If trialing, skip sending invites; optionally store for later
+    if ($isTrial) {
+      // Optionally, store pending invite for later use
+      if ($request->filled('email')) {
+        // placeholder for persistence if desired, e.g., session or a future table
+      }
+      return redirect()->route('onboarding.finish');
+    }
+
+    // Non-trial: invitation logic could be added here. For now, just continue.
+    return redirect()->route('onboarding.finish');
+  }
+
+  // STEP 7: Finish
   public function finish()
   {
-    $this->middleware('auth'); // Ensure user is logged in
-    $tenantId = Auth::user()->tenant_id;
-
-    // Use Eloquent or Query Builder to update the organization record
-    Organization::where('id', $tenantId)->update(['onboarded_at' => now()]);
-
-    // The columnExists helper is no longer necessary; use migrations and Eloquent features.
-
-    return Redirect::route('dashboard');
-  }
-  /**
-   * Show the "request link" form.
-   * Replaces requestLinkForm()
-   */
-  public function requestLinkForm(): View
-  {
-    return view('onboarding.request_link');
-  }
-
-  /**
-   * Handle the request link submission.
-   * Replaces handleRequestLink() - uses Form Request for validation
-   */
-  public function handleRequestLink(RequestLinkRequest $request)
-  {
-    // 1. Validation and CSRF handled by RequestLinkRequest
-    $email = $request->validated('email');
-
-    // 2. Look up user by email
-    $user = User::where('email', $email)->first();
-
-    // Always say “sent” even if user not found (don’t leak existence)
-    if ($user) {
-      $token = bin2hex(random_bytes(32));
-
-      // 3. Create fresh onboarding token (Eloquent/Service handles this)
-      OnboardingToken::create([
-        'user_id' => $user->id,
-        'token' => $token,
-        'expires_at' => now()->addHours(48),
-      ]);
-
-      $magicUrl = route('onboarding.set-password', ['token' => $token]);
-
-      // 4. Send Mailable (Replaces best-effort @mail())
-      Mail::to($user->email)->send(new OnboardingLinkMailable($magicUrl));
+    $tenant = $this->currentTenant();
+    if ($tenant && ! $tenant->onboarding_completed_at) {
+      $tenant->onboarding_completed_at = now();
+      $tenant->save();
     }
 
-    return Redirect::route('onboarding.link-sent');
-  }
+    $adminUser = Auth::guard('admin')->user();
+    $routeName = $adminUser
+      ? 'admin.dashboard'
+      : (Auth::check() ? 'dashboard' : 'login');
 
-  /**
-   * Show the "link sent" confirmation page.
-   * Replaces linkSent()
-   */
-  public function linkSent(): View
-  {
-    return view('onboarding.link_sent');
-  }
-
-  /**
-   * Show the "token expired/invalid" page.
-   */
-  public function expired(): View
-  {
-    return view('onboarding.expired');
+    return redirect()
+      ->route($routeName)
+      ->with('status', 'Welcome to Renlo — your workspace is ready.');
   }
 }
