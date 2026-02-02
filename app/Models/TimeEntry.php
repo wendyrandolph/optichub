@@ -203,12 +203,19 @@ class TimeEntry extends Model
   public static function getMonthlyUserTime()
   {
     return static::query()
-      ->select('users.username', DB::raw('SUM(time_entries.hours) as total_hours'))
+      ->selectRaw("
+        users.id,
+        COALESCE(
+          NULLIF(TRIM(CONCAT(users.first_name, ' ', users.last_name)), ''),
+          users.email
+        ) as name,
+        SUM(time_entries.hours) as total_hours
+      ")
       // Join is safe because User is also tenant-scoped
       ->join('users', 'time_entries.user_id', '=', 'users.id')
       ->whereYear('time_entries.date', now()->year)
       ->whereMonth('time_entries.date', now()->month)
-      ->groupBy('users.username')
+      ->groupBy('users.id', 'name')
       ->orderByDesc('total_hours')
       ->get();
   }

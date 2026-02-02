@@ -32,6 +32,9 @@
             'q' => request('q'),
             'billable' => request('billable'),
         ];
+        $timerAllowedAll = $timerAllowedAll ?? false;
+        $timerAllowedTaskIds = $timerAllowedTaskIds ?? [];
+        $runningTaskTimers = $runningTaskTimers ?? [];
 
         // Helpers for links that preserve filters
         $withQuery = function (array $extra = []) {
@@ -162,6 +165,20 @@
         <form method="POST" action="{{ route('tenant.time.bulk-bill', ['tenant' => $tenantId]) }}" id="bulk-container">
             @csrf
             <div class="oh-card border border-border-default shadow-card overflow-hidden">
+                <div class="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-border-default/70 text-xs text-text-subtle">
+                    <div class="flex items-center gap-2">
+                        <span class="oh-dot text-status-success"></span>
+                        <span>Billed</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="oh-dot text-status-danger"></span>
+                        <span>Unbilled</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="oh-dot text-text-subtle"></span>
+                        <span>Non-billable</span>
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="bg-[rgba(var(--surface-muted)/.6)] text-text-subtle">
@@ -174,8 +191,6 @@
                                 <th class="px-4 py-2 text-left font-medium">Project</th>
                                 <th class="px-4 py-2 text-left font-medium">Task</th>
                                 <th class="px-4 py-2 text-right font-medium">Hours</th>
-                                <th class="px-4 py-2 text-left font-medium">Billing</th>
-                                <th class="px-4 py-2 text-left font-medium">Notes</th>
                                 <th class="px-4 py-2 text-right font-medium">Actions</th>
                             </tr>
                         </thead>
@@ -183,13 +198,13 @@
                             @forelse($entries as $entry)
                                 @php
                                     $billing = $entry->billing_status ?? 'unbilled';
-                                    $pill = match ($billing) {
-                                        'billed' => 'oh-pill oh-pill--info',
-                                        'non_billable' => 'oh-pill',
-                                        default => 'oh-pill oh-pill--muted',
+                                    $dotTone = match ($billing) {
+                                        'billed' => 'text-status-success',
+                                        'non_billable' => 'text-text-subtle',
+                                        default => 'text-status-danger',
                                     };
                                 @endphp
-                                <tr class="hover:bg-surface-accent/40 transition-colors">
+                                <tr class="hover:bg-surface-accent/40 transition-colors" data-entry-id="{{ $entry->id }}">
                                     <td class="px-4 py-3 align-middle">
                                         <input type="checkbox" name="entry_ids[]" value="{{ $entry->id }}"
                                             class="row-check oh-input h-4 w-4" data-billing="{{ $billing }}"
@@ -199,7 +214,7 @@
                                         {{ optional($entry->start_time ?? $entry->date)->format('M j, Y') ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-text-base">
-                                        {{ $entry->user->name ?? '—' }}
+                                        {{ $entry->user ? trim(($entry->user->first_name ?? '') . ' ' . ($entry->user->last_name ?? '')) : '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-text-base">
                                         @if ($entry->project_id)
@@ -214,25 +229,11 @@
                                     <td class="px-4 py-3 text-text-base">
                                         {{ $entry->task->title ?? ($entry->task_name ?? '—') }}
                                     </td>
-                                    <td class="px-4 py-3 text-right font-semibold text-text-base">
-                                        {{ number_format($entry->hours ?? ($entry->duration_hours ?? 0), 2) }}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        @if ($billing === 'billed' && $entry->invoice_id)
-                                            <a href="{{ route('tenant.invoices.show', ['tenant' => $tenantId, 'invoice' => $entry->invoice_id]) }}"
-                                                class="{{ $pill }} text-[11px] inline-flex items-center gap-1" title="Billed via invoice">
-                                                Billed
-                                                <i class="fa-regular fa-arrow-up-right-from-square text-[10px]"></i>
-                                            </a>
-                                        @else
-                                            <span class="{{ $pill }} text-[11px] inline-flex items-center" title="{{ $billing === 'unbilled' ? 'Billable & not invoiced yet' : 'Marked non-billable' }}">
-                                                {{ ucfirst(str_replace('_', ' ', $billing)) }}
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 max-w-[28ch] truncate text-text-subtle"
-                                        title="{{ $entry->notes }}">
-                                        {{ $entry->notes ?? '—' }}
+                                    <td class="px-4 py-3 text-right font-semibold text-text-base js-entry-hours">
+                                        <span class="inline-flex items-center justify-end gap-2">
+                                            <span class="oh-dot {{ $dotTone }}" title="{{ ucfirst(str_replace('_', ' ', $billing)) }}"></span>
+                                            <span>{{ number_format($entry->hours ?? ($entry->duration_hours ?? 0), 2) }}</span>
+                                        </span>
                                     </td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="inline-flex items-center gap-2">
@@ -249,13 +250,12 @@
                                                     'notes' => $entry->notes,
                                                 ];
                                             @endphp
-                                            <button type="button"
-                                                class="oh-icon-btn edit-time-trigger"
-                                                title="Edit"
-                                                aria-label="Edit time entry"
-                                                data-entry='@json($editPayload)'>
-                                                <i class="fa-regular fa-pen-to-square text-[12px]"></i>
-                                            </button>
+                                            <a href="{{ route('tenant.time.edit', ['tenant' => $tenantId, 'entry' => $entry->id]) }}"
+                                                class="oh-icon-btn"
+                                                title="View"
+                                                aria-label="View time entry">
+                                                <i class="fa-regular fa-eye text-[12px]"></i>
+                                            </a>
                                             <button type="submit" form="delete-entry-{{ $entry->id }}"
                                                 class="oh-icon-btn text-rose-600 delete-time-btn" title="Delete"
                                                 aria-label="Delete time entry"
@@ -267,7 +267,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-6 py-12 text-center text-text-subtle">
+                                    <td colspan="7" class="px-6 py-12 text-center text-text-subtle">
                                         <div class="space-y-3">
                                             <p class="font-semibold text-text-base">No time entries yet</p>
                                             <p class="text-sm">Log your first entry to start tracking hours.</p>
@@ -328,192 +328,220 @@
             </form>
         @endforeach
     </div>
-        {{-- Log time modal --}}
+
     @if ($tenantId)
-        <div id="log-time-modal" class="fixed inset-0 z-50 hidden">
-            {{-- overlay --}}
-            <button type="button" id="close-log-modal-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-                aria-label="Close modal"></button>
+        @push('modals')
+            {{-- Log time modal --}}
+            <div id="log-time-modal" class="fixed inset-0 z-50 hidden">
+                <button type="button" id="close-log-modal-overlay"
+                    class="absolute inset-0 bg-black/40 backdrop-blur-[2px]" aria-label="Close modal"></button>
 
-            {{-- centering container --}}
-            <div class="relative flex min-h-screen items-center justify-center p-4 sm:p-6 overflow-y-auto">
-                <div class="oh-card w-full max-w-xl border border-border-default shadow-card relative">
-                    <div class="flex items-center justify-between p-4 border-b border-border-default/70">
-                        <h3 class="text-lg font-semibold text-text-base">Log Time</h3>
-                        <button type="button" id="close-log-modal" class="oh-icon-btn" aria-label="Close modal">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-
-                    <form method="POST" action="{{ route('tenant.time.store', ['tenant' => $tenantId]) }}"
-                        class="p-4 space-y-4">
-                        @csrf
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Project <span class="text-rose-500">*</span></span>
-                                <select name="project_id" class="oh-select h-10 text-text-base" required>
-                                    <option value="">Select project</option>
-                                    @foreach ($projects ?? [] as $p)
-                                        <option value="{{ $p->id }}">
-                                            {{ $p->name ?? ($p->project_name ?? 'Unnamed project') }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Task (optional)</span>
-                                <select name="task_id" class="oh-select h-10">
-                                    <option value="">Select task</option>
-                                    @foreach ($tasks ?? [] as $t)
-                                        <option value="{{ $t->id }}">{{ $t->title }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Date</span>
-                                <input type="date" name="date" value="{{ now()->toDateString() }}"
-                                    class="oh-input h-10">
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Hours <span class="text-rose-500">*</span></span>
-                                <input type="number" step="0.01" min="0.01" name="hours"
-                                    class="oh-input h-10" required>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Member</span>
-                                <select name="user_id" class="oh-select h-10 text-text-base">
-                                    @foreach ($members ?? [] as $m)
-                                        <option value="{{ $m->id }}" @selected(auth()->id() == $m->id)>
-                                            {{ $m->first_name ? trim($m->first_name . ' ' . $m->last_name) : $m->username ?? $m->email }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Hourly rate (optional)</span>
-                                <input type="number" step="0.01" min="0" name="hourly_rate"
-                                    class="oh-input h-10" placeholder="Inherit project rate if blank">
-                            </label>
-
-                            <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
-                                <input type="hidden" name="billable" value="0">
-                                <input type="checkbox" name="billable" value="1" class="oh-input h-4 w-4" checked>
-                                <span class="text-text-base">Billable</span>
-                            </label>
+                <div class="relative flex min-h-screen items-center justify-center p-4 sm:p-6 overflow-y-auto">
+                    <div class="oh-card w-full max-w-xl border border-border-default shadow-card relative">
+                        <div class="flex items-center justify-between p-4 border-b border-border-default/70">
+                            <h3 class="text-lg font-semibold text-text-base">Log Time</h3>
+                            <button type="button" id="close-log-modal" class="oh-icon-btn" aria-label="Close modal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
                         </div>
 
-                        <div class="border border-border-default/70 rounded-lg">
-                            <button type="button" id="toggle-optional"
-                                class="w-full flex items-center justify-between px-3 py-2 text-sm text-text-base">
-                                <span>Optional details</span>
-                                <i class="fa-solid fa-chevron-down text-[10px]" id="optional-icon"></i>
-                            </button>
+                        <form method="POST" action="{{ route('tenant.time.store', ['tenant' => $tenantId]) }}"
+                            class="p-4 space-y-4">
+                            @csrf
 
-                            <div id="optional-body" class="hidden px-3 pb-3 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <label class="grid gap-1 text-sm">
-                                    <span class="text-text-subtle">Notes (optional)</span>
-                                    <textarea name="notes" rows="3" class="oh-input" placeholder="Add a short note"></textarea>
+                                    <span class="text-text-subtle">Project <span class="text-rose-500">*</span></span>
+                                    <select name="project_id" class="oh-select h-10 text-text-base" required>
+                                        <option value="">Select project</option>
+                                        @foreach ($projects ?? [] as $p)
+                                            <option value="{{ $p->id }}">
+                                                {{ $p->name ?? ($p->project_name ?? 'Unnamed project') }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Task (optional)</span>
+                                    <select name="task_id" class="oh-select h-10">
+                                        <option value="">Select task</option>
+                                        @foreach ($tasks ?? [] as $t)
+                                            <option value="{{ $t->id }}">{{ $t->title }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <div class="md:col-span-2">
+                                    <div class="rounded-xl border border-border-default/70 bg-surface-card px-3 py-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-sm font-semibold text-text-base">Timer</div>
+                                            <div id="timer-display" class="text-sm font-semibold text-text-base">00:00:00
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                                            <button type="button" id="timer-start" class="oh-btn">Start</button>
+                                            <button type="button" id="timer-stop" class="oh-btn" disabled>Stop</button>
+                                            <span class="text-xs text-text-subtle">Timer fills hours automatically.</span>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="start_time" id="timer-start-time">
+                                    <input type="hidden" name="end_time" id="timer-end-time">
+                                </div>
+
+                                <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
+                                    <input type="checkbox" id="manual-toggle"
+                                        class="h-4 w-4 rounded border-border-default text-[rgb(var(--brand-primary))]">
+                                    <span class="text-text-base">Enter time manually</span>
+                                </label>
+
+                                <div id="manual-fields" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:col-span-2 hidden">
+                                    <label class="grid gap-1 text-sm">
+                                        <span class="text-text-subtle">Date</span>
+                                        <input type="date" name="date" value="{{ now()->toDateString() }}"
+                                            class="oh-input h-10" id="manual-date">
+                                    </label>
+
+                                    <label class="grid gap-1 text-sm">
+                                        <span class="text-text-subtle">Hours <span
+                                                class="text-rose-500">*</span></span>
+                                        <input type="number" step="0.01" min="0.01" name="hours"
+                                            class="oh-input h-10" id="manual-hours">
+                                    </label>
+                                </div>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Member</span>
+                                    <select name="user_id" class="oh-select h-10 text-text-base">
+                                        @foreach ($members ?? [] as $m)
+                                            <option value="{{ $m->id }}" @selected(auth()->id() == $m->id)>
+                                                {{ $m->first_name ? trim($m->first_name . ' ' . $m->last_name) : $m->username ?? $m->email }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Hourly rate (optional)</span>
+                                    <input type="number" step="0.01" min="0" name="hourly_rate"
+                                        class="oh-input h-10" placeholder="Inherit project rate if blank">
+                                </label>
+
+                                <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
+                                    <input type="hidden" name="billable" value="0">
+                                    <input type="checkbox" name="billable" value="1" class="oh-input h-4 w-4"
+                                        checked>
+                                    <span class="text-text-base">Billable</span>
                                 </label>
                             </div>
-                        </div>
 
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" class="oh-btn" id="cancel-log">Cancel</button>
-                            <button type="submit" class="oh-btn oh-btn--primary">Save</button>
-                        </div>
-                    </form>
+                            <div class="border border-border-default/70 rounded-lg">
+                                <button type="button" id="toggle-optional"
+                                    class="w-full flex items-center justify-between px-3 py-2 text-sm text-text-base">
+                                    <span>Optional details</span>
+                                    <i class="fa-solid fa-chevron-down text-[10px]" id="optional-icon"></i>
+                                </button>
+
+                                <div id="optional-body" class="hidden px-3 pb-3 space-y-3">
+                                    <label class="grid gap-1 text-sm">
+                                        <span class="text-text-subtle">Notes (optional)</span>
+                                        <textarea name="notes" rows="3" class="oh-input" placeholder="Add a short note"></textarea>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" class="oh-btn" id="cancel-log">Cancel</button>
+                                <button type="submit" class="oh-btn oh-btn--primary">Save</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
             {{-- Edit time modal (same placement as Log Time) --}}
             <div id="edit-time-modal" class="fixed inset-0 z-50 hidden">
-                <button type="button" id="close-edit-modal-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-                    aria-label="Close modal"></button>
+                <button type="button" id="close-edit-modal-overlay"
+                    class="absolute inset-0 bg-black/40 backdrop-blur-[2px]" aria-label="Close modal"></button>
                 <div class="relative flex min-h-screen items-center justify-center p-4 sm:p-6 overflow-y-auto">
                     <div class="oh-card w-full max-w-xl border border-border-default shadow-card relative">
-                    <div class="flex items-center justify-between p-4 border-b border-border-default/70">
-                        <h3 class="text-lg font-semibold text-text-base">Edit Time Entry</h3>
-                        <button type="button" id="close-edit-modal" class="oh-icon-btn" aria-label="Close modal">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
+                        <div class="flex items-center justify-between p-4 border-b border-border-default/70">
+                            <h3 class="text-lg font-semibold text-text-base">Edit Time Entry</h3>
+                            <button type="button" id="close-edit-modal" class="oh-icon-btn" aria-label="Close modal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <form id="edit-time-form" method="POST" action="" class="p-4 space-y-5">
+                            @csrf
+                            @method('PUT')
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Project <span class="text-rose-500">*</span></span>
+                                    <select name="project_id" class="oh-select h-10 text-text-base" required>
+                                        <option value="">Select project</option>
+                                        @foreach ($projects ?? [] as $p)
+                                            <option value="{{ $p->id }}">
+                                                {{ $p->name ?? ($p->project_name ?? 'Unnamed project') }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Task (optional)</span>
+                                    <select name="task_id" class="oh-select h-10" id="edit-modal-task">
+                                        <option value="">Select task</option>
+                                    </select>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Date</span>
+                                    <input type="date" name="date" class="oh-input h-10">
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Hours <span class="text-rose-500">*</span></span>
+                                    <input type="number" step="0.01" min="0.01" name="hours"
+                                        class="oh-input h-10" required>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Member</span>
+                                    <select name="user_id" class="oh-select h-10 text-text-base">
+                                        @foreach ($members ?? [] as $m)
+                                            <option value="{{ $m->id }}">
+                                                {{ $m->first_name ? trim($m->first_name . ' ' . $m->last_name) : $m->username ?? $m->email }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Hourly rate (optional)</span>
+                                    <input type="number" step="0.01" min="0" name="hourly_rate"
+                                        class="oh-input h-10" placeholder="Inherit project rate if blank">
+                                </label>
+
+                                <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
+                                    <input type="hidden" name="billable" value="0">
+                                    <input type="checkbox" name="billable" value="1" class="oh-input h-4 w-4">
+                                    <span class="text-text-base">Billable</span>
+                                </label>
+                            </div>
+
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Notes</span>
+                                <textarea name="notes" rows="3" class="oh-input" placeholder="Optional notes"></textarea>
+                            </label>
+
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" class="oh-btn" id="cancel-edit-modal">Cancel</button>
+                                <button type="submit" class="oh-btn oh-btn--primary">Save</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <form id="edit-time-form" method="POST" action="" class="p-4 space-y-5">
-                        @csrf
-                        @method('PUT')
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Project <span class="text-rose-500">*</span></span>
-                                <select name="project_id" class="oh-select h-10 text-text-base" required>
-                                    <option value="">Select project</option>
-                                    @foreach ($projects ?? [] as $p)
-                                        <option value="{{ $p->id }}">
-                                            {{ $p->name ?? ($p->project_name ?? 'Unnamed project') }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Task (optional)</span>
-                                <select name="task_id" class="oh-select h-10" id="edit-modal-task">
-                                    <option value="">Select task</option>
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Date</span>
-                                <input type="date" name="date" class="oh-input h-10">
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Hours <span class="text-rose-500">*</span></span>
-                                <input type="number" step="0.01" min="0.01" name="hours"
-                                    class="oh-input h-10" required>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Member</span>
-                                <select name="user_id" class="oh-select h-10 text-text-base">
-                                    @foreach ($members ?? [] as $m)
-                                        <option value="{{ $m->id }}">
-                                            {{ $m->first_name ? trim($m->first_name . ' ' . $m->last_name) : $m->username ?? $m->email }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </label>
-
-                            <label class="grid gap-1 text-sm">
-                                <span class="text-text-subtle">Hourly rate (optional)</span>
-                                <input type="number" step="0.01" min="0" name="hourly_rate"
-                                    class="oh-input h-10" placeholder="Inherit project rate if blank">
-                            </label>
-
-                            <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
-                                <input type="hidden" name="billable" value="0">
-                                <input type="checkbox" name="billable" value="1" class="oh-input h-4 w-4">
-                                <span class="text-text-base">Billable</span>
-                            </label>
-                        </div>
-
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Notes</span>
-                            <textarea name="notes" rows="3" class="oh-input" placeholder="Optional notes"></textarea>
-                        </label>
-
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" class="oh-btn" id="cancel-edit-modal">Cancel</button>
-                            <button type="submit" class="oh-btn oh-btn--primary">Save</button>
-                        </div>
-                    </form>
                 </div>
             </div>
-        </div>
+        @endpush
     @endif
 
     @push('scripts')
@@ -534,6 +562,15 @@
                 const optionalIcon = document.getElementById('optional-icon');
                 const projectSelect = modal.querySelector('select[name="project_id"]');
                 const taskSelect = modal.querySelector('select[name="task_id"]');
+                const timerStartBtn = modal.querySelector('#timer-start');
+                const timerStopBtn = modal.querySelector('#timer-stop');
+                const timerDisplay = modal.querySelector('#timer-display');
+                const timerStartInput = modal.querySelector('#timer-start-time');
+                const timerEndInput = modal.querySelector('#timer-end-time');
+                const manualToggle = modal.querySelector('#manual-toggle');
+                const manualFields = modal.querySelector('#manual-fields');
+                const manualHours = modal.querySelector('#manual-hours');
+                const manualDate = modal.querySelector('#manual-date');
                 @php
                     $tasksPayload = ($tasks ?? collect())->map(function ($t) {
                         return [
@@ -560,6 +597,7 @@
                     // optional: autofocus first input/select for nicer UX
                     const firstField = modal.querySelector('input, select, textarea, button');
                     firstField?.focus?.();
+                    populateTasks(projectSelect?.value || null);
                 }
 
                 function closeModal() {
@@ -611,20 +649,97 @@
                     const prev = taskSelect.value;
                     taskSelect.innerHTML = '<option value="">Select task</option>';
                     const pid = projectId ? Number(projectId) : null;
-                    tasksByProject
+                    const matched = tasksByProject
                         .filter(t => pid && Number(t.project_id) === pid)
-                        .forEach(t => {
+                    if (matched.length === 0 && pid) {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'No tasks for this project';
+                        opt.disabled = true;
+                        taskSelect.appendChild(opt);
+                    } else {
+                        matched.forEach(t => {
                             const opt = document.createElement('option');
                             opt.value = t.id;
                             opt.textContent = t.title;
                             taskSelect.appendChild(opt);
                         });
+                    }
                     if (prev && [...taskSelect.options].some(o => o.value === prev)) {
                         taskSelect.value = prev;
                     }
                 }
                 projectSelect?.addEventListener('change', (e) => populateTasks(e.target.value));
                 populateTasks(projectSelect?.value || null);
+
+                // Timer logic
+                let timerInterval = null;
+                let timerStart = null;
+
+                const formatDuration = (seconds) => {
+                    const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+                    const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+                    const secs = String(seconds % 60).padStart(2, '0');
+                    return `${hrs}:${mins}:${secs}`;
+                };
+
+                const resetTimer = () => {
+                    if (timerInterval) clearInterval(timerInterval);
+                    timerInterval = null;
+                    timerStart = null;
+                    if (timerDisplay) timerDisplay.textContent = '00:00:00';
+                    if (timerStartInput) timerStartInput.value = '';
+                    if (timerEndInput) timerEndInput.value = '';
+                };
+
+                const toggleManual = () => {
+                    if (!manualToggle || !manualFields || !manualHours) return;
+                    const isManual = manualToggle.checked;
+                    manualFields.classList.toggle('hidden', !isManual);
+                    manualHours.required = isManual;
+                    if (isManual) {
+                        if (timerStartBtn) timerStartBtn.disabled = true;
+                        if (timerStopBtn) timerStopBtn.disabled = true;
+                        resetTimer();
+                    } else {
+                        if (timerStartBtn) timerStartBtn.disabled = false;
+                        if (timerStopBtn) timerStopBtn.disabled = true;
+                    }
+                };
+
+                manualToggle?.addEventListener('change', toggleManual);
+                toggleManual();
+
+                if (timerStartBtn && timerStopBtn && timerDisplay && timerStartInput && timerEndInput && manualHours) {
+                    timerStartBtn.addEventListener('click', () => {
+                        if (manualToggle && manualToggle.checked) return;
+                        timerStart = new Date();
+                        timerStartInput.value = timerStart.toISOString();
+                        if (manualDate) {
+                            manualDate.value = timerStart.toISOString().slice(0, 10);
+                        }
+                        timerStartBtn.disabled = true;
+                        timerStopBtn.disabled = false;
+                        timerInterval = setInterval(() => {
+                            const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 1000);
+                            timerDisplay.textContent = formatDuration(elapsed);
+                        }, 1000);
+                    });
+
+                    timerStopBtn.addEventListener('click', () => {
+                        if (!timerStart) return;
+                        const endTime = new Date();
+                        timerEndInput.value = endTime.toISOString();
+                        const seconds = Math.max(1, Math.floor((endTime - timerStart) / 1000));
+                        const hours = Math.round((seconds / 3600) * 100) / 100;
+                        manualHours.value = hours.toFixed(2);
+                        timerDisplay.textContent = formatDuration(seconds);
+                        timerStartBtn.disabled = false;
+                        timerStopBtn.disabled = true;
+                        if (timerInterval) clearInterval(timerInterval);
+                        timerInterval = null;
+                    });
+                }
 
                 // Edit modal open/close
                 const editOpenButtons = document.querySelectorAll('.edit-time-trigger');
@@ -685,6 +800,7 @@
                         }
                     });
                 });
+
             });
         </script>
     @endpush

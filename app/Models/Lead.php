@@ -6,6 +6,7 @@ use App\Traits\HasTenantScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use DateTimeInterface;
 
@@ -17,7 +18,7 @@ use DateTimeInterface;
 class Lead extends Model
 {
   // Use the Factory and the tenant scoping trait for automatic multi-tenancy filtering
-  use HasFactory, HasTenantScope, \App\Traits\FormatsPhone;
+  use HasFactory, HasTenantScope, SoftDeletes, \App\Traits\FormatsPhone;
 
   protected $table = 'leads';
 
@@ -27,24 +28,43 @@ class Lead extends Model
   protected $fillable = [
     'tenant_id',
     'company_id',
+    'deleted_by',
     'name',
     'first_name',
     'last_name',
     'email',
     'phone',
+    'company',
     'status',
     'status_changed_at',
+    'priority',
     'first_contacted_at',
     'scheduled_at',
     'won_at',
     'value_cents',
     'source',
+    'source_url',
+    'form_name',
     'source_detail',
     'description',
     'preferred_time',
     'service_address',
     'captured_at',
     'assigned_to_user_id',
+    'owner_user_id',
+    'converted_contact_id',
+    'converted_project_id',
+    'converted_opportunity_id',
+    'message',
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_term',
+    'utm_content',
+    'meta',
+    'ip_address',
+    'user_agent',
+    'submitted_at',
     'became_client_at',
     'lost_at',
     'lost_reason',
@@ -70,6 +90,16 @@ class Lead extends Model
     return $this->belongsTo(\App\Models\User::class, 'owner_id');
   }
 
+  public function ownerUser()
+  {
+    return $this->belongsTo(\App\Models\User::class, 'owner_user_id');
+  }
+
+  public function deletedBy()
+  {
+    return $this->belongsTo(\App\Models\User::class, 'deleted_by');
+  }
+
   public function assignedTo()
   {
     return $this->belongsTo(\App\Models\User::class, 'assigned_to_user_id');
@@ -78,6 +108,11 @@ class Lead extends Model
   public function events()
   {
     return $this->hasMany(\App\Models\TradeLeadEvent::class, 'lead_id');
+  }
+
+  public function leadEvents()
+  {
+    return $this->hasMany(\App\Models\LeadEvent::class, 'lead_id');
   }
 
   public function company()
@@ -96,6 +131,8 @@ class Lead extends Model
     'closed_at' => 'datetime',
     'source_detail' => 'array',
     'value_cents' => 'int',
+    'meta' => 'array',
+    'submitted_at' => 'datetime',
   ];
 
   // --- Core Analytical/Counting methods replacing old procedural logic ---

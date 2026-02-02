@@ -31,6 +31,12 @@ Route::get('/pricing', [MarketingController::class, 'page'])
   ->name('marketing.pricing')
   ->defaults('pageName', 'marketing/pricing');
 
+Route::view('/for-creatives', 'marketing.for-creatives')
+  ->name('marketing.for-creatives');
+
+Route::view('/for-trades', 'marketing.for-trades')
+  ->name('marketing.for-trades');
+
 Route::get('/faq', [MarketingController::class, 'page'])
   ->name('marketing.faq')
   ->defaults('pageName', 'marketing/faq');

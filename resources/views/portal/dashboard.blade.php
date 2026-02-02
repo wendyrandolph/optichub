@@ -10,8 +10,11 @@
 
     <div class="oh-page space-y-5 animate-fade-in-up">
         <div>
-            <p class="text-[11px] uppercase tracking-wider text-text-subtle">Portal</p>
-            <h1 class="text-3xl font-semibold text-text-base">Welcome back, {{ $client->firstName }}.</h1>
+            @php
+                $clientFirst = $client->firstName ?? $client->first_name ?? 'there';
+                $tenantName = $tenant->name ?? $tenant->company_name ?? 'Your team';
+            @endphp
+            <h1 class="text-2xl font-semibold text-text-base">Welcome back, {{ $clientFirst }}.</h1>
             @php
                 $lastActivityAt = null;
                 if (!empty($activities) && count($activities) > 0) {
@@ -22,7 +25,7 @@
                     : now()->format('M j, Y');
             @endphp
             <p class="text-text-subtle mt-2">
-                {{ $tenant->name ?? 'Your workspace' }} · Your projects and updates are ready.
+                {{ $tenantName }} shared updates, files, and invoices here.
             </p>
             <div class="mt-2 flex items-start gap-2 text-sm text-text-subtle">
                 <span class="mt-1 h-2 w-2 rounded-full bg-[rgb(var(--brand-primary))]"></span>
@@ -34,7 +37,7 @@
         </div>
 
         {{-- Status strip --}}
-        <div class="bg-surface-card rounded-xl border border-border-default shadow-sm px-6 py-3.5">
+        <div class="oh-card px-6 py-3.5">
             <div class="flex flex-wrap items-center gap-6">
                 <div class="flex items-center gap-3">
                     <div class="h-8 w-8 rounded-full flex items-center justify-center bg-surface-muted text-text-subtle">
@@ -61,7 +64,7 @@
         {{-- Main content --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Projects --}}
-            <div class="bg-surface-card rounded-xl border border-border-default shadow-sm p-6 lg:col-span-2">
+            <div class="oh-card p-6 lg:col-span-2">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-medium text-text-base">Projects</h2>
@@ -86,6 +89,12 @@
                                     'completed', 'closed' => 'Completed',
                                     default => 'In progress',
                                 };
+                                $statusPill = match ($statusKey) {
+                                    'completed', 'closed' => 'oh-pill oh-pill--success',
+                                    'awaiting_approval', 'approval', 'needs_approval' => 'oh-pill oh-pill--info',
+                                    'pending' => 'oh-pill',
+                                    default => 'oh-pill',
+                                };
                                 $nextStep = match ($statusKey) {
                                     'awaiting_approval',
                                     'approval',
@@ -97,14 +106,13 @@
                                 };
                             @endphp
 
-                            <li class="border border-border-default rounded-xl px-5 py-4">
+                            <li class="oh-card border border-border-default rounded-xl px-5 py-4">
                                 <div class="flex flex-wrap items-baseline justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="text-base font-semibold text-text-base truncate">
                                             {{ $project->project_name }}
                                         </p>
-                                        <span
-                                            class="inline-flex items-center gap-2 rounded-full border border-border-default bg-surface-muted px-2.5 py-0.5 text-[11px] font-medium text-text-subtle mt-2">
+                                        <span class="{{ $statusPill }} text-[11px] mt-2 inline-flex items-center gap-2">
                                             <span class="h-1.5 w-1.5 rounded-full bg-[rgb(var(--brand-primary))]"></span>
                                             {{ $statusLabel }}
                                         </span>
@@ -115,8 +123,7 @@
 
                                     <div class="flex items-center gap-3 text-xs">
                                         <a href="{{ route('portal.projects.show', $project->id) }}"
-                                            class="oh-btn oh-btn--primary text-xs px-3 py-1.5"
-                                            style="background: rgb(var(--brand-primary)); border-color: rgb(var(--brand-primary));">
+                                            class="oh-btn oh-btn--primary text-xs px-3 py-1.5">
                                             View project
                                         </a>
                                         <a href="{{ route('portal.projects.messages.index', $project->id) }}"
@@ -145,7 +152,7 @@
 
             <div class="space-y-6">
                 {{-- Files --}}
-                <div class="bg-surface-card rounded-xl border border-border-default shadow-sm p-6">
+                <div class="oh-card p-6">
                     <h2 class="text-lg font-medium text-text-base">Files</h2>
                     <p class="text-text-subtle text-sm mt-1 mb-4">
                         Shared documents stay here for easy access.
@@ -153,7 +160,7 @@
 
                     @if ($uploads->isEmpty())
                         <div class="text-sm text-text-subtle">
-                            No files yet. When your team shares documents, they’ll appear here.
+                            No files yet. When {{ $tenantName }} shares documents, they’ll appear here.
                         </div>
                     @else
                         <ul class="space-y-3 text-sm">
@@ -173,7 +180,7 @@
                 </div>
 
                 {{-- Activity --}}
-                <div class="bg-surface-card rounded-xl border border-border-default shadow-sm p-6">
+                <div class="oh-card p-6">
                     <h2 class="text-lg font-medium text-text-base">Activity</h2>
                     <p class="text-text-subtle text-sm mt-1 mb-4">
                         Recent updates from your team.
@@ -181,7 +188,7 @@
 
                     @if (empty($activities) || count($activities) === 0)
                         <div class="text-sm text-text-subtle">
-                            All quiet for now. When your team shares updates, they’ll appear here.
+                            All quiet for now. When {{ $tenantName }} shares updates, they’ll appear here.
                         </div>
                     @else
                         <ul class="space-y-4">
@@ -200,6 +207,25 @@
                                 </li>
                             @endforeach
                         </ul>
+                    @endif
+                </div>
+
+                {{-- Need help --}}
+                @php
+                    $supportEmail = $tenant->support_email ?? config('mail.from.address');
+                @endphp
+                <div class="bg-surface-card rounded-xl border border-border-default shadow-sm p-6">
+                    <h2 class="text-lg font-medium text-text-base">Need help?</h2>
+                    <p class="text-text-subtle text-sm mt-1">
+                        Reach out any time if you have questions about your project.
+                    </p>
+                    @if ($supportEmail)
+                        <a href="mailto:{{ $supportEmail }}"
+                            class="oh-btn oh-btn--primary text-xs px-3 py-1.5 mt-4 inline-flex">
+                            Contact support
+                        </a>
+                    @else
+                        <p class="text-xs text-text-subtle mt-4">Ask your project owner for support details.</p>
                     @endif
                 </div>
             </div>

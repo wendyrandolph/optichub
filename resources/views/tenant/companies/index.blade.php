@@ -68,15 +68,11 @@
                             @endphp
 
                             <button type="button"
-                                class="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold whitespace-nowrap transition
-                            {{ $isActive
-                                ? 'bg-[rgb(var(--brand-primary))] text-white border-[rgb(var(--brand-primary))]'
-                                : 'bg-surface-card text-text-base border-border-default/70 hover:border-border-default' }}"
+                                class="inline-flex items-center gap-2 whitespace-nowrap transition oh-pill {{ $isActive ? 'oh-pill--info' : 'oh-pill--muted' }}"
                                 data-filter-value="{{ $value }}" aria-pressed="{{ $isActive ? 'true' : 'false' }}">
                                 <span>{{ $card['label'] }}</span>
                                 <span
-                                    class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-[11px]
-                            {{ $isActive ? 'bg-white/20 text-white' : 'bg-surface-muted text-text-subtle' }}">
+                                    class="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-2 rounded-full text-[11px] bg-surface-muted text-text-subtle">
                                     {{ $card['count'] ?? 0 }}
                                 </span>
                             </button>
@@ -94,7 +90,7 @@
                             <button type="button"
                                 class="rounded-xl p-3 border transition flex flex-col justify-between min-h-[72px] text-left
                             {{ $isActive
-                                ? 'border-[rgb(var(--brand-primary)/.45)] ring-1 ring-[rgb(var(--brand-primary)/.25)] bg-[rgb(var(--surface-muted))]'
+                                ? 'border-brand-primary/45 ring-1 ring-brand-primary/25 bg-surface-muted'
                                 : 'border-border-default/70 bg-surface-card hover:border-border-default' }}"
                                 data-filter-value="{{ $value }}" aria-pressed="{{ $isActive ? 'true' : 'false' }}">
                                 <div
@@ -134,8 +130,8 @@
 
 
 
-                {{-- Mobile apply/reset --}}
-                <div class="lg:flex items-center gap-2 pt-1">
+                {{-- Apply/reset --}}
+                <div class="flex items-center gap-2 pt-1">
                     <button type="submit" class="oh-btn oh-btn--primary">
                         Apply
                     </button>
@@ -150,7 +146,7 @@
         </section>
 
 
-        {{-- Mobile/sm-md cards --}}
+        {{-- Mobile cards --}}
         <div class="md:hidden grid gap-3 grid-cols-1 sm:grid-cols-2">
             @foreach ($companies as $company)
                 @php
@@ -202,17 +198,17 @@
         <div class="hidden xl:block oh-card p-0">
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead style="background: rgba(var(--surface-muted)/.55);">
+                    <thead class="bg-surface-muted/60">
                         <tr class="text-left text-text-subtle border-b border-border-default/60">
-                            <th class="px-6 py-3 font-medium">Company</th>
-                            <th class="px-6 py-3 font-medium">Industry</th>
-                            <th class="px-6 py-3 font-medium">Website</th>
-                            <th class="px-6 py-3 font-medium text-center">Contacts</th>
-                            <th class="px-6 py-3 font-medium text-center">Active Projects</th>
-                            <th class="px-6 py-3 font-medium text-right">Actions</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px]">Company</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px]">Industry</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px]">Website</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px] text-center">Contacts</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px] text-center">Active Projects</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px] text-right">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y" style="--tw-divide-color: rgb(var(--border) / .35);">
+                    <tbody class="divide-y divide-border-default/60">
                         @forelse ($companies as $company)
                             @php
                                 $name = $company->company_name ?? '—';
@@ -282,7 +278,7 @@
                                     <div class="inline-flex items-center gap-2">
                                         <a href="{{ $showUrl }}" class="oh-icon-btn oh-tooltip" data-tooltip="View"
                                             aria-label="View">
-                                            <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                            <i class="fa-solid fa-eye text-[12px]"></i>
                                         </a>
                                         <a href="{{ $editUrl }}" class="oh-icon-btn oh-tooltip" data-tooltip="Edit"
                                             aria-label="Edit">
@@ -303,7 +299,7 @@
             </div>
         </div>
 
-        {{-- Cards for xl- --}}
+        {{-- Cards for md-xl --}}
         <div class="hidden md:grid gap-3 xl:hidden grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             @foreach ($companies as $company)
                 @php
@@ -325,7 +321,7 @@
                         <div class="flex items-center gap-1">
                             <a href="{{ $showUrl }}" class="oh-icon-btn oh-tooltip" data-tooltip="View"
                                 aria-label="View">
-                                <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                <i class="fa-solid fa-eye text-[12px]"></i>
                             </a>
                             <a href="{{ $editUrl }}" class="oh-icon-btn oh-tooltip" data-tooltip="Edit"
                                 aria-label="Edit">
@@ -355,21 +351,8 @@
             @php $pager = $companies->appends(['q' => $q, 'filter' => $filter]); @endphp
             @if ($pager->hasPages())
                 <div class="px-4 py-3 border-t border-border-default/60 text-sm text-text-subtle space-y-3">
-                    <div>Showing {{ $pager->firstItem() ?? 0 }} to
-                        {{ $pager->lastItem() ?? $pager->count() }} of
-                        {{ method_exists($pager, 'total') ? $pager->total() : $pager->count() }} results
-                    </div>
-                    <div class="flex items-center justify-between">
-                        @if ($pager->onFirstPage())
-                            <span class="oh-btn opacity-50 pointer-events-none">Previous</span>
-                        @else
-                            <a href="{{ $pager->previousPageUrl() }}" class="oh-btn">Previous</a>
-                        @endif
-                        @if ($pager->hasMorePages())
-                            <a href="{{ $pager->nextPageUrl() }}" class="oh-btn">Next</a>
-                        @else
-                            <span class="oh-btn opacity-50 pointer-events-none">Next</span>
-                        @endif
+                    <div>
+                        {{ $pager->links() }}
                     </div>
                 </div>
             @endif

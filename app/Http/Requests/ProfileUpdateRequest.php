@@ -28,8 +28,11 @@ class ProfileUpdateRequest extends FormRequest
             'invoice_footer'  => ['nullable', 'string'],
             'logo'            => ['nullable', 'file', 'mimes:png,svg', 'max:1024'],
             'default_uses_phases' => ['nullable', 'boolean'],
+            'registered_users_enabled' => ['nullable', 'boolean'],
             'phases'          => ['nullable', 'array', 'max:7'],
             'phases.*'        => ['nullable', 'string', 'max:100'],
+            'team_member_colors' => ['nullable', 'array', 'max:20'],
+            'team_member_colors.*' => ['nullable', 'string', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
         ];
     }
 

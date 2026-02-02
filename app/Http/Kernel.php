@@ -52,9 +52,11 @@ class Kernel extends HttpKernel
     'checkrole' => \App\Http\Middleware\CheckRole::class, // your canonical alias
     //'role'      => \App\Http\Middleware\CheckRole::class, // temporary shim
     'tenant' => \App\Http\Middleware\ResolveTenant::class,
-
+    'capability' => \App\Http\Middleware\RequireCapability::class,
+    'support.manage' => \App\Http\Middleware\EnsureProviderSupportAccess::class,
     'trial.only' => \App\Http\Middleware\TrialOnly::class,
     'tenant.access' => \App\Http\Middleware\EnsureTenantAccess::class,
+
 
   ];
 
@@ -71,10 +73,12 @@ class Kernel extends HttpKernel
     'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     'trial.only' => \App\Http\Middleware\TrialOnly::class,
     'tenant' => \App\Http\Middleware\ResolveTenant::class,
+    'capability' => \App\Http\Middleware\RequireCapability::class,
     'apikey' => \App\Http\Middleware\ApiKeyAuth::class,
     'tenant.access' => \App\Http\Middleware\EnsureTenantAccess::class,
     'platform_owner' => \App\Http\Middleware\EnsurePlatformOwner::class,
     'tenant.activity' => \App\Http\Middleware\TrackTenantActivity::class,
     'nocache' => \App\Http\Middleware\NoCache::class,
+    'support.manage' => \App\Http\Middleware\EnsureProviderSupportAccess::class,
   ];
 }

@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\OpportunityActivity;
 use App\Models\Project;
 use App\Models\Notification;
+use App\Models\ActivityLog;
 use App\Services\OpportunityAutomation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +41,7 @@ class OpportunityController extends Controller
     $so  = $request->get('sort', 'recent');
     $view = $request->get('view', '');
     $ownerId = $request->get('owner_id');
+    $health = $request->get('health', '');
     $minAge = $request->get('min_age_days');
     $maxAge = $request->get('max_age_days');
     $minAge = is_numeric($minAge) ? (int) $minAge : null;
@@ -48,13 +50,16 @@ class OpportunityController extends Controller
 
     $stageList = ['new', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
     $now = Carbon::now();
+    $stalledDays = 14;
+    $readyWindow = 7;
 
     $query = Opportunity::query()
       ->where('tenant_id', $tenant->id)
+      ->where('stage', '!=', 'lost')
       ->with([
         'company:id,company_name',
         'lead:id,name',
-        'owner:id,first_name,last_name,username',
+        'owner:id,first_name,last_name,email',
       ])
       ->when(is_numeric($ownerId), fn($qb) => $qb->where('owner_id', (int) $ownerId))
       ->when($q, fn($qb) => $qb->where(function ($w) use ($q) {
@@ -63,6 +68,37 @@ class OpportunityController extends Controller
           ->orWhereHas('lead', fn($l) => $l->where('name', 'like', "%{$q}%"));
       }))
       ->when($st, fn($qb) => $qb->where('stage', $st));
+
+    // Health filters
+    if ($health === 'overdue') {
+      $query->whereNotIn('stage', ['won', 'lost'])
+        ->whereNotNull('next_followup_at')
+        ->where('next_followup_at', '<', $now);
+    } elseif ($health === 'stalled') {
+      $query->where(function ($qb) use ($stalledDays) {
+        $qb->where('stage', 'stalled')
+          ->orWhereRaw('updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)', [$stalledDays]);
+      })
+        ->where(function ($qb) use ($now) {
+          $qb->whereNull('next_followup_at')
+            ->orWhere('next_followup_at', '>=', $now);
+        });
+    } elseif ($health === 'ready') {
+      $query->whereNotIn('stage', ['won', 'lost'])
+        ->whereNotNull('expected_close_date')
+        ->whereBetween('expected_close_date', [$now, (clone $now)->addDays($readyWindow)]);
+    } elseif ($health === 'on_track') {
+      $query->whereNotIn('stage', ['won', 'lost'])
+        ->where(function ($qb) use ($now) {
+          $qb->whereNull('next_followup_at')
+            ->orWhere('next_followup_at', '>=', $now);
+        })
+        ->whereRaw('updated_at >= DATE_SUB(NOW(), INTERVAL ? DAY)', [$stalledDays])
+        ->where(function ($qb) use ($now, $readyWindow) {
+          $qb->whereNull('expected_close_date')
+            ->orWhere('expected_close_date', '>', (clone $now)->addDays($readyWindow));
+        });
+    }
 
     // Quick views
     if ($view === 'my') {
@@ -100,7 +136,7 @@ class OpportunityController extends Controller
       ->when($minAge !== null, fn($qb) => $qb->whereRaw("$ageExpr >= ?", [$minAge]))
       ->when($maxAge !== null, fn($qb) => $qb->whereRaw("$ageExpr <= ?", [$maxAge]))
       ->paginate(20)
-      ->appends($request->only(['q', 'stage', 'sort', 'view', 'owner_id', 'min_age_days', 'max_age_days']));
+      ->appends($request->only(['q', 'stage', 'sort', 'view', 'owner_id', 'min_age_days', 'max_age_days', 'health']));
 
     $kpis = $this->kpis($tenant, $stageList);
 
@@ -128,7 +164,7 @@ class OpportunityController extends Controller
       ->whereIn('id', $ownerIds)
       ->orderBy('first_name')
       ->orderBy('last_name')
-      ->get(['id', 'first_name', 'last_name', 'username']);
+      ->get(['id', 'first_name', 'last_name', 'email']);
 
     return view('opportunities.create', [
       'tenant'        => $tenant,
@@ -184,7 +220,7 @@ class OpportunityController extends Controller
       ->whereIn('id', $ownerIds)
       ->orderBy('first_name')
       ->orderBy('last_name')
-      ->get(['id', 'first_name', 'last_name', 'username']);
+      ->get(['id', 'first_name', 'last_name', 'email']);
 
     return view('opportunities.edit', [
       'tenant'        => $tenant,
@@ -275,6 +311,22 @@ class OpportunityController extends Controller
   {
     $this->authorize('delete', $opportunity);
 
+    if ($opportunity->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    ActivityLog::record(
+      $tenant->id,
+      auth()->id(),
+      $opportunity,
+      'opportunity.deleted',
+      'Opportunity deleted',
+      [
+        'opportunity_title' => $opportunity->title,
+        'opportunity_stage' => $opportunity->stage,
+      ]
+    );
+
     $opportunity->delete();
 
     return Redirect::route('tenant.opportunities.index', ['tenant' => $tenant])
@@ -287,7 +339,7 @@ class OpportunityController extends Controller
     $this->authorize('view', $opportunity);
 
     $opportunity->load(['company', 'lead', 'owner', 'activities.user' => function ($q) {
-        $q->select('id', 'first_name', 'last_name', 'username');
+        $q->select('id', 'first_name', 'last_name', 'email');
     }])->loadCount('activities');
 
     return view('opportunities.show', [

@@ -4,6 +4,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientInvoiceController;
 use App\Http\Controllers\ClientFileController;
 use App\Http\Controllers\ClientPortal\ProjectMessagesController;
+use App\Http\Controllers\ClientPortal\NotificationController;
 use App\Http\Controllers\ClientPortal\ProjectController as PortalProjectController;
 use App\Http\Controllers\ClientSettingsController;
 use App\Http\Controllers\TaskController;
@@ -36,7 +37,8 @@ Route::middleware(['auth:client'])
       ->name('invoices.pdf');
 
     Route::post('/invoices/{invoice}/pay', [ClientInvoiceController::class, 'pay'])
-      ->name('invoices.pay');
+      ->name('invoices.pay')
+      ->middleware('capability:PAYMENTS_FRAMEWORK');
 
 
     Route::post('/invoices/{invoice}/download', [ClientInvoiceController::class, 'download'])
@@ -89,6 +91,9 @@ Route::middleware(['auth:client'])
       ->name('files.download');
     Route::get('/messages', [ProjectMessagesController::class, 'index'])
       ->name('messages.index');
+
+    Route::post('/notifications/seen', [NotificationController::class, 'seen'])
+      ->name('notifications.seen');
 
 
     // Account Settings 

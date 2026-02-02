@@ -33,15 +33,21 @@
   --ui-text-subtle: 120 125 135;
   --ui-primary: 28 46 112;
   --ui-primary-hover: 23 37 84;
-  --ui-accent: 143 175 154;
-  --ui-success: 34 139 94;
-  --ui-danger: 220 76 76;
+  --ui-accent: 50 103 88;
+  --ui-success: 24 118 74;
+  --ui-danger: 196 50 50;
   --ui-primary-tint: 236 240 252;
   --ui-accent-tint: 235 244 240;
   --ui-lavender-tint: 241 238 248;
   --ui-primary-edge: 28 46 112;
-  --ui-accent-edge: 143 175 154;
+  --ui-accent-edge: 50 103 88;
   --ui-lavender-edge: 154 143 191;
+
+  /* ---------- Z-index scale ---------- */
+  --z-dropdown: 60;
+  --z-overlay: 80;
+  --z-modal: 100;
+  --z-toast: 200;
 
   /* ---------- Tenant tokens (runtime) ---------- */
   --tenant-primary: 28 46 112; /* #1C2E70 */
@@ -61,6 +67,8 @@
   --brand-primary: var(--ui-primary);
   --brand-secondary: var(--ui-primary-hover);
   --brand-accent: var(--ui-accent);
+  --status-info: var(--ui-primary);
+  --status-beta: var(--ui-accent);
   --status-success: var(--ui-success);
   --status-danger: var(--ui-danger);
 }
@@ -76,15 +84,21 @@
   --ui-text-subtle: 170 176 190;
   --ui-primary: 120 136 200;
   --ui-primary-hover: 96 113 180;
-  --ui-accent: 143 175 154;
-  --ui-success: 110 200 160;
-  --ui-danger: 235 120 120;
+  --ui-accent: 168 208 182;
+  --ui-success: 124 220 180;
+  --ui-danger: 248 144 144;
   --ui-primary-tint: 24 33 74;
   --ui-accent-tint: 22 46 40;
   --ui-lavender-tint: 33 28 56;
   --ui-primary-edge: 120 136 200;
-  --ui-accent-edge: 143 175 154;
+  --ui-accent-edge: 168 208 182;
   --ui-lavender-edge: 165 155 210;
+
+  /* ---------- Z-index scale ---------- */
+  --z-dropdown: 60;
+  --z-overlay: 80;
+  --z-modal: 100;
+  --z-toast: 200;
 
   /* ---------- Tenant tokens (safe defaults) ---------- */
   --tenant-primary: 120 136 200; /* dark adaptation of #1C2E70 */
@@ -104,6 +118,8 @@
   --brand-primary: var(--ui-primary);
   --brand-secondary: var(--ui-primary-hover);
   --brand-accent: var(--ui-accent);
+  --status-info: var(--ui-primary);
+  --status-beta: var(--ui-accent);
   --status-success: var(--ui-success);
   --status-danger: var(--ui-danger);
 }
@@ -180,6 +196,12 @@
   }
   .text-status-danger {
     color: rgb(var(--danger));
+  }
+  .text-status-success {
+    color: rgb(var(--status-success));
+  }
+  .text-status-info {
+    color: rgb(var(--status-info));
   }
   .oh-scroll-offset {
     scroll-margin-top: 7rem;

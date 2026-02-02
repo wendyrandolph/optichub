@@ -87,8 +87,8 @@ class ClientCompanyController extends Controller
         ]);
 
         $users = method_exists($tenant, 'users')
-            ? $tenant->users()->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'username', 'email'])
-            : User::where('tenant_id', $tenant->id)->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'username', 'email']);
+            ? $tenant->users()->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email'])
+            : User::where('tenant_id', $tenant->id)->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
 
         return view('tenant.companies.create', [
             'tenant'  => $tenant,
@@ -253,8 +253,8 @@ class ClientCompanyController extends Controller
         }]);
 
         $users = method_exists($tenant, 'users')
-            ? $tenant->users()->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'username', 'email'])
-            : User::where('tenant_id', $tenant->id)->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'username', 'email']);
+            ? $tenant->users()->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email'])
+            : User::where('tenant_id', $tenant->id)->orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
 
         return view('tenant.companies.edit', [
             'tenant'  => $tenant,

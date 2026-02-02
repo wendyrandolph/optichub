@@ -29,7 +29,7 @@ class CalendarController extends Controller
     $tenantId = auth()->user()?->tenant_id ?? (tenant('id') ?? null);
     $members = \App\Models\User::where('tenant_id', $tenantId)
       ->orderBy('last_name')
-      ->select('id', 'first_name', 'last_name', 'username')
+      ->select('id', 'first_name', 'last_name', 'email')
       ->get();
     $projects = \App\Models\Project::where('tenant_id', $tenantId)
       ->orderBy('project_name')

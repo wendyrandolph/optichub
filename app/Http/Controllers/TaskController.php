@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use App\Models\{Task, Contact, Project, Phase, TeamMember, Tenant, User, ProjectConversation, ProjectMessage, TaskComment, TimeEntry};
 use App\Models\Activity;
 use App\Models\ActivityLog;
@@ -27,6 +29,8 @@ class TaskController extends Controller
   {
     $tenantParam = request()->route('tenant');
     $tenantId = $tenantParam instanceof Tenant ? $tenantParam->getKey() : (int) $tenantParam;
+    $currentUser = Auth::user();
+    $currentUserId = $currentUser?->id;
     $statusFilter = request('status', '');
     $assigneeId = request('assignee_id');
 
@@ -43,7 +47,15 @@ class TaskController extends Controller
       ->where('tenant_id', $tenantId)
       ->when(is_numeric($assigneeId), fn($q) => $q->where('user_id', (int) $assigneeId))
       ->when($filterStatuses, fn($q) => $q->whereIn('status', $filterStatuses))
-      ->with(['project:id,project_name,color', 'phase:id,name', 'client:id,firstName,lastName,first_name,last_name'])
+      ->with([
+        'project:id,project_name,color',
+        'phase:id,name',
+        'client:id,firstName,lastName,first_name,last_name',
+        'assignedUser:id,first_name,last_name,email',
+      ])
+      ->withSum(['timeEntries as tracked_hours' => function ($query) {
+        $query->whereNotNull('end_time');
+      }], 'hours')
       ->get();
 
     // Normalize statuses to the columns your Blade uses
@@ -81,8 +93,16 @@ class TaskController extends Controller
         'timer_started_at'=> optional($t->timer_started_at)?->toDateTimeString(),
         'worked_seconds'  => $t->worked_seconds,
         'hours_spent'     => $t->hours_spent,
+        'tracked_hours'   => (float) ($t->tracked_hours ?? 0),
+        'external_url'    => $t->external_url ?? null,
+        'feedback_image_url' => $t->feedback_image_url ?? null,
+        'client_must_upload' => (bool) ($t->client_must_upload ?? false),
         'assign_type'     => $t->assign_type ?? null,
         'assign_id'       => $t->assign_id ?? $t->user_id ?? null,
+        'assigned_user_id' => $t->assigned_user_id ?? null,
+        'assigned_user_name' => trim(
+          ($t->assignedUser?->first_name ?? '') . ' ' . ($t->assignedUser?->last_name ?? '')
+        ) ?: ($t->assignedUser?->email ?? 'Unassigned'),
         'project_id'      => $t->project_id,
         'phase_id'        => $t->phase_id,
         'contact_id'      => $t->contact_id,
@@ -96,6 +116,7 @@ class TaskController extends Controller
         'card_bg_color'   => '#fff',
         'card_text_color' => '#111827',
         'requires_approval' => (bool) ($t->requires_approval ?? false),
+        'estimated_minutes' => $t->estimated_minutes,
       ];
     }
 
@@ -117,8 +138,18 @@ class TaskController extends Controller
       'tenantId'    => $tenantId,
     ];
 
+    $runningEntries = collect();
+    if ($currentUserId) {
+      $runningEntries = TimeEntry::where('tenant_id', $tenantId)
+        ->where('user_id', $currentUserId)
+        ->whereNotNull('task_id')
+        ->whereNull('end_time')
+        ->get(['id', 'task_id', 'start_time', 'billable'])
+        ->keyBy('task_id');
+    }
+
     // Dropdown data (only if your modal needs them)
-    $users   = User::where('tenant_id', $tenantId)->get(['id', 'first_name', 'last_name', 'username', 'role']);
+    $users   = User::where('tenant_id', $tenantId)->get(['id', 'first_name', 'last_name', 'email', 'role']);
     $clients = Contact::where('tenant_id', $tenantId)
       ->orderBy('firstName')
       ->get(['id', 'firstName as client_name', 'lastName']);
@@ -146,8 +177,129 @@ class TaskController extends Controller
       'clients',
       'projects',
       'phases',
-      'debugCounts'
+      'debugCounts',
+      'runningEntries'
     ));
+  }
+
+  protected function canUseTimer(Task $task, ?User $user): bool
+  {
+    if (! $user) {
+      return false;
+    }
+    if (strtolower((string) ($task->assign_type ?? '')) === 'client') {
+      return false;
+    }
+
+    $role = strtolower((string) ($user->role ?? ''));
+    $isAdmin = in_array($role, ['provider', 'admin', 'super_admin', 'superadmin'], true);
+    $isAssignee = $task->assign_type === 'admin' && (int) $task->assign_id === (int) $user->id;
+    $isLegacyAssignee = !empty($task->user_id) && (int) $task->user_id === (int) $user->id;
+
+    return $isAdmin || $isAssignee || $isLegacyAssignee;
+  }
+
+  protected function closeRunningTimer(Tenant $tenant, User $user, ?int $keepTaskId = null): ?TimeEntry
+  {
+    $running = TimeEntry::where('tenant_id', $tenant->id)
+      ->where('user_id', $user->id)
+      ->whereNull('end_time')
+      ->lockForUpdate()
+      ->first();
+
+    if (! $running) {
+      return null;
+    }
+
+    if ($keepTaskId && (int) $running->task_id === (int) $keepTaskId) {
+      return $running;
+    }
+
+    $end = now();
+    $start = $running->start_time ? $running->start_time->copy() : $end;
+    $seconds = max(1, $start->diffInSeconds($end));
+    $running->end_time = $end;
+    $running->hours = round($seconds / 3600, 2);
+    $running->date = $running->date ?: $start->toDateString();
+    $running->save();
+
+    return $running;
+  }
+
+  protected function startTimerEntry(Tenant $tenant, Task $task, User $user, bool $billable): TimeEntry
+  {
+    return DB::transaction(function () use ($tenant, $task, $user, $billable) {
+      $existing = $this->closeRunningTimer($tenant, $user, $task->id);
+
+      if ($existing && (int) $existing->task_id === (int) $task->id && $existing->end_time === null) {
+        return $existing;
+      }
+
+      return TimeEntry::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'project_id' => $task->project_id,
+        'task_id' => $task->id,
+        'date' => now()->toDateString(),
+        'start_time' => now(),
+        'billable' => $billable,
+        'hours' => null,
+      ]);
+    });
+  }
+
+  public function timerStart(Request $request, Tenant $tenant, Task $task)
+  {
+    abort_unless($task->tenant_id === $tenant->id, 404);
+
+    $user = Auth::user();
+    if (! $this->canUseTimer($task, $user)) {
+      abort(403);
+    }
+
+    $billable = $request->boolean('billable', true);
+    $running = $this->startTimerEntry($tenant, $task, $user, $billable);
+    $this->ensureProjectInProgress($task);
+
+    return response()->json([
+      'id' => $running->id,
+      'start_time' => optional($running->start_time)->toIso8601String(),
+      'billable' => (bool) $running->billable,
+    ]);
+  }
+
+  public function timerStop(Request $request, Tenant $tenant, Task $task)
+  {
+    abort_unless($task->tenant_id === $tenant->id, 404);
+
+    $user = Auth::user();
+    if (! $this->canUseTimer($task, $user)) {
+      abort(403);
+    }
+
+    $running = TimeEntry::where('tenant_id', $tenant->id)
+      ->where('user_id', $user->id)
+      ->where('task_id', $task->id)
+      ->whereNull('end_time')
+      ->first();
+
+    if (! $running) {
+      return response()->json(['message' => 'No active timer found.'], 422);
+    }
+
+    $end = now();
+    $start = $running->start_time ? $running->start_time->copy() : $end;
+    $seconds = max(1, $start->diffInSeconds($end));
+    $running->end_time = $end;
+    $running->hours = round($seconds / 3600, 2);
+    $running->date = $running->date ?: $start->toDateString();
+    $running->save();
+
+    return response()->json([
+      'id' => $running->id,
+      'hours' => (float) $running->hours,
+      'end_time' => optional($running->end_time)->toIso8601String(),
+    ]);
   }
 
   // POST /{tenant}/tasks/{task}/start
@@ -173,7 +325,34 @@ class TaskController extends Controller
     }
     $task->save();
 
+    $this->ensureTimerEntry($tenant, $task, $user, true);
+    $this->ensureProjectInProgress($task);
+
     return back()->with('success_message', 'Task moved to Working On.');
+  }
+
+  protected function ensureProjectInProgress(Task $task): void
+  {
+    $project = $task->project;
+    if (! $project) {
+      return;
+    }
+
+    if (in_array($project->status, ['open', 'on_hold'], true)) {
+      $project->status = 'in_progress';
+      $project->save();
+    }
+  }
+
+  protected function ensureTimerEntry(Tenant $tenant, Task $task, ?User $user, bool $billable = true): void
+  {
+    if (! $user) {
+      return;
+    }
+    if (strtolower((string) ($task->assign_type ?? '')) === 'client') {
+      return;
+    }
+    $this->startTimerEntry($tenant, $task, $user, $billable);
   }
 
   protected function accumulateTime(Task $task): void
@@ -187,50 +366,6 @@ class TaskController extends Controller
     $task->worked_seconds = max(0, $worked + $delta);
     $task->timer_started_at = null;
     $task->hours_spent = round(($task->worked_seconds ?? 0) / 3600, 2);
-  }
-
-  // POST /{tenant}/tasks/{task}/pause
-  public function pause(Tenant $tenant, Task $task)
-  {
-    if ($task->tenant_id !== $tenant->id) {
-      abort(404);
-    }
-
-    $user = Auth::user();
-    $canUpdate = $user && $user->can('update', $task);
-    $isAssignee = $user && $task->assign_type === 'admin' && (int) $task->assign_id === (int) $user->id;
-    if (! $canUpdate && ! $isAssignee) {
-      abort(403);
-    }
-
-    $this->accumulateTime($task);
-    $task->save();
-
-    return back()->with('success_message', 'Task paused.');
-  }
-
-  // POST /{tenant}/tasks/{task}/resume
-  public function resume(Tenant $tenant, Task $task)
-  {
-    if ($task->tenant_id !== $tenant->id) {
-      abort(404);
-    }
-
-    $user = Auth::user();
-    $canUpdate = $user && $user->can('update', $task);
-    $isAssignee = $user && $task->assign_type === 'admin' && (int) $task->assign_id === (int) $user->id;
-    if (! $canUpdate && ! $isAssignee) {
-      abort(403);
-    }
-
-    if (! $task->started_at) {
-      $task->started_at = now();
-    }
-    $task->timer_started_at = now();
-    $task->status = 'in_progress';
-    $task->save();
-
-    return back()->with('success_message', 'Task resumed.');
   }
 
   /** POST /{tenant}/tasks/{task}/approve */
@@ -268,6 +403,10 @@ class TaskController extends Controller
 
     $user = $request->user();
     abort_unless($user && $user->can('update', $task), 403);
+
+    $request->merge([
+      'contact_id' => $request->input('contact_id') ?: null,
+    ]);
 
     $data = $request->validate([
       'note' => ['nullable', 'string', 'max:2000'],
@@ -335,16 +474,17 @@ class TaskController extends Controller
   {
     $adminUsers  = User::where('tenant_id', $tenant->id)
       ->whereIn('role', ['admin', 'super_admin', 'superadmin', 'provider'])
-      ->get(['id', 'first_name', 'last_name', 'username', 'tenant_id']);
+      ->get(['id', 'first_name', 'last_name', 'email', 'tenant_id']);
 
     $clientUsers = Contact::where('tenant_id', $tenant->id)
+      ->orderBy('lastName')
       ->orderBy('firstName')
       ->get(['id', 'firstName as client_name', 'lastName', 'tenant_id']);
 
     $assignees = User::where('tenant_id', $tenant->id)
       ->orderBy('first_name')
       ->orderBy('last_name')
-      ->get(['id', 'first_name', 'last_name', 'username', 'email']);
+      ->get(['id', 'first_name', 'last_name', 'email']);
 
     $projects = Project::where('tenant_id', $tenant->id)
       ->with('client')
@@ -370,11 +510,13 @@ class TaskController extends Controller
       'status'      => ['nullable', 'string', 'max:32'],   // your defaults handle 'todo'
       'priority'    => ['nullable', 'string', 'max:32'],   // default 'medium'
       'project_id'  => ['nullable', 'integer', 'exists:projects,id'],
-      'contact_id'   => ['nullable', 'integer', 'exists:clients,id'],
+      'contact_id'   => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('contacts', 'id')->where('tenant_id', $tenant->id)],
       'user_id'     => ['nullable', 'integer', 'exists:users,id'],
+      'assigned_user_id' => ['nullable', 'integer', 'exists:users,id'],
       'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
       'assign_type' => ['nullable', 'string', 'in:admin,client'],
       'assign_id'   => ['nullable', 'integer'],
+      'estimated_minutes' => ['nullable', 'integer', 'min:0', 'max:100000'],
       'requires_approval' => ['nullable', 'boolean'],
     ]);
 
@@ -386,6 +528,19 @@ class TaskController extends Controller
     $data['tenant_id'] = $tenant->id;
     $data['requires_approval'] = $request->boolean('requires_approval', false);
 
+    if (empty($data['assigned_user_id']) && !empty($data['user_id'])) {
+      $data['assigned_user_id'] = $data['user_id'];
+    }
+
+    if (!empty($data['project_id'])) {
+      $projectContactId = Project::where('tenant_id', $tenant->id)
+        ->where('id', $data['project_id'])
+        ->value('contact_id');
+      if (!empty($projectContactId)) {
+        $data['contact_id'] = $projectContactId;
+      }
+    }
+
     if (!empty($data['assign_type']) && $data['assign_type'] === 'admin' && !empty($data['assign_id']) && empty($data['user_id'])) {
       $data['user_id'] = $data['assign_id'];
     }
@@ -393,6 +548,10 @@ class TaskController extends Controller
     if (empty($data['assign_type']) && !empty($data['user_id'])) {
       $data['assign_type'] = 'admin';
       $data['assign_id'] = $data['user_id'];
+    }
+
+    if (!empty($data['assign_type']) && $data['assign_type'] === 'client' && !empty($data['contact_id'])) {
+      $data['assign_id'] = $data['contact_id'];
     }
 
     if ($data['requires_approval']) {
@@ -442,7 +601,13 @@ class TaskController extends Controller
       $messages = $conversation->messages()->orderBy('created_at')->get();
     }
 
-    return view('tasks.show', compact('tenant', 'task', 'conversation', 'messages'));
+    $timeEntries = TimeEntry::where('tenant_id', $tenant->id)
+      ->where('task_id', $task->id)
+      ->with(['user:id,first_name,last_name,email'])
+      ->orderByDesc('start_time')
+      ->get();
+
+    return view('tasks.show', compact('tenant', 'task', 'conversation', 'messages', 'timeEntries'));
   }
 
   /** GET /{tenant}/tasks/{task}/edit */
@@ -455,12 +620,17 @@ class TaskController extends Controller
       'task'    => $task,
       'projects' => Project::where('tenant_id', $tenant->id)->orderBy('project_name')->get(['id', 'project_name']),
       'clients' => Contact::where('tenant_id', $tenant->id)
+        ->orderBy('lastName')
         ->orderBy('firstName')
         ->get(['id', 'firstName', 'lastName']),
+      'teamMembers' => \App\Models\TeamMember::where('tenant_id', $tenant->id)
+        ->orderBy('firstName')
+        ->orderBy('lastName')
+        ->get(['id', 'user_id', 'firstName', 'lastName', 'email', 'title']),
       'users' => User::where('tenant_id', $tenant->id)
         ->orderBy('first_name')
         ->orderBy('last_name')
-        ->get(['id', 'first_name', 'last_name', 'username', 'email']),
+        ->get(['id', 'first_name', 'last_name', 'email']),
       'phases' => Phase::where('tenant_id', $tenant->id)
         ->whereNull('project_id')
         ->orderBy('sort_order')
@@ -490,10 +660,12 @@ class TaskController extends Controller
       'project_id'  => ['nullable', 'integer', 'exists:projects,id'],
       'contact_id'   => ['nullable', 'integer', 'exists:clients,id'],
       'user_id'     => ['nullable', 'integer', 'exists:users,id'],
+      'assigned_user_id' => ['nullable', 'integer', 'exists:users,id'],
       'phase_id'    => $phaseRule,
       'assign_type' => ['nullable', 'string', 'in:admin,client'],
       'assign_id'   => ['nullable', 'integer'],
       'hours_spent' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+      'estimated_minutes' => ['nullable', 'integer', 'min:0', 'max:100000'],
       'requires_approval' => ['nullable', 'boolean'],
       'phases' => $projectPhasesRule,
     ]);
@@ -504,13 +676,37 @@ class TaskController extends Controller
 
     $data['requires_approval'] = $request->boolean('requires_approval', false);
 
-    if (!empty($data['assign_type']) && $data['assign_type'] === 'admin' && !empty($data['assign_id']) && empty($data['user_id'])) {
-      $data['user_id'] = $data['assign_id'];
+    if (!empty($data['project_id'])) {
+      $projectContactId = Project::where('tenant_id', $tenant->id)
+        ->where('id', $data['project_id'])
+        ->value('contact_id');
+      if (!empty($projectContactId)) {
+        $data['contact_id'] = $projectContactId;
+      }
+    }
+
+    if (!empty($data['assign_type']) && $data['assign_type'] === 'admin' && !empty($data['assign_id'])) {
+      $teamMember = \App\Models\TeamMember::find($data['assign_id']);
+      if (!empty($teamMember?->user_id)) {
+        $data['user_id'] = $teamMember->user_id;
+      }
     }
 
     if (empty($data['assign_type']) && !empty($data['user_id'])) {
       $data['assign_type'] = 'admin';
       $data['assign_id'] = $data['user_id'];
+    }
+
+    if (empty($data['assigned_user_id']) && !empty($data['user_id'])) {
+      $data['assigned_user_id'] = $data['user_id'];
+    }
+
+    if (!empty($data['assign_type']) && $data['assign_type'] === 'client' && !empty($data['assign_id']) && empty($data['contact_id'])) {
+      $data['contact_id'] = $data['assign_id'];
+    }
+
+    if (!empty($data['assign_type']) && $data['assign_type'] === 'client' && !empty($data['contact_id'])) {
+      $data['assign_id'] = $data['contact_id'];
     }
 
     if ($data['requires_approval'] && empty($task->approval_status)) {

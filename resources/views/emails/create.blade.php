@@ -19,12 +19,13 @@
         {{-- Back / Title --}}
         <div class="flex items-start justify-between mb-6">
             <div class="space-y-1">
-                <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}"
-                    class="oh-link-underline inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
-                    <i class="fa-solid fa-arrow-left mr-2 text-xs"></i> Back to Email Log
-                </a>
-                <h1 class="text-xl font-semibold text-text-base">Compose Email</h1>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Emails</p>
+                <h1 class="text-2xl font-semibold text-text-base">Compose Email</h1>
             </div>
+            <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}" class="oh-btn oh-btn--secondary">
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+                Back to Email Log
+            </a>
         </div>
 
         {{-- Flash / Errors --}}
@@ -44,16 +45,14 @@
         @endif
 
         <form method="POST" action="{{ route('tenant.emails.store', ['tenant' => $tenantId]) }}"
-            class="rounded-xl border border-border-default/60 bg-surface-card/70 p-5 space-y-5">
+            class="oh-card border border-border-default/60 bg-surface-card/70 p-5 space-y-5">
             @csrf
 
             {{-- Recipient block --}}
             <div class="grid sm:grid-cols-3 gap-4">
                 <div class="sm:col-span-1">
                     <label for="related_type" class="block text-sm font-medium text-text-base">Recipient Type</label>
-                    <select id="related_type" name="related_type"
-                        class="mt-1 w-full h-10 rounded-lg border border-border-default bg-surface-card px-3 text-sm focus:ring-brand-primary"
-                        required>
+                    <select id="related_type" name="related_type" class="oh-select mt-1 w-full h-10" required>
                         <option value="" @selected(old('related_type') === '')>Select…</option>
                         <option value="client" @selected(old('related_type') === 'client')>Client</option>
                         <option value="lead" @selected(old('related_type') === 'lead')>Lead</option>
@@ -62,19 +61,21 @@
 
                 <div class="sm:col-span-2">
                     <label for="related_id" class="block text-sm font-medium text-text-base">Recipient</label>
-                    <select id="related_id" name="related_id"
-                        class="mt-1 w-full h-10 rounded-lg border border-border-default bg-surface-card px-3 text-sm focus:ring-brand-primary"
-                        required>
+                    <select id="related_id" name="related_id" class="oh-select mt-1 w-full h-10" required>
                         <option value="">Choose a recipient…</option>
                         {{-- We render both groups then JS filters by type --}}
                         <optgroup label="Clients" data-type="client">
                             @foreach ($sources['client'] as $c)
                                 @php
                                     $cid = $c->id ?? $c['id'];
+                                    $first = $c->firstName ?? ($c['firstName'] ?? $c->first_name ?? ($c['first_name'] ?? null));
+                                    $last = $c->lastName ?? ($c['lastName'] ?? $c->last_name ?? ($c['last_name'] ?? null));
+                                    $full = trim(($first ?? '') . ' ' . ($last ?? ''));
                                     $label =
-                                        ($c->name ??
-                                            ($c['name'] ?? ($c->client_name ?? ($c['client_name'] ?? 'Client')))) .
-                                        '';
+                                        $full !== ''
+                                            ? $full
+                                            : ($c->name ??
+                                                ($c['name'] ?? ($c->client_name ?? ($c['client_name'] ?? 'Client'))));
                                     $email = $c->email ?? ($c['email'] ?? '');
                                 @endphp
                                 <option value="{{ $cid }}" data-type="client" data-email="{{ $email }}"
@@ -89,10 +90,13 @@
                             @foreach ($sources['lead'] as $l)
                                 @php
                                     $lid = $l->id ?? $l['id'];
+                                    $first = $l->first_name ?? ($l['first_name'] ?? $l->firstName ?? ($l['firstName'] ?? null));
+                                    $last = $l->last_name ?? ($l['last_name'] ?? $l->lastName ?? ($l['lastName'] ?? null));
+                                    $full = trim(($first ?? '') . ' ' . ($last ?? ''));
                                     $label =
-                                        $l->name ??
-                                        ($l['name'] ?? ($l->first_name ?? '') . ' ' . ($l->last_name ?? ''));
-                                    $label = trim($label) !== '' ? $label : 'Lead';
+                                        $full !== ''
+                                            ? $full
+                                            : ($l->name ?? ($l['name'] ?? 'Lead'));
                                     $email = $l->email ?? ($l['email'] ?? '');
                                 @endphp
                                 <option value="{{ $lid }}" data-type="lead" data-email="{{ $email }}"
@@ -113,7 +117,7 @@
                 <label for="recipient_email" class="block text-sm font-medium text-text-base">To</label>
                 <input id="recipient_email" name="recipient_email" type="email" required
                     value="{{ old('recipient_email') }}"
-                    class="mt-1 w-full h-10 rounded-lg border border-border-default bg-surface-card px-3 text-sm focus:ring-brand-primary"
+                    class="oh-input mt-1 w-full h-10"
                     placeholder="person@example.com">
             </div>
 
@@ -121,7 +125,7 @@
             <div>
                 <label for="subject" class="block text-sm font-medium text-text-base">Subject</label>
                 <input id="subject" name="subject" type="text" required value="{{ old('subject') }}"
-                    class="mt-1 w-full h-10 rounded-lg border border-border-default bg-surface-card px-3 text-sm focus:ring-brand-primary"
+                    class="oh-input mt-1 w-full h-10"
                     placeholder="Subject">
             </div>
 
@@ -129,19 +133,17 @@
             <div>
                 <label for="body" class="block text-sm font-medium text-text-base">Message</label>
                 <textarea id="body" name="body" rows="8"
-                    class="mt-1 w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm focus:ring-brand-primary"
+                    class="oh-textarea mt-1 w-full"
                     placeholder="Write your message…">{{ old('body') }}</textarea>
             </div>
 
             {{-- Actions --}}
             <div class="flex items-center justify-end gap-3 pt-2">
                 <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}"
-                    class="inline-flex items-center h-10 px-4 rounded-lg bg-surface-card/60 hover:bg-surface-card/90 text-text-base text-sm">
+                    class="oh-btn oh-btn--secondary">
                     Cancel
                 </a>
-                <button type="submit"
-                    class="inline-flex items-center h-10 px-4 rounded-lg text-sm font-medium text-white
-                           bg-gradient-to-b from-brand-primary to-blue-700 hover:brightness-110 transition">
+                <button type="submit" class="oh-btn oh-btn--primary">
                     Send & Log
                 </button>
             </div>

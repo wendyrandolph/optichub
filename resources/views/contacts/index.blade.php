@@ -123,29 +123,10 @@
             <form method="GET"
                 action="{{ $tenantId ? route('tenant.contacts.index', ['tenant' => $tenantId]) : url()->current() }}"
                 class="grid gap-3 w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-end">
-                <label class="grid gap-1 text-sm col-span-2 xl:col-span-2">
+                <label class="grid gap-1 text-sm col-span-2">
                     <span class="text-text-subtle">Search</span>
                     <input id="contact-search" name="search" type="search" placeholder="Name, email, company…"
                         value="{{ $qSearch }}" class="oh-input h-10" />
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                    <span class="text-text-subtle">Status</span>
-                    <select id="contact-status" name="status" class="oh-select h-10">
-                        <option value="" @selected($qStatus === '')>All</option>
-                        <option value="active" @selected($qStatus === 'active')>Active</option>
-                        <option value="inactive" @selected($qStatus === 'inactive')>Inactive</option>
-                        <option value="invited" @selected($qStatus === 'invited')>Invited</option>
-                    </select>
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                    <span class="text-text-subtle">Portal access</span>
-                    <select id="contact-login" name="login" class="oh-select h-10">
-                        <option value="" @selected($qLogin === '')>All</option>
-                        <option value="yes" @selected($qLogin === 'yes')>Has login</option>
-                        <option value="no" @selected($qLogin === 'no')>No login</option>
-                    </select>
                 </label>
 
                 <label class="grid gap-1 text-sm">
@@ -157,17 +138,18 @@
                     </select>
                 </label>
 
-                <div class="flex flex-row gap-2 justify-end w-full col-span-2 xl:col-span-1 mt-1 mb-1">
-                    <button type="submit" class="oh-btn oh-btn--primary w-1/2 sm:w-auto">
-                        Apply
-                    </button>
+                <div class="flex flex-row gap-2 justify-start w-full col-span-2 sm:col-span-1">
+                    <button type="submit" class="oh-btn oh-btn--primary">Apply</button>
                     <a href="{{ $tenantId ? route('tenant.contacts.index', ['tenant' => $tenantId]) : url()->current() }}"
-                        class="oh-btn w-1/2 sm:w-auto">Reset</a>
+                        class="oh-btn">Reset</a>
                 </div>
             </form>
 
-            {{-- Status chips (matches Leads style) --}}
-            <div class="flex flex-wrap gap-2">
+            {{-- Status + access chips --}}
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-col gap-2 pt-3 pb-3 border-b border-border-default/90 sm:border-b-0 sm:pr-4">
+                    <span class="text-[11px] uppercase tracking-wide text-text-subtle">Status</span>
+                    <div class="flex flex-wrap gap-2">
                 @php
                     $seg = [
                         '' => 'All',
@@ -177,10 +159,17 @@
                     ];
                 @endphp
                 @foreach ($seg as $val => $label)
-                    @php $isActive = $qStatus === $val; @endphp
+                    @php
+                        $isActive = $qStatus === $val;
+                        $activeClass = match ($val) {
+                            'active' => 'oh-pill--success',
+                            'invited' => 'oh-pill--info',
+                            'inactive' => 'oh-pill--muted',
+                            default => 'oh-pill--info',
+                        };
+                    @endphp
                     <a href="{{ request()->fullUrlWithQuery(['status' => $val ?: null, 'page' => null]) }}"
-                        class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold border border-border-default
-                  {{ $isActive ? 'bg-[rgb(var(--brand-primary)/.14)] text-text-base ring-1 ring-[rgb(var(--brand-primary)/.25)]' : 'bg-surface-card text-text-subtle hover:text-text-base' }}"
+                        class="oh-pill {{ $isActive ? $activeClass : 'oh-pill--muted' }}"
                         aria-pressed="{{ $isActive ? 'true' : 'false' }}"
                         @if ($isActive) aria-current="page" @endif>
                         <span>{{ $label }}</span>
@@ -189,6 +178,39 @@
                         @endif
                     </a>
                 @endforeach
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2 pt-3 sm:pl-4 sm:border-l sm:border-border-default/90">
+                    <span class="text-[11px] uppercase tracking-wide text-text-subtle">Portal Access</span>
+                    <div class="flex flex-wrap gap-2">
+                @php
+                    $loginSeg = [
+                        '' => 'All Access',
+                        'yes' => 'Has Login',
+                        'no' => 'No Login',
+                    ];
+                @endphp
+                @foreach ($loginSeg as $val => $label)
+                    @php
+                        $isActive = $qLogin === $val;
+                        $activeClass = match ($val) {
+                            'yes' => 'oh-pill--success',
+                            'no' => 'oh-pill--muted',
+                            default => 'oh-pill--info',
+                        };
+                    @endphp
+                    <a href="{{ request()->fullUrlWithQuery(['login' => $val ?: null, 'page' => null]) }}"
+                        class="oh-pill {{ $isActive ? $activeClass : 'oh-pill--muted' }}"
+                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
+                        @if ($isActive) aria-current="page" @endif>
+                        <span>{{ $label }}</span>
+                        @if ($isActive)
+                            <i class="fa-solid fa-check text-[10px] opacity-70"></i>
+                        @endif
+                    </a>
+                @endforeach
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -207,8 +229,13 @@
                     $companyName = $contact->company_name ?? ($contact->client_company_name ?? null);
                     $name = trim($first . ' ' . $last) ?: $email;
 
-                    $statusPill = $status === 'inactive' ? 'oh-pill' : 'oh-pill oh-pill--success';
                     $invited = !$lastLogin && $invitedAt;
+                    $statusLabel = $invited ? 'Invited' : ucfirst($status);
+                    $statusPill = match (true) {
+                        $invited => 'oh-pill oh-pill--info',
+                        $status === 'inactive' => 'oh-pill oh-pill--muted',
+                        default => 'oh-pill oh-pill--success',
+                    };
                 @endphp
                 <article class="oh-card contact-card h-full flex flex-col"
                     data-status="{{ $invited ? 'invited' : $status }}">
@@ -233,12 +260,9 @@
                                 <div class="text-xs text-text-subtle truncate">{{ $companyName }}</div>
                             @endif
                             <div class="flex flex-wrap gap-3 text-[11px] m-25 contact-pills">
-                                <span class="{{ $statusPill }} px-3 py-1">{{ ucfirst($status) }}</span>
+                                <span class="{{ $statusPill }} px-3 py-1">{{ $statusLabel }}</span>
                                 <span
                                     class="oh-pill oh-pill--muted px-3 py-1">{{ $hasLogin ? 'Portal access' : 'No login' }}</span>
-                                @if ($invited)
-                                    <span class="oh-pill oh-pill--info px-3 py-1">Invited</span>
-                                @endif
                             </div>
                         </div>
                     </div>
@@ -249,7 +273,7 @@
                         <div class="contact-actions inline-flex items-center gap-2">
                             <a href="{{ route('tenant.contacts.show', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
                                 class="oh-icon-btn oh-tooltip" data-tooltip="View" aria-label="View">
-                                <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                <i class="fa-solid fa-eye text-[12px]"></i>
                             </a>
                             <a href="{{ route('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
                                 class="oh-icon-btn oh-tooltip" data-tooltip="Edit" aria-label="Edit">

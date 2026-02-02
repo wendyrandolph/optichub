@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TenantGatewaySeeder::class);
         $this->call(EmailSeeder::class);
 
+        $this->call(ProjectTemplateSeeder::class);
         $this->call(ProjectSeeder::class);
         $this->call(ProjectPhaseSeeder::class);
         $this->call(TaskSeeder::class);
@@ -29,7 +30,9 @@ class DatabaseSeeder extends Seeder
         $this->call(LeadSeeder::class);
         $this->call(PipelineSeeder::class);
         $this->call(InvoiceSeeder::class);
-        $this->call(ClientDemoProjectsSeeder::class);
+        $this->call(ProposalSeeder::class);
+        $this->call(ProfitabilityDemoSeeder::class);
+        $this->call(SupportPermissionSeeder::class);
         $this->call([
             OpportunitySeeder::class,
         ]);

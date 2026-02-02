@@ -39,6 +39,10 @@ class RouteServiceProvider extends ServiceProvider
       return Limit::perMinute(20)->by($request->ip());
     });
 
+    RateLimiter::for('lead-ingest', function (Request $request) {
+      return Limit::perMinute(20)->by($request->ip());
+    });
+
     Route::aliasMiddleware('tenant', ResolveTenant::class);
 
 

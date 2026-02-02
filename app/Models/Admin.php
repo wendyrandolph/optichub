@@ -33,17 +33,18 @@ class Admin extends Authenticatable
    *
    * @var array<int, string>
    */
-  protected $fillable = [
-    'firstName',
-    'lastName',
-    'email',
-    'phone',
-    'password', // Ensure password is fillable if you are creating admins
-    'role',
-    'title',
-    'notes',
-    'tenant_id',
-  ];
+    protected $fillable = [
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'password', // Ensure password is fillable if you are creating admins
+      'role',
+      'title',
+      'notes',
+      'can_manage_support',
+      'tenant_id',
+    ];
 
   /**
    * The attributes that should be hidden for serialization.
@@ -66,6 +67,7 @@ class Admin extends Authenticatable
     'created_at' => 'datetime',
     'updated_at' => 'datetime',
     'email_verified_at' => 'datetime', // Add if admins use email verification
+    'can_manage_support' => 'boolean',
   ];
 
   // --- RELATIONSHIPS ---
@@ -94,5 +96,23 @@ class Admin extends Authenticatable
   public function scopeHasRole(Builder $query, TeamRole $role): Builder
   {
     return $query->where('role', $role);
+  }
+
+  public function isProviderAdmin(): bool
+  {
+    $role = strtolower((string) ($this->role ?? ''));
+    $allowlist = config('provider.admin_allowlist', []);
+    $emails = array_map('strtolower', $allowlist['emails'] ?? []);
+    $ids = array_map('intval', $allowlist['user_ids'] ?? []);
+
+    if (!in_array($role, ['provider', 'super_admin', 'superadmin'], true)) {
+      return false;
+    }
+
+    if (!empty($emails) && in_array(strtolower((string) $this->email), $emails, true)) {
+      return true;
+    }
+
+    return !empty($ids) && in_array((int) $this->getKey(), $ids, true);
   }
 }

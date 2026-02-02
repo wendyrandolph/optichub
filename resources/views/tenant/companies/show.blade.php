@@ -24,43 +24,26 @@
     <div class="oh-page space-y-6">
         {{-- Header --}}
         <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div class="space-y-2">
-                <a href="{{ route('tenant.companies.index', ['tenant' => $tenantId]) }}"
-                    class="inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base oh-link-underline">
-                    <i class="fa-solid fa-arrow-left mr-2"></i>
-                    Back to companies
-                </a>
+            <div class="space-y-3">
                 <div>
                     <p class="text-[11px] uppercase tracking-[0.08em] text-text-subtle">Clients</p>
-                    <h1 class="text-2xl font-semibold text-text-base flex items-center gap-2">
-                        {{ $company->company_name ?? 'Company' }}
-                        @if ($company->industry)
-                            <span class="oh-pill oh-pill--muted text-[11px]">{{ $company->industry }}</span>
-                        @endif
-                    </h1>
+                    <h1 class="text-2xl font-semibold text-text-base">{{ $company->company_name ?? 'Company' }}</h1>
                     <p class="text-sm text-text-subtle">
                         Company overview, linked contacts, services, and activity.
                     </p>
                 </div>
 
                 <div class="flex flex-wrap gap-2 text-sm text-text-subtle">
+                    @if ($company->industry)
+                        <span class="oh-pill oh-pill--muted text-[11px]">{{ $company->industry }}</span>
+                    @endif
                     @if ($company->website)
                         <a href="{{ $company->website }}" target="_blank" rel="noopener"
                             class="oh-pill oh-pill--muted inline-flex items-center gap-2">
                             <i class="fa-solid fa-link text-[11px]"></i>
                             {{ preg_replace('#^https?://#', '', $company->website) }}
                         </a>
-                    @else
-                        <span class="oh-pill oh-pill--muted">No website</span>
                     @endif
-
-                    @if ($company->address)
-                        <span class="oh-pill oh-pill--muted inline-flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-[11px]"></i>
-                            {{ $company->address }}
-                        </span>
-                    @endif
-
                     @if ($company->phone_formatted ?? $company->phone ?? false)
                         <span class="oh-pill oh-pill--muted inline-flex items-center gap-2">
                             <i class="fa-solid fa-phone text-[11px]"></i>
@@ -71,14 +54,20 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('tenant.contacts.create', ['tenant' => $tenantId, 'company' => $company->id]) }}"
-                    class="oh-btn oh-btn--primary">
-                    <i class="fa-solid fa-user-plus mr-2 text-xs"></i>
-                    Add contact
+                <a href="{{ route('tenant.companies.index', ['tenant' => $tenantId]) }}" class="oh-btn">
+                    <i class="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden="true"></i>
+                    View All Companies
                 </a>
+                @if (Route::has('tenant.companies.services.index'))
+                    <a href="{{ route('tenant.companies.services.index', ['tenant' => $tenantId, 'company' => $company->id]) }}"
+                        class="oh-btn">
+                        <i class="fa-solid fa-layer-group mr-2 text-xs" aria-hidden="true"></i>
+                        View Services
+                    </a>
+                @endif
                 <a href="{{ route('tenant.companies.edit', ['tenant' => $tenantId, 'company' => $company->id]) }}"
                     class="oh-btn">
-                    <i class="fa-solid fa-pen-to-square mr-2 text-xs"></i>
+                    <i class="fa-solid fa-pen mr-2 text-xs"></i>
                     Edit company
                 </a>
             </div>
@@ -161,6 +150,17 @@
                                             Edit
                                         </a>
                                     @endif
+                                    @if (Route::has('tenant.contacts.destroy'))
+                                        <form method="POST" class="inline"
+                                            action="{{ route('tenant.contacts.destroy', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
+                                            onsubmit="return confirm('Delete this contact?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="oh-btn text-xs ml-2">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </article>
                         @empty
@@ -171,12 +171,11 @@
                     {{-- Desktop table --}}
                     <div class="hidden md:block">
                         <table class="min-w-full text-sm">
-                            <thead class="bg-surface-card">
+                            <thead class="bg-surface-muted/60">
                                 <tr class="text-left text-text-subtle">
-                                    <th class="px-6 py-3 font-medium">Name</th>
-                                    <th class="px-6 py-3 font-medium">Role / Title</th>
-                                    <th class="px-6 py-3 font-medium">Email</th>
-                                    <th class="px-6 py-3 font-medium text-right">Actions</th>
+                                    <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px]">Name</th>
+                                    <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px]">Role / Title</th>
+                                    <th class="px-6 py-3 font-semibold uppercase tracking-wide text-[11px] text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border-default/60">
@@ -206,14 +205,11 @@
                                         <td class="px-6 py-3 text-text-base">
                                             {{ $role ?: '—' }}
                                         </td>
-                                        <td class="px-6 py-3 text-text-base">
-                                            <div class="text-[12px] text-text-subtle">{{ $contact->email ?? '—' }}</div>
-                                        </td>
                                         <td class="px-6 py-3 text-right">
                                             <div class="inline-flex items-center gap-2">
                                                 <a href="{{ route('tenant.contacts.show', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
                                                     class="oh-icon-btn oh-tooltip" data-tooltip="View" aria-label="View">
-                                                    <i class="fa-solid fa-circle-info text-[12px]"></i>
+                                                    <i class="fa-solid fa-eye text-[12px]"></i>
                                                 </a>
                                                 @if (Route::has('tenant.contacts.edit'))
                                                     <a href="{{ route('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
@@ -221,12 +217,24 @@
                                                         <i class="fa-solid fa-pen text-[12px]"></i>
                                                     </a>
                                                 @endif
+                                                @if (Route::has('tenant.contacts.destroy'))
+                                                    <form method="POST" class="inline"
+                                                        action="{{ route('tenant.contacts.destroy', ['tenant' => $tenantId, 'contact' => $contact->id]) }}"
+                                                        onsubmit="return confirm('Delete this contact?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="oh-icon-btn oh-tooltip text-rose-600"
+                                                            data-tooltip="Delete" aria-label="Delete">
+                                                            <i class="fa-solid fa-trash text-[12px]"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="px-6 py-10 text-center text-text-subtle">No contacts yet. Add your first contact to keep everyone organized for this company.</td>
+                                        <td colspan="3" class="px-6 py-10 text-center text-text-subtle">No contacts yet. Add your first contact to keep everyone organized for this company.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -239,10 +247,11 @@
                     <section class="oh-card p-0">
                         <div class="flex items-center justify-between px-6 pt-4 pb-2">
                             <h2 class="text-sm font-semibold text-text-base">Services</h2>
-                            @if (Route::has('tenant.services.index'))
-                                <a href="{{ route('tenant.services.index', ['tenant' => $tenantId, 'company' => $company->id]) }}"
-                                    class="oh-btn oh-btn--ghost text-xs">
-                                    View all services
+                            @if (Route::has('tenant.companies.services.index'))
+                            <a href="{{ route('tenant.companies.services.index', ['tenant' => $tenantId, 'company' => $company->id, 'open' => 'add']) }}"
+                                class="oh-btn oh-btn--primary text-xs">
+                                    <i class="fa-solid fa-plus mr-1.5 text-[10px]"></i>
+                                    Add service
                                 </a>
                             @endif
                         </div>
@@ -258,7 +267,27 @@
                                             @endif
                                         </div>
                                     </div>
-                                    <span class="oh-pill oh-pill--muted">{{ ucfirst($service->status ?? 'active') }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="oh-pill oh-pill--muted">{{ ucfirst($service->status ?? 'active') }}</span>
+                                        @if (Route::has('tenant.services.show'))
+                                            <a href="{{ route('tenant.services.show', ['tenant' => $tenantId, 'service' => $service->id]) }}"
+                                                class="oh-icon-btn oh-tooltip" data-tooltip="View" aria-label="View">
+                                                <i class="fa-solid fa-eye text-[12px]"></i>
+                                            </a>
+                                        @endif
+                                        @if (Route::has('tenant.services.destroy'))
+                                            <form method="POST"
+                                                action="{{ route('tenant.services.destroy', ['tenant' => $tenantId, 'service' => $service->id]) }}"
+                                                onsubmit="return confirm('Delete this service?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="oh-icon-btn oh-tooltip text-rose-600"
+                                                    data-tooltip="Delete" aria-label="Delete">
+                                                    <i class="fa-solid fa-trash text-[12px]"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
                             @empty
                                 <div class="px-6 py-6 text-sm text-text-subtle">No services yet.</div>
@@ -304,13 +333,8 @@
                 </section>
 
                 <section class="oh-card">
-                    <h3 class="text-sm font-semibold text-text-base mb-3">Notes</h3>
-                    <p class="text-sm text-text-subtle">Notes coming soon.</p>
-                </section>
-
-                <section class="oh-card">
-                    <h3 class="text-sm font-semibold text-text-base mb-3">Files</h3>
-                    <p class="text-sm text-text-subtle">Files coming soon.</p>
+                    <h3 class="text-sm font-semibold text-text-base mb-3">Resources</h3>
+                    <p class="text-sm text-text-subtle">Notes and files are coming soon.</p>
                 </section>
             </div>
         </div>
@@ -319,18 +343,8 @@
         @if (method_exists($contacts, 'links'))
             @if ($contacts->hasPages())
                 <div class="text-sm text-text-subtle space-y-3">
-                    <div>Showing {{ $contacts->firstItem() }} to {{ $contacts->lastItem() }} of {{ $contacts->total() }} results</div>
-                    <div class="flex items-center justify-between">
-                        @if ($contacts->onFirstPage())
-                            <span class="oh-btn opacity-50 pointer-events-none">Previous</span>
-                        @else
-                            <a href="{{ $contacts->previousPageUrl() }}" class="oh-btn">Previous</a>
-                        @endif
-                        @if ($contacts->hasMorePages())
-                            <a href="{{ $contacts->nextPageUrl() }}" class="oh-btn">Next</a>
-                        @else
-                            <span class="oh-btn opacity-50 pointer-events-none">Next</span>
-                        @endif
+                    <div>
+                        {{ $contacts->links() }}
                     </div>
                 </div>
             @endif

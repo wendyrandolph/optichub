@@ -10,102 +10,107 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <header class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <a href="{{ route('tenant.companies.show', ['tenant' => $tenantId, 'company' => $company->id]) }}"
-                    class="inline-flex items-center text-xs text-text-subtle hover:text-text-base mb-1">
-                    <i class="fa-solid fa-arrow-left mr-1"></i>
-                    Back to company
-                </a>
+                <p class="text-[11px] uppercase tracking-wider text-text-subtle">Company</p>
                 <h1 class="text-2xl font-semibold text-text-base">Services</h1>
                 <p class="text-sm text-text-subtle mt-1">Manage hosting, domains, maintenance, and retainers for this company.</p>
             </div>
-            <button type="button" id="openServiceModal" class="oh-btn oh-btn--primary">
-                <i class="fa-solid fa-plus mr-2 text-xs"></i>
-                Add Service
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('tenant.companies.show', ['tenant' => $tenantId, 'company' => $company->id]) }}"
+                    class="oh-btn">
+                    <i class="fa-solid fa-arrow-left mr-2 text-xs"></i>
+                    Company Details
+                </a>
+                <button type="button" id="openServiceModal" class="oh-btn oh-btn--primary">
+                    <i class="fa-solid fa-plus mr-2 text-xs"></i>
+                    Add Service
+                </button>
+            </div>
         </header>
 
         {{-- Toolbar --}}
-        <div class="rounded-xl bg-surface-card/70 border border-border-default/60 mb-2">
-            <form method="GET" action="{{ route('tenant.companies.services.index', ['tenant' => $tenantId, 'company' => $company->id]) }}"
-                class="p-4 md:p-5 flex flex-col gap-3">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div class="flex-1 md:max-w-[360px]">
-                        <input name="q" value="{{ $q ?? '' }}" placeholder="Search service, provider, domain…"
-                            class="w-full h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm
-                            border border-border-default focus:outline-none focus:ring-1 focus:ring-[rgb(var(--brand-primary)/.45)]">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <select name="type" class="oh-input">
-                            <option value="">All types</option>
-                            @foreach (['domain','hosting','maintenance','retainer','other'] as $t)
-                                <option value="{{ $t }}" @selected(($typeFilter ?? '') === $t)>{{ ucfirst($t) }}</option>
-                            @endforeach
-                        </select>
-                        <button type="submit" class="oh-btn oh-btn--primary">Apply</button>
-                        @if (($q ?? '') !== '' || ($typeFilter ?? '') !== '' || ($timing ?? '') !== '' || ($statusFilter ?? '') !== '')
+        <div class="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+            <div class="oh-card h-full">
+                <form method="GET" action="{{ route('tenant.companies.services.index', ['tenant' => $tenantId, 'company' => $company->id]) }}"
+                    class="p-4 md:p-5 flex flex-col gap-3">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div class="flex-1 md:max-w-[420px] flex items-center gap-2">
+                            <input name="q" value="{{ $q ?? '' }}" placeholder="Search service, provider, domain…"
+                                class="oh-input h-10 w-full">
+                            <button type="submit" class="oh-btn oh-btn--primary">Apply</button>
+                        </div>
+                        @if (($q ?? '') !== '' || ($timing ?? '') !== '' || ($statusFilter ?? '') !== '')
                             <a href="{{ route('tenant.companies.services.index', ['tenant' => $tenantId, 'company' => $company->id]) }}" class="oh-btn">
                                 Reset
                             </a>
                         @endif
                     </div>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        @php
+                            $chips = [
+                                ['label' => 'All', 'status' => '', 'timing' => '', 'activeClass' => 'oh-pill--info'],
+                                ['label' => 'Active', 'status' => 'active', 'timing' => '', 'activeClass' => 'oh-pill--success'],
+                                ['label' => 'Inactive', 'status' => 'inactive', 'timing' => '', 'activeClass' => 'oh-pill--muted'],
+                                ['label' => 'Due soon', 'status' => '', 'timing' => 'soon', 'activeClass' => 'oh-pill--warning'],
+                                ['label' => 'Overdue', 'status' => '', 'timing' => 'overdue', 'activeClass' => 'oh-pill--danger'],
+                            ];
+                        @endphp
+                        @foreach ($chips as $chip)
+                            @php
+                                $isActive = ($statusFilter ?? '') === $chip['status'] && ($timing ?? '') === $chip['timing'];
+                                $url = route('tenant.companies.services.index', [
+                                    'tenant' => $tenantId,
+                                    'company' => $company->id,
+                                    'status' => $chip['status'] ?: null,
+                                    'timing' => $chip['timing'] ?: null,
+                                    'q' => $q ?? null,
+                                ]);
+                            @endphp
+                            <a href="{{ $url }}"
+                                class="oh-pill {{ $isActive ? $chip['activeClass'] : 'oh-pill--muted' }}"
+                                aria-pressed="{{ $isActive ? 'true' : 'false' }}">
+                                <span>{{ $chip['label'] }}</span>
+                                @if ($isActive)
+                                    <i class="fa-solid fa-check text-[10px] opacity-70"></i>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </form>
+            </div>
+
+            <div class="grid h-full gap-3 sm:grid-cols-2 sm:grid-rows-2">
+                <div class="oh-card p-4 h-full">
+                    <div class="text-xs uppercase tracking-wide text-text-subtle">Active Services</div>
+                    <div class="mt-2 text-2xl font-semibold text-text-base">{{ $summary['active'] ?? 0 }}</div>
                 </div>
-            </form>
+                <div class="oh-card p-4 h-full">
+                    <div class="text-xs uppercase tracking-wide text-text-subtle">Due Soon</div>
+                    <div class="mt-2 text-2xl font-semibold text-text-base">{{ $summary['dueSoon'] ?? 0 }}</div>
+                </div>
+                <div class="oh-card p-4 h-full">
+                    <div class="text-xs uppercase tracking-wide text-text-subtle">Overdue</div>
+                    <div class="mt-2 text-2xl font-semibold text-text-base">{{ $summary['overdue'] ?? 0 }}</div>
+                </div>
+                <div class="oh-card p-4 h-full">
+                    <div class="text-xs uppercase tracking-wide text-text-subtle">Next Renewal</div>
+                    <div class="mt-2 text-sm text-text-base">
+                        @if (!empty($summary['nextRenewal']?->renewal_date))
+                            {{ optional($summary['nextRenewal']->renewal_date)->format('M j') }}
+                            <span class="text-text-subtle">· {{ $summary['nextRenewal']->name ?? '—' }}</span>
+                        @else
+                            —
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
 
-        {{-- Filter chips --}}
-        <div class="flex flex-wrap gap-2 mb-3">
-            @php
-                $chips = [
-                    ['label' => 'All', 'status' => '', 'timing' => ''],
-                    ['label' => 'Active', 'status' => 'active', 'timing' => ''],
-                    ['label' => 'Inactive', 'status' => 'inactive', 'timing' => ''],
-                    ['label' => 'Due soon', 'status' => '', 'timing' => 'soon'],
-                    ['label' => 'Overdue', 'status' => '', 'timing' => 'overdue'],
-                ];
-            @endphp
-            @foreach ($chips as $chip)
-                @php
-                    $isActive = ($statusFilter ?? '') === $chip['status'] && ($timing ?? '') === $chip['timing'];
-                    $url = route('tenant.companies.services.index', [
-                        'tenant' => $tenantId,
-                        'company' => $company->id,
-                        'status' => $chip['status'] ?: null,
-                        'timing' => $chip['timing'] ?: null,
-                        'q' => $q ?? null,
-                        'type' => $typeFilter ?? null,
-                    ]);
-                @endphp
-                <a href="{{ $url }}"
-                    class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold border border-border-default
-                    {{ $isActive ? 'bg-[rgb(var(--brand-primary)/.14)] text-text-base ring-1 ring-[rgb(var(--brand-primary)/.25)]' : 'bg-surface-card text-text-subtle hover:text-text-base' }}"
-                    aria-pressed="{{ $isActive ? 'true' : 'false' }}">
-                    <span>{{ $chip['label'] }}</span>
-                    @if ($isActive)
-                        <i class="fa-solid fa-check text-[10px] opacity-70"></i>
-                    @endif
-                </a>
-            @endforeach
-        </div>
-
-        {{-- Summary strip --}}
-        <div class="rounded-xl bg-surface-card/70 border border-border-default/60 px-4 py-3 text-sm text-text-subtle flex flex-wrap gap-4">
-            <span>Active: {{ $summary['active'] ?? 0 }}</span>
-            <span>Due soon: {{ $summary['dueSoon'] ?? 0 }}</span>
-            <span>Overdue: {{ $summary['overdue'] ?? 0 }}</span>
-            <span>Next renewal:
-                @if (!empty($summary['nextRenewal']?->renewal_date))
-                    {{ optional($summary['nextRenewal']->renewal_date)->format('M j') }} ({{ $summary['nextRenewal']->name ?? '—' }})
-                @else
-                    —
-                @endif
-            </span>
-        </div>
 
         {{-- Add/Edit Service Modal --}}
         <div id="serviceModal" class="hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm">
             <div class="min-h-full flex items-start justify-center px-4 py-8">
                 <div id="serviceModalCard" role="dialog" aria-modal="true" aria-labelledby="serviceModalTitle"
-                    class="oh-card rounded-2xl border border-border-default/70 shadow-lg w-[92vw] sm:w-full max-w-2xl max-h-[90vh] overflow-hidden bg-surface-card bg-white flex flex-col sm:mt-6">
+                    class="oh-card rounded-2xl border border-border-default/70 shadow-lg w-[92vw] sm:w-full max-w-2xl max-h-[90vh] overflow-hidden bg-surface-card/100 flex flex-col sm:mt-6">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-border-default/60 shrink-0">
                         <h2 id="serviceModalTitle" class="text-lg font-semibold text-text-base">Add Service</h2>
                         <button type="button" id="closeServiceModal" class="oh-icon-btn" aria-label="Close">
@@ -124,12 +129,12 @@
                                 <label class="grid gap-1 text-sm">
                                     <span class="text-text-subtle">Service name</span>
                                     <input type="text" name="name" id="serviceName"
-                                        class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                                        class="oh-input h-10">
                                 </label>
                                 <label class="grid gap-1 text-sm">
                                     <span class="text-text-subtle">Type</span>
                                     <select name="type" id="serviceType"
-                                        class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary" required>
+                                        class="oh-select h-10" required>
                                         <option value="">Select</option>
                                         <option value="domain">Domain</option>
                                         <option value="hosting">Hosting</option>
@@ -138,31 +143,29 @@
                                         <option value="other">Other</option>
                                     </select>
                                 </label>
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Status</span>
-                            <select name="status" id="serviceStatus"
-                                class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                                <option value="active">Active</option>
-                                <option value="paused">Paused</option>
-                                <option value="canceled">Canceled</option>
-                            </select>
-                        </label>
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Handling</span>
-                            <select name="handling" id="serviceHandling"
-                                class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
-                                <option value="">Select</option>
-                                <option value="client">Client handles/pays</option>
-                                <option value="agency">We handle/pay</option>
-                                <option value="agency_reimburse">We pay, client reimburses</option>
-                            </select>
-                        </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Status</span>
+                                    <select name="status" id="serviceStatus" class="oh-select h-10">
+                                        <option value="active">Active</option>
+                                        <option value="paused">Paused</option>
+                                        <option value="canceled">Canceled</option>
+                                    </select>
+                                </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Handling</span>
+                                    <select name="handling" id="serviceHandling" class="oh-select h-10">
+                                        <option value="">Select</option>
+                                        <option value="client">Client handles/pays</option>
+                                        <option value="agency">We handle/pay</option>
+                                        <option value="agency_reimburse">We pay, client reimburses</option>
+                                    </select>
+                                </label>
 
                                 <div class="md:col-span-2 text-xs font-semibold uppercase tracking-wide text-text-subtle">Billing</div>
                                 <label class="grid gap-1 text-sm">
                                     <span class="text-text-subtle">Billing cycle</span>
                                     <select name="billing_cycle" id="serviceBilling"
-                                        class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                                        class="oh-select h-10">
                                         <option value="">Select</option>
                                         <option value="monthly">Monthly</option>
                                         <option value="annual">Annual</option>
@@ -172,12 +175,12 @@
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Renewal date</span>
                             <input type="date" name="renewal_date" id="serviceRenewal"
-                                class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                                class="oh-input h-10">
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Reminder lead time (days)</span>
                             <input type="number" min="0" max="365" name="reminder_days" id="serviceReminder"
-                                class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                class="oh-input h-10"
                                 placeholder="e.g., 30">
                         </label>
 
@@ -185,12 +188,12 @@
                                 <label class="grid gap-1 text-sm">
                                     <span class="text-text-subtle">Provider</span>
                                     <input type="text" name="provider" id="serviceProvider"
-                                        class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                                        class="oh-input h-10">
                                 </label>
                                 <label class="grid gap-1 text-sm">
                                     <span class="text-text-subtle">Provider URL</span>
                                     <input type="text" name="provider_url" id="serviceProviderUrl"
-                                        class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary">
+                                        class="oh-input h-10">
                                 </label>
 
                                 <div id="domainFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
@@ -198,13 +201,13 @@
                                     <label class="grid gap-1 text-sm">
                                         <span class="text-text-subtle">Domain registrar</span>
                                         <input type="text" name="registrar" id="serviceRegistrar"
-                                            class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                            class="oh-input h-10"
                                             placeholder="e.g., GoDaddy, Namecheap">
                                     </label>
                                     <label class="grid gap-1 text-sm">
                                         <span class="text-text-subtle">Domain name</span>
                                         <input type="text" name="domain_name" id="serviceDomainName"
-                                            class="h-10 rounded-lg bg-surface-card text-text-base px-3 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                            class="oh-input h-10"
                                             placeholder="example.com">
                                     </label>
                                 </div>
@@ -212,7 +215,7 @@
                                 <div class="md:col-span-2 text-xs font-semibold uppercase tracking-wide text-text-subtle">Notes</div>
                                 <label class="grid gap-1 text-sm md:col-span-2">
                                     <textarea name="notes" id="serviceNotes" rows="3"
-                                        class="w-full rounded-lg bg-surface-card text-text-base px-3 py-2 text-sm border border-border-default focus:outline-none focus:ring-1 focus:ring-brand-primary"></textarea>
+                                        class="oh-textarea"></textarea>
                                 </label>
                             </div>
                         </div>
@@ -226,7 +229,7 @@
             </div>
         </div>
 
-        <section class="rounded-2xl bg-surface-card border border-border-default/70 shadow-sm">
+        <section class="oh-card">
             <div class="divide-y divide-border-default/60">
                 @php
                     $serviceTypeClass = function ($type) {
@@ -268,11 +271,10 @@
                             ? 'Renews ' . $renewDate->format('M j, Y') . ' · ' . $renewDate->diffForHumans(null, true)
                             : 'No renewal date';
                     @endphp
-                    <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-3 items-center gap-3">
+                    <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-[2fr_1fr_2fr_auto] items-center gap-3">
                         <div class="min-w-0 space-y-1">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="{{ $serviceTypeClass($service->type) }}">{{ ucfirst($service->type ?? 'Service') }}</span>
-                                <span class="{{ $serviceStatusClass($service->status) }}">{{ ucfirst($service->status ?? 'Status') }}</span>
                             </div>
                             <div class="font-semibold text-text-base truncate">{{ $service->name ?: '—' }}</div>
                             <div class="text-[12px] text-text-subtle flex flex-wrap gap-2">
@@ -283,6 +285,10 @@
                                     <span>Cycle: {{ $service->billing_cycle }}</span>
                                 @endif
                             </div>
+                        </div>
+                        <div class="min-w-0 space-y-1">
+                            <div class="text-[11px] uppercase tracking-wide text-text-subtle">Status</div>
+                            <span class="{{ $serviceStatusClass($service->status) }}">{{ ucfirst($service->status ?? 'Status') }}</span>
                         </div>
                         <div class="min-w-0 space-y-1">
                             <div class="text-sm text-text-base">
@@ -416,10 +422,10 @@
                 setBodyLock(false);
             };
 
-            const openModal = (mode = 'create', data = {}) => {
-                if (!modal) return;
-                modal.classList.remove('hidden');
-                setBodyLock(true);
+                    const openModal = (mode = 'create', data = {}) => {
+                        if (!modal) return;
+                        modal.classList.remove('hidden');
+                        setBodyLock(true);
 
                 titleEl.textContent = mode === 'edit' ? 'Edit Service' : 'Add Service';
                 form.action = mode === 'edit' ? data.action || createAction : createAction;
@@ -446,24 +452,31 @@
                 openBtn.addEventListener('click', () => openModal('create', {}));
             }
 
-            document.querySelectorAll('.js-edit-service').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const data = btn.dataset;
-                    openModal('edit', {
-                        action: data.action,
-                        name: data.name,
-                        type: data.type,
-                        status: data.status,
-                        billing: data.billing,
-                        renewal: data.renewal,
-                        provider: data.provider,
-                        provider_url: data.provider_url,
-                        registrar: data.registrar,
-                        domain_name: data.domain_name,
-                        notes: data.notes,
+            const shouldOpen = new URLSearchParams(window.location.search).get('open') === 'add';
+            if (shouldOpen) {
+                openModal('create', {});
+            }
+
+                    document.querySelectorAll('.js-edit-service').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const data = btn.dataset;
+                            openModal('edit', {
+                                action: data.action,
+                                name: data.name,
+                                type: data.type,
+                                status: data.status,
+                                billing: data.billing,
+                                renewal: data.renewal,
+                                provider: data.provider,
+                                provider_url: data.provider_url,
+                                registrar: data.registrar,
+                                domain_name: data.domain_name,
+                                handling: data.handling,
+                                reminder_days: data.reminder_days,
+                                notes: data.notes,
+                            });
+                        });
                     });
-                });
-            });
 
             closeBtns.forEach(btn => btn && btn.addEventListener('click', closeModal));
             if (modal) {

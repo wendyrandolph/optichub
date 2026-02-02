@@ -153,18 +153,11 @@ class ProjectConversationController extends Controller
             abort_unless((int)$project->contact_id === (int)$user->contact_id, 403);
         }
 
-        $conversation = ProjectConversation::firstOrCreate(
-            ['project_id' => $project->id],
-            [
-                'tenant_id' => $project->tenant_id,
-                'company_name' => null,
-                'last_message_at' => now(),
-            ]
-        );
+        if ($guard === 'client') {
+            return redirect()->route('portal.projects.show', $project->id);
+        }
 
-        $messages = $conversation->messages()->orderBy('created_at')->get();
-
-        return view('portal.messages.show', compact('project', 'conversation', 'messages'));
+        return redirect()->route('projects.show', $project->id);
     }
 
     public function approve(Project $project, Request $request)

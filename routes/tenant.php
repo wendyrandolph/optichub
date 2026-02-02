@@ -13,10 +13,16 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\Tenant\ClientCompanyController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProposalController;
+use App\Http\Controllers\ProposalTemplateController;
+use App\Http\Controllers\ContractTemplateController;
 use App\Http\Controllers\Client\ProjectConversationController;
 use App\Http\Controllers\Client\ProjectMessageController;
 use App\Http\Controllers\Tenant\ServiceController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MockPaymentController;
+use App\Http\Controllers\Tenant\ScheduleController;
 
 
 /*
@@ -28,6 +34,12 @@ use App\Http\Controllers\InvoiceController;
 // Projects
 Route::resource('projects', ProjectController::class)
   ->names('projects');
+Route::post('projects/{project}/milestones', [ProjectController::class, 'storeMilestoneInvoice'])
+  ->name('projects.milestones.store');
+Route::put('projects/{project}/milestones/{invoice}', [ProjectController::class, 'updateMilestoneInvoice'])
+  ->name('projects.milestones.update');
+Route::delete('projects/{project}/milestones/{invoice}', [ProjectController::class, 'destroyMilestoneInvoice'])
+  ->name('projects.milestones.destroy');
 // Mark project completed (status -> closed, end_date -> today)
 Route::post('projects/{project}/complete', [ProjectController::class, 'complete'])
   ->name('projects.complete');
@@ -44,14 +56,18 @@ Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])
   ->name('tasks.complete');
 Route::post('tasks/{task}/archive', [TaskController::class, 'archive'])
   ->name('tasks.archive');
-Route::post('tasks/{task}/pause', [TaskController::class, 'pause'])
-  ->name('tasks.pause');
-Route::post('tasks/{task}/resume', [TaskController::class, 'resume'])
-  ->name('tasks.resume');
+Route::post('tasks/{task}/timer/start', [TaskController::class, 'timerStart'])
+  ->name('tasks.timer.start');
+Route::post('tasks/{task}/timer/stop', [TaskController::class, 'timerStop'])
+  ->name('tasks.timer.stop');
 Route::post('tasks/{task}/approve', [TaskController::class, 'approveTask'])
   ->name('tasks.approve');
 Route::post('tasks/{task}/request-changes', [TaskController::class, 'requestChanges'])
   ->name('tasks.request_changes');
+
+// My Schedule (creative workspace)
+Route::get('schedule', [ScheduleController::class, 'index'])
+  ->name('schedule.index');
 
 // Time entries
 Route::resource('time', TimeEntryController::class)
@@ -59,13 +75,24 @@ Route::resource('time', TimeEntryController::class)
   ->names('time');
 Route::post('time/bulk-bill', [TimeEntryController::class, 'bulkBill'])
   ->name('time.bulk-bill');
-Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'storePayment'])->name('invoices.payments.store');
+Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'storePayment'])
+  ->name('invoices.payments.store')
+  ->middleware('capability:PAYMENTS_FRAMEWORK');
+Route::get('pay/mock/{invoice}', [MockPaymentController::class, 'show'])
+  ->name('payments.mock.show')
+  ->middleware('capability:PAYMENTS_MOCK_PROVIDERS');
+Route::post('pay/mock/{invoice}', [MockPaymentController::class, 'simulate'])
+  ->name('payments.mock.simulate')
+  ->middleware('capability:PAYMENTS_MOCK_PROVIDERS');
 
 // Calendar
 Route::get('calendar', [CalendarController::class, 'index'])
   ->name('calendar.index');
 Route::get('calendar/events', [\App\Http\Controllers\CalendarEventsController::class, 'index'])
   ->name('calendar.events');
+Route::resource('meetings', MeetingController::class)
+  ->only(['create', 'store', 'show'])
+  ->names('meetings');
 
 // Email logs (Gmail sync)
 Route::get('email-logs', [\App\Http\Controllers\EmailLogController::class, 'index'])
@@ -99,11 +126,44 @@ Route::post('services/{service}/logs', [ServiceController::class, 'storeLog'])->
 Route::patch('services/logs/{log}', [ServiceController::class, 'updateLog'])->name('services.logs.update');
 Route::delete('services/logs/{log}', [ServiceController::class, 'destroyLog'])->name('services.logs.destroy');
 Route::patch('services/{service}', [ServiceController::class, 'update'])->name('services.update');
+
+/*
+|--------------------------------------------------------------------------
+| Tenant Support Center
+|--------------------------------------------------------------------------
+*/
+Route::prefix('support')
+  ->as('support.')
+  ->group(function () {
+    Route::get('/', [\App\Http\Controllers\Tenant\SupportCenterController::class, 'index'])
+      ->name('index');
+    Route::get('/kb', [\App\Http\Controllers\Tenant\KnowledgeBaseController::class, 'index'])
+      ->name('kb.index');
+    Route::get('/kb/{article:slug}', [\App\Http\Controllers\Tenant\KnowledgeBaseController::class, 'show'])
+      ->name('kb.show');
+
+    Route::get('/tickets', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'index'])
+      ->name('tickets.index');
+    Route::get('/tickets/create', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'create'])
+      ->name('tickets.create');
+    Route::post('/tickets', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'store'])
+      ->name('tickets.store');
+    Route::get('/tickets/{ticket}', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'show'])
+      ->name('tickets.show');
+    Route::post('/tickets/{ticket}/reply', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'reply'])
+      ->name('tickets.reply');
+    Route::post('/tickets/{ticket}/resolve', [\App\Http\Controllers\Tenant\SupportTicketController::class, 'resolve'])
+      ->name('tickets.resolve');
+  });
 Route::delete('services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
 
 // Leads
 Route::resource('leads', LeadController::class)
   ->names('leads');
+Route::post('leads/{lead}/notes', [LeadController::class, 'storeNote'])
+  ->name('leads.notes.store');
+Route::post('leads/{lead}/convert', [LeadController::class, 'convert'])
+  ->name('leads.convert');
 
 // Opportunities
 Route::resource('opportunities', OpportunityController::class)
@@ -114,6 +174,35 @@ Route::post('opportunities/{opportunity}/convert', [OpportunityController::class
   ->name('opportunities.convert');
 Route::post('opportunities/{opportunity}/followup', [OpportunityController::class, 'updateFollowup'])
   ->name('opportunities.followup');
+
+// Proposals
+Route::get('proposals', [ProposalController::class, 'index'])->name('proposals.index');
+Route::get('proposals/create', [ProposalController::class, 'createForm'])->name('proposals.create');
+Route::post('proposals', [ProposalController::class, 'store'])->name('proposals.store');
+Route::get('proposals/{proposal}/edit', [ProposalController::class, 'edit'])->name('proposals.edit');
+Route::put('proposals/{proposal}', [ProposalController::class, 'update'])->name('proposals.update');
+Route::get('proposals/{proposal}', [ProposalController::class, 'show'])->name('proposals.show');
+Route::get('proposals/{proposal}/pdf', [ProposalController::class, 'pdf'])->name('proposals.pdf');
+Route::post('proposals/{proposal}/send', [ProposalController::class, 'send'])->name('proposals.send');
+Route::post('proposals/{proposal}/duplicate', [ProposalController::class, 'duplicate'])->name('proposals.duplicate');
+Route::delete('proposals/{proposal}', [ProposalController::class, 'archive'])->name('proposals.archive');
+Route::post('proposals/{proposal}/templates', [ProposalTemplateController::class, 'fromProposal'])->name('proposals.templates.store');
+
+// Contract templates
+Route::get('contracts/templates', [ContractTemplateController::class, 'index'])->name('contracts.templates.index');
+Route::get('contracts/templates/create', [ContractTemplateController::class, 'create'])->name('contracts.templates.create');
+Route::post('contracts/templates', [ContractTemplateController::class, 'store'])->name('contracts.templates.store');
+Route::get('contracts/templates/{template}/edit', [ContractTemplateController::class, 'edit'])->name('contracts.templates.edit');
+Route::put('contracts/templates/{template}', [ContractTemplateController::class, 'update'])->name('contracts.templates.update');
+Route::delete('contracts/templates/{template}', [ContractTemplateController::class, 'destroy'])->name('contracts.templates.destroy');
+
+// Proposal templates
+Route::get('proposal-templates', [ProposalTemplateController::class, 'index'])->name('proposal-templates.index');
+Route::get('proposal-templates/create', [ProposalTemplateController::class, 'create'])->name('proposal-templates.create');
+Route::post('proposal-templates', [ProposalTemplateController::class, 'store'])->name('proposal-templates.store');
+Route::get('proposal-templates/{proposal_template}/edit', [ProposalTemplateController::class, 'edit'])->name('proposal-templates.edit');
+Route::put('proposal-templates/{proposal_template}', [ProposalTemplateController::class, 'update'])->name('proposal-templates.update');
+Route::delete('proposal-templates/{proposal_template}', [ProposalTemplateController::class, 'destroy'])->name('proposal-templates.destroy');
 
 // Quick company create (AJAX from lead form)
 Route::post('companies/quick-store', [\App\Http\Controllers\Tenant\ClientCompanyController::class, 'quickStore'])
@@ -179,6 +268,13 @@ Route::prefix('projects/{project}')->group(function () {
 
 // Internal chat
 Route::get('chat', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
+Route::get('chat/dm', [\App\Http\Controllers\ChatController::class, 'dmIndex'])->name('chat.dm.index');
+Route::get('chat/dm/{user}', [\App\Http\Controllers\ChatController::class, 'dmStart'])->name('chat.dm.start');
 Route::get('chat/{channel}', [\App\Http\Controllers\ChatController::class, 'show'])->name('chat.show');
 Route::post('chat/{channel}/messages', [\App\Http\Controllers\ChatController::class, 'store'])->name('chat.messages.store');
+Route::patch('chat/{channel}/messages/{message}', [\App\Http\Controllers\ChatController::class, 'updateMessage'])
+    ->name('chat.messages.update');
+Route::delete('chat/{channel}/messages/{message}', [\App\Http\Controllers\ChatController::class, 'destroyMessage'])
+    ->name('chat.messages.destroy');
+Route::post('chat/{channel}/archive', [\App\Http\Controllers\ChatController::class, 'archive'])->name('chat.archive');
 Route::get('projects/{project}/chat', [\App\Http\Controllers\ChatController::class, 'project'])->name('chat.project');

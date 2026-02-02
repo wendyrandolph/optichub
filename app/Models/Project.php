@@ -21,7 +21,12 @@ class Project extends Model
     'client_company_id',
     'opportunity_id',
     'contact_id',
+    'proposal_id',
     'project_manager_id',
+    'project_fee_total',
+    'external_costs',
+    'target_hourly_rate',
+    'billing_model',
     'project_name',
     'status',
     'description',
@@ -93,10 +98,21 @@ class Project extends Model
     return $this->hasMany(\App\Models\ProjectMessage::class)->latest();
   }
 
+  public function timeEntries(): HasMany
+  {
+    return $this->hasMany(TimeEntry::class);
+  }
+
   // app/Models/Project.php
   public function conversation()
   {
     return $this->hasOne(\App\Models\ProjectConversation::class);
+  }
+
+  public function chatChannel()
+  {
+    return $this->hasOne(\App\Models\ChatChannel::class, 'project_id')
+      ->where('type', 'project');
   }
 
   public function clientUser(): BelongsTo
@@ -104,6 +120,63 @@ class Project extends Model
     return $this->belongsTo(User::class, 'client_user_id');
   }
 
+  public function scopeWithProfitability(Builder $query): Builder
+  {
+    return $query->withSum('timeEntries as total_hours', 'hours');
+  }
+
+  public function totalHoursLogged(): float
+  {
+    return $this->timeEntries()->sum('hours');
+  }
+
+  public function currentEhr(): ?float
+  {
+    $hours = $this->totalHoursLogged();
+    if ($hours <= 0 || !isset($this->project_fee_total)) {
+      return null;
+    }
+
+    $net = ($this->project_fee_total - ($this->external_costs ?? 0));
+    return round($net / $hours, 2);
+  }
+
+  public function projectedEhr(): ?float
+  {
+    if ($this->currentEhr() === null) {
+      return null;
+    }
+
+    $hours = $this->totalHoursLogged();
+    if ($hours <= 0) {
+      return null;
+    }
+
+    $remainingHours = max(8, $hours); // heuristic for projection
+    $targetHours = $hours + $remainingHours;
+    $net = ($this->project_fee_total ?? 0) - ($this->external_costs ?? 0);
+    return round($net / $targetHours, 2);
+  }
+
+  public function ehrSignal(): string
+  {
+    $target = $this->target_hourly_rate ?? 0;
+    $projected = $this->projectedEhr();
+
+    if ($projected === null || $target <= 0) {
+      return 'neutral';
+    }
+
+    if ($projected >= $target) {
+      return 'healthy';
+    }
+
+    if ($projected >= $target * 0.8) {
+      return 'drifting';
+    }
+
+    return 'time-heavy';
+  }
   public function opportunity(): BelongsTo
   {
     return $this->belongsTo(Opportunity::class);
@@ -161,5 +234,10 @@ class Project extends Model
   public function tasks(): HasMany
   {
     return $this->hasMany(Task::class);
+  }
+
+  public function invoices(): HasMany
+  {
+    return $this->hasMany(Invoice::class);
   }
 }

@@ -13,10 +13,17 @@ return new class extends Migration {
             $table->string('name');
             $table->string('type', 20)->default('tenant'); // tenant|project
             $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
+            $table->unsignedBigInteger('trade_job_id')->nullable();
+            $table->string('dm_key')->nullable();
+            $table->timestamp('archived_at')->nullable();
             $table->timestamps();
 
             $table->index(['tenant_id', 'type']);
+            $table->index(['tenant_id', 'trade_job_id']);
+            $table->index(['tenant_id', 'archived_at']);
             $table->unique(['tenant_id', 'type', 'project_id']);
+            $table->unique(['tenant_id', 'trade_job_id'], 'chat_channels_tenant_trade_job_unique');
+            $table->unique(['tenant_id', 'dm_key'], 'chat_channels_tenant_dm_key_unique');
         });
     }
 

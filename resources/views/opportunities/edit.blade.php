@@ -15,7 +15,10 @@
                 <h1 class="text-2xl font-semibold text-text-base">Edit Opportunity</h1>
                 <p class="text-sm text-text-subtle">Update pipeline details and keep your follow-ups current.</p>
             </div>
-            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">Back</a>
+            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">
+                <i class="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden="true"></i>
+                View All Opportunities
+            </a>
         </header>
 
         <section class="oh-card p-6 space-y-6">
@@ -45,7 +48,6 @@
                             <span class="text-text-subtle">Title</span>
                             <input name="title" required value="{{ old('title', $opportunity->title) }}"
                                 class="oh-input h-10">
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Stage</span>
@@ -54,7 +56,7 @@
                                     <option value="{{ $s }}" @selected(old('stage', $opportunity->stage) === $s)>{{ ucfirst($s) }}</option>
                                 @endforeach
                             </select>
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                            <span class="text-[11px] text-text-subtle">Selecting “Lost” requires a reason below.</span>
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Estimated value</span>
@@ -71,7 +73,6 @@
                             <input type="date" name="expected_close_date"
                                 value="{{ old('expected_close_date', optional($opportunity->expected_close_date)->format('Y-m-d')) }}"
                                 class="oh-input h-10">
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
                         </label>
                     </div>
                 </div>
@@ -89,12 +90,11 @@
                                 @foreach (($owners ?? []) as $u)
                                     @php
                                         $ownerName =
-                                            trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?: ($u->username ?? 'User');
+                                            trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?: ($u->email ?? 'User');
                                     @endphp
                                     <option value="{{ $u->id }}" @selected(old('owner_id', $opportunity->owner_id) == $u->id)>{{ $ownerName }}</option>
                                 @endforeach
                             </select>
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Lead</span>
@@ -138,7 +138,6 @@
                             <span class="text-text-subtle">Next step</span>
                             <input name="next_step" value="{{ old('next_step', $opportunity->next_step) }}"
                                 class="oh-input h-10">
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Next follow-up</span>
@@ -150,18 +149,14 @@
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <h2 class="text-sm font-semibold text-text-base">Notes</h2>
+                <div class="space-y-3">
+                    <h2 class="text-sm font-semibold text-text-base">Notes & Outcome</h2>
                     <label class="grid gap-1 text-sm">
                         <span class="text-text-subtle">Internal notes</span>
                         <textarea name="notes" rows="4" class="oh-textarea">{{ old('notes', $opportunity->notes) }}</textarea>
                     </label>
-                </div>
-
-                <div class="space-y-2">
-                    <h2 class="text-sm font-semibold text-text-base">Lost reason</h2>
                     <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Only required if marking as lost</span>
+                        <span class="text-text-subtle">Lost reason (only if stage is Lost)</span>
                         <textarea name="lost_reason" rows="2" class="oh-textarea">{{ old('lost_reason', $opportunity->lost_reason) }}</textarea>
                     </label>
                 </div>

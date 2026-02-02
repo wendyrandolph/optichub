@@ -38,12 +38,10 @@ class ClientCredentialsMailable extends Mailable
 
     public function content(): Content
     {
-        $username = $this->contact->email;
-
         return new Content(
             markdown: 'emails.client-credentials',
             with: [
-                'username' => $username,
+                'email' => $this->contact->email,
                 'tempPassword' => $this->tempPassword,
             ],
         );

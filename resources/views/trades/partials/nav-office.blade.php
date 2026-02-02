@@ -27,6 +27,36 @@
 
         <nav class="sidebar-nav flex-1 space-y-2">
             @php
+                $chatUnreadCount = 0;
+                $chatUser = auth('web')->user();
+                if ($chatUser && $tenant?->id && (int) $chatUser->tenant_id === (int) $tenant->id) {
+                    $channels = \App\Models\ChatChannel::query()
+                        ->where('tenant_id', $tenant->id)
+                        ->withMax('messages as last_message_at', 'created_at')
+                        ->addSelect([
+                            'last_read_at' => \App\Models\ChatRead::query()
+                                ->select('last_read_at')
+                                ->whereColumn('chat_reads.channel_id', 'chat_channels.id')
+                                ->where('chat_reads.user_id', $chatUser->id)
+                                ->limit(1),
+                        ])
+                        ->where(function ($q) use ($chatUser) {
+                            $q->where('type', '!=', 'dm')
+                                ->orWhere(function ($q) use ($chatUser) {
+                                    $q->where('type', 'dm')
+                                        ->whereHas('users', fn ($q) => $q->where('users.id', $chatUser->id));
+                                });
+                        })
+                        ->get();
+
+                    $chatUnreadCount = $channels->filter(function ($channel) {
+                        $lastMsg = data_get($channel, 'last_message_at');
+                        $lastRead = data_get($channel, 'last_read_at');
+
+                        return $lastMsg && (! $lastRead || $lastMsg > $lastRead);
+                    })->count();
+                }
+
                 $links = [
                     [
                         'label' => 'Overview',
@@ -102,11 +132,12 @@
                         'enabled' => true,
                     ],
                     [
-                        'label' => 'Team Chat',
+                        'label' => 'Messages',
                         'route' => 'tenant.trades.chat.index',
                         'match' => 'tenant.trades.chat.*',
                         'icon' => 'fa-comments',
                         'enabled' => true,
+                        'badge' => $chatUnreadCount,
                     ],
                 ];
             @endphp
@@ -126,6 +157,12 @@
                         @if ($isActive) aria-current="page" @endif>
                         <i class="fa-solid {{ $link['icon'] }}"></i>
                         <span class="nav-text">{{ $link['label'] }}</span>
+                        @if (!empty($link['badge']))
+                            <span
+                                class="ml-auto rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                {{ $link['badge'] > 9 ? '9+' : $link['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endif
             @endforeach

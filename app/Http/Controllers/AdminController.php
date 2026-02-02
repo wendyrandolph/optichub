@@ -109,16 +109,12 @@ class AdminController extends Controller
     $data = $request->validate([
       'first_name' => ['nullable', 'string', 'max:100'],
       'last_name' => ['nullable', 'string', 'max:100'],
-      'username' => ['nullable', 'string', 'max:150', 'unique:users,username,' . $user->id],
       'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
       'password' => ['nullable', 'confirmed', 'min:8'],
     ]);
 
     $user->first_name = $data['first_name'] ?? $user->first_name;
     $user->last_name = $data['last_name'] ?? $user->last_name;
-    if (!empty($data['username'])) {
-      $user->username = $data['username'];
-    }
     $user->email = $data['email'];
 
     if (!empty($data['password'])) {
@@ -126,6 +122,32 @@ class AdminController extends Controller
     }
 
     $user->save();
+
+    $tenantId = $user->tenant_id;
+    if ($tenantId) {
+      $hasUserId = \Illuminate\Support\Facades\Schema::hasColumn('team_members', 'user_id');
+
+      $teamMember = \App\Models\TeamMember::where('tenant_id', $tenantId)
+        ->where(function ($q) use ($user, $hasUserId) {
+          if ($hasUserId) {
+            $q->where('user_id', $user->id)
+              ->orWhere('email', $user->email);
+          } else {
+            $q->where('email', $user->email);
+          }
+        })
+        ->first();
+
+      if ($teamMember) {
+        if ($hasUserId && empty($teamMember->user_id)) {
+          $teamMember->user_id = $user->id;
+        }
+        $teamMember->firstName = $user->first_name ?? $teamMember->firstName;
+        $teamMember->lastName = $user->last_name ?? $teamMember->lastName;
+        $teamMember->email = $user->email;
+        $teamMember->save();
+      }
+    }
 
     return Redirect::route('admin.profile')->with('success', 'Profile updated.');
   }

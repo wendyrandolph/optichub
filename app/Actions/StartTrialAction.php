@@ -51,15 +51,10 @@ class StartTrialAction
         ]);
 
         // 2) Create Owner User
-        $baseUsername = explode('@', $email)[0] ?: 'owner';
-        // Note: In a real app, User::ensureUniqueUsername would be a method on the User model
-        $username = User::ensureUniqueUsername($baseUsername);
-
         $tempPassword = bin2hex(random_bytes(12));
 
         $user = User::create([
           'tenant_id'  => $tenant->id,
-          'username'   => $username,
           'email'      => $email,
           'password'   => bcrypt($tempPassword),
           'is_admin'   => true,
@@ -90,7 +85,6 @@ class StartTrialAction
         return [
           'tenantId' => $tenant->id,
           'userId'   => $user->id,
-          'username' => $username,
           'token'    => $token,
         ];
       });

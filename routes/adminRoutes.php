@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Admin\TenantController;
+use App\Http\Controllers\Admin\TenantSubscriptionController;
+use App\Http\Controllers\Admin\TenantUserDirectoryController;
 use App\Http\Controllers\Admin\ProviderClientCompanyController;
 use App\Http\Controllers\Admin\AutomationRuleController;
 use App\Http\Controllers\ClientController;
@@ -52,6 +54,46 @@ Route::post('/profile', [AdminController::class, 'updateProfile'])
 Route::get('/invoices', [AdminController::class, 'invoices'])
   ->name('invoices');
 
+/*
+|--------------------------------------------------------------------------
+| Provider Support Console
+|--------------------------------------------------------------------------
+*/
+Route::middleware(\App\Http\Middleware\EnsureProviderSupportAccess::class)->group(function () {
+  Route::get('/support', [\App\Http\Controllers\Admin\SupportTicketController::class, 'index'])
+    ->name('support.index');
+  Route::get('/support/create', [\App\Http\Controllers\Admin\SupportTicketController::class, 'create'])
+    ->name('support.create');
+  Route::post('/support', [\App\Http\Controllers\Admin\SupportTicketController::class, 'store'])
+    ->name('support.store');
+  Route::get('/support/kb', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'index'])
+    ->name('support.kb.index');
+  Route::post('/support/kb/categories', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'storeCategory'])
+    ->name('support.kb.categories.store');
+  Route::delete('/support/kb/categories/{category}', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'destroyCategory'])
+    ->name('support.kb.categories.destroy');
+  Route::get('/support/kb/create', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'create'])
+    ->name('support.kb.create');
+  Route::post('/support/kb', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'store'])
+    ->name('support.kb.store');
+  Route::get('/support/kb/{article}/edit', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'edit'])
+    ->name('support.kb.edit');
+  Route::put('/support/kb/{article}', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'update'])
+    ->name('support.kb.update');
+  Route::delete('/support/kb/{article}', [\App\Http\Controllers\Admin\SupportKnowledgeBaseController::class, 'destroy'])
+    ->name('support.kb.destroy');
+
+  Route::get('/support/{ticket}', [\App\Http\Controllers\Admin\SupportTicketController::class, 'show'])
+    ->whereNumber('ticket')
+    ->name('support.show');
+  Route::post('/support/{ticket}/status', [\App\Http\Controllers\Admin\SupportTicketController::class, 'updateStatus'])
+    ->whereNumber('ticket')
+    ->name('support.status');
+  Route::post('/support/{ticket}/messages', [\App\Http\Controllers\Admin\SupportTicketController::class, 'addMessage'])
+    ->whereNumber('ticket')
+    ->name('support.messages.store');
+});
+
 // Quick search for provider/admin (uses current user's tenant_id, if any)
 Route::get('/search/quick', [SearchController::class, 'quick'])
   ->name('search.quick');
@@ -71,8 +113,28 @@ Route::middleware('platform_owner')->group(function () {
   Route::post('tenants', [TenantController::class, 'store'])
     ->name('tenants.store');
 
+  Route::get('tenants/subscriptions', [TenantSubscriptionController::class, 'subscriptionsIndex'])
+    ->name('tenants.subscriptions.index');
+  Route::get('tenants/usage', [TenantSubscriptionController::class, 'usageIndex'])
+    ->name('tenants.usage.index');
+  Route::get('tenants/logins', [TenantSubscriptionController::class, 'loginsIndex'])
+    ->name('tenants.logins.index');
+  Route::get('tenants/invoices', [TenantSubscriptionController::class, 'invoicesIndex'])
+    ->name('tenants.invoices.index');
+  Route::get('tenants/users', [TenantUserDirectoryController::class, 'index'])
+    ->name('tenants.users.index');
+
   Route::get('tenants/{tenant}', [TenantController::class, 'show'])
     ->name('tenants.show');
+
+  Route::get('tenants/{tenant}/subscriptions', [TenantSubscriptionController::class, 'subscriptionsShow'])
+    ->name('tenants.subscriptions.show');
+  Route::get('tenants/{tenant}/usage', [TenantSubscriptionController::class, 'usageShow'])
+    ->name('tenants.usage.show');
+  Route::get('tenants/{tenant}/logins', [TenantSubscriptionController::class, 'loginsShow'])
+    ->name('tenants.logins.show');
+  Route::get('tenants/{tenant}/invoices', [TenantSubscriptionController::class, 'invoicesShow'])
+    ->name('tenants.invoices.show');
 
   Route::get('tenants/{tenant}/edit', [TenantController::class, 'edit'])
     ->name('tenants.edit');
@@ -82,6 +144,19 @@ Route::middleware('platform_owner')->group(function () {
 
   Route::delete('tenants/{tenant}', [TenantController::class, 'destroy'])
     ->name('tenants.destroy');
+
+  Route::get('tenants/{tenant}/contracts/templates', [\App\Http\Controllers\ContractTemplateController::class, 'index'])
+    ->name('tenants.contracts.templates.index');
+  Route::get('tenants/{tenant}/contracts/templates/create', [\App\Http\Controllers\ContractTemplateController::class, 'create'])
+    ->name('tenants.contracts.templates.create');
+  Route::post('tenants/{tenant}/contracts/templates', [\App\Http\Controllers\ContractTemplateController::class, 'store'])
+    ->name('tenants.contracts.templates.store');
+  Route::get('tenants/{tenant}/contracts/templates/{template}/edit', [\App\Http\Controllers\ContractTemplateController::class, 'edit'])
+    ->name('tenants.contracts.templates.edit');
+  Route::put('tenants/{tenant}/contracts/templates/{template}', [\App\Http\Controllers\ContractTemplateController::class, 'update'])
+    ->name('tenants.contracts.templates.update');
+  Route::delete('tenants/{tenant}/contracts/templates/{template}', [\App\Http\Controllers\ContractTemplateController::class, 'destroy'])
+    ->name('tenants.contracts.templates.destroy');
 
   // Tenant Companies (platform-owner view)
   Route::get('tenants/{tenant}/companies', [\App\Http\Controllers\Admin\TenantCompanyController::class, 'index'])

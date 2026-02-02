@@ -24,23 +24,40 @@ class DashboardController extends Controller
     $tenant = $tenant ?: request()->route('tenant');
     $payload = [];
     if ($tenant) {
-      $payload = $this->dashboard->getTenantDashboardPayload((int) $tenant->getKey());
+      $payload = $this->dashboard->getTenantWorkspaceOverviewPayload(
+        (int) $tenant->getKey(),
+        [
+          'range' => request('range', 'wtd'),
+          'queue' => request('queue'),
+        ]
+      );
     }
-
-    $byStatus = $payload['leadStatusCounts'] ?? ['labels' => [], 'datasets' => []];
-    $growth = $payload['leadsGrowthData'] ?? ['labels' => [], 'datasets' => []];
-
-    // Tenant Lead Insights dashboard (safe defaults in the blade handle missing metrics)
-    return view('dashboards.index', [
+    // Tenant workspace overview dashboard
+    return view('dashboards.tenant', [
       'tenant' => $tenant,
-      'metrics' => $payload['metrics'] ?? ['new' => 0, 'convRate' => 0, 'avgDaysToConvert' => 0, 'active' => 0],
-      'byStatus' => $byStatus,
-      'bySource' => $payload['bySource'] ?? ['labels' => [], 'datasets' => []],
-      'growth' => $growth,
-      'funnel' => $payload['funnel'] ?? ['labels' => [], 'datasets' => []],
-      'recentLeads' => $payload['recentLeads'] ?? collect(),
-      'owners' => $payload['owners'] ?? [],
-      'sources' => $payload['sources'] ?? [],
+      'range' => $payload['range'] ?? 'wtd',
+      'tasksDueToday' => $payload['tasksDueToday'] ?? collect(),
+      'tasksOverdue' => $payload['tasksOverdue'] ?? collect(),
+      'tasksDueSoon' => $payload['tasksDueSoon'] ?? collect(),
+      'tasksDueTodayCount' => $payload['tasksDueTodayCount'] ?? 0,
+      'tasksOverdueCount' => $payload['tasksOverdueCount'] ?? 0,
+      'tasksDueSoonCount' => $payload['tasksDueSoonCount'] ?? 0,
+      'tasksBlockedCount' => $payload['tasksBlockedCount'] ?? 0,
+      'tasksQueue' => $payload['tasksQueue'] ?? collect(),
+      'queue' => $payload['queue'] ?? 'today',
+      'invoicesOverdueCount' => $payload['invoicesOverdueCount'] ?? 0,
+      'invoicesOverdueTotal' => $payload['invoicesOverdueTotal'] ?? 0,
+      'invoicesDueSoonCount' => $payload['invoicesDueSoonCount'] ?? 0,
+      'invoicesDueSoonTotal' => $payload['invoicesDueSoonTotal'] ?? 0,
+      'invoicesDueSoon' => $payload['invoicesDueSoon'] ?? collect(),
+      'outstandingTotal' => $payload['outstandingTotal'] ?? 0,
+      'collectedTotal' => $payload['collectedTotal'] ?? 0,
+      'draftInvoicesCount' => $payload['draftInvoicesCount'] ?? 0,
+      'hoursLogged' => $payload['hoursLogged'] ?? 0,
+      'showHoursLogged' => $payload['showHoursLogged'] ?? false,
+      'atRiskProjects' => $payload['atRiskProjects'] ?? collect(),
+      'atRiskProjectsCount' => $payload['atRiskProjectsCount'] ?? 0,
+      'recentActivity' => $payload['recentActivity'] ?? collect(),
     ]);
   }
 
@@ -102,19 +119,43 @@ class DashboardController extends Controller
    */
   public function tasks(Tenant $tenant): View
   {
-    return $this->index($tenant);
+    return $this->leadInsights($tenant);
   }
   public function time(Tenant $tenant): View
   {
-    return $this->index($tenant);
+    return $this->leadInsights($tenant);
   }
   public function opportunities(Tenant $tenant): View
   {
-    return $this->index($tenant);
+    return $this->leadInsights($tenant);
   }
   public function leads(Tenant $tenant): View
   {
-    return $this->index($tenant);
+    return $this->leadInsights($tenant);
+  }
+
+  public function leadInsights(?Tenant $tenant = null): View
+  {
+    $tenant = $tenant ?: request()->route('tenant');
+    $payload = [];
+    if ($tenant) {
+      $payload = $this->dashboard->getTenantDashboardPayload((int) $tenant->getKey());
+    }
+
+    $byStatus = $payload['leadStatusCounts'] ?? ['labels' => [], 'datasets' => []];
+    $growth = $payload['leadsGrowthData'] ?? ['labels' => [], 'datasets' => []];
+
+    return view('dashboards.index', [
+      'tenant' => $tenant,
+      'metrics' => $payload['metrics'] ?? ['new' => 0, 'convRate' => 0, 'avgDaysToConvert' => 0, 'active' => 0],
+      'byStatus' => $byStatus,
+      'bySource' => $payload['bySource'] ?? ['labels' => [], 'datasets' => []],
+      'growth' => $growth,
+      'funnel' => $payload['funnel'] ?? ['labels' => [], 'datasets' => []],
+      'recentLeads' => $payload['recentLeads'] ?? collect(),
+      'owners' => $payload['owners'] ?? [],
+      'sources' => $payload['sources'] ?? [],
+    ]);
   }
 
   /**

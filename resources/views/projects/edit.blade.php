@@ -71,31 +71,33 @@
         $currentOwner = old('owner_id', $ownerId);
         $currentCompany = old('client_company_id', $companyId);
         $currentBudget = old('budgeted_hours', $budget);
+        $currentBillingModel = old('billing_model', $project->billing_model ?? 'fixed');
+        $contactId = old('client_id', data_get($project, 'contact_id'));
         $currentUsesPhases = old('uses_phases', $project->uses_phases ?? false);
         $phaseNames = old('phases', ($projectPhases ?? collect())->pluck('name')->toArray());
         $phaseNames = array_pad(array_slice($phaseNames, 0, 5), 5, '');
         $showUrl = route('tenant.projects.show', ['tenant' => $tenantId, 'project' => $projectId]);
+        $fileCategories = ['Contract/SOW', 'Billing', 'Access', 'Brand', 'Requirements', 'Other'];
     @endphp
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {{-- Header --}}
         <div class="flex flex-col gap-3">
-            <div>
-                <a href="{{ route('tenant.projects.index', ['tenant' => $tenantId]) }}"
-                    class="inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base relative">
-                    <i class="fa-solid fa-arrow-left mr-2 text-[10px]"></i>
-                    <span class="relative after:absolute after:left-1/2 after:bottom-[-3px] after:h-0.5 after:w-0 after:bg-[rgb(var(--brand-accent))] after:transition-all after:duration-200 hover:after:w-full hover:after:left-0">Back to projects</span>
-                </a>
-            </div>
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">Projects</p>
+                    <p class="text-xs uppercase tracking-wide text-text-subtle">Projects</p>
                     <h1 class="text-2xl font-semibold text-text-base">Edit Project</h1>
                     <p class="text-sm text-text-subtle mt-1">Update details, ownership, and branding color.</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{{ $showUrl }}" class="oh-btn">Back</a>
-                    <button type="submit" form="projectEditForm" class="oh-btn oh-btn--primary">Save changes</button>
+                    <a href="{{ route('tenant.projects.index', ['tenant' => $tenantId]) }}" class="oh-btn">
+                        <i class="fa-solid fa-arrow-left mr-2 text-xs"></i>
+                        Projects list
+                    </a>
+                    <a href="{{ $showUrl }}" class="oh-btn">
+                        Project details
+                        <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                    </a>
                 </div>
             </div>
         </div>
@@ -113,7 +115,7 @@
         @endif
 
         {{-- Form --}}
-        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-6">
+        <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-6">
             <form id="projectEditForm" method="POST"
                 action="{{ route('tenant.projects.update', ['tenant' => $tenantId, 'project' => $projectId]) }}"
                 class="space-y-5" novalidate>
@@ -123,7 +125,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                     {{-- Client --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="client_id">Client</label>
+                        <label class="oh-label" for="client_id">Client</label>
                         <select name="client_id" id="client_id" class="oh-select h-10 w-full" @disabled(!$tenantId)>
                             <option value="">Select client</option>
                             @foreach ($clients ?? [] as $c)
@@ -146,7 +148,7 @@
 
                     {{-- Client Company --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="client_company_id">Client company</label>
+                        <label class="oh-label" for="client_company_id">Client company</label>
                         <select name="client_company_id" id="client_company_id" class="oh-select h-10 w-full" @disabled(!$tenantId)>
                             <option value="">Select company</option>
                             @foreach ($clientCompanies ?? [] as $company)
@@ -157,7 +159,7 @@
                                 <option value="{{ $cid }}" @selected((string) $currentCompany === (string) $cid)>{{ $cname }}</option>
                             @endforeach
                         </select>
-                        <p class="text-xs text-text-subtle">Link to the account this project belongs to.</p>
+                        <p class="oh-help">Link to the account this project belongs to.</p>
                         @if ($errors?->first('client_company_id'))
                             <p class="text-xs text-rose-600">{{ $errors->first('client_company_id') }}</p>
                         @endif
@@ -165,7 +167,7 @@
 
                     {{-- Project name --}}
                     <div class="space-y-1.5 md:col-span-2">
-                        <label class="text-sm font-medium text-text-base" for="project_name">Project name</label>
+                        <label class="oh-label" for="project_name">Project name</label>
                         <input id="project_name" name="project_name" class="oh-input h-10" required
                             value="{{ old('project_name', $name) }}" @disabled(!$tenantId)>
                         @if ($errors?->first('project_name'))
@@ -175,7 +177,7 @@
 
                     {{-- Status --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="status">Status</label>
+                        <label class="oh-label" for="status">Status</label>
                         @php $statuses = ['open' => 'Open', 'closed' => 'Closed', 'in_progress' => 'In Progress', 'on_hold' => 'On Hold']; @endphp
                         <select id="status" name="status" class="oh-select h-10" @disabled(!$tenantId)>
                             @foreach ($statuses as $value => $label)
@@ -189,7 +191,7 @@
 
                     {{-- Owner --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="owner_id">Project owner</label>
+                        <label class="oh-label" for="owner_id">Project owner</label>
                         <select id="owner_id" name="owner_id" class="oh-select h-10" @disabled(!$tenantId)>
                             @foreach ($users ?? [] as $member)
                                 @php
@@ -212,7 +214,7 @@
 
                     {{-- Dates --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="start_date">Start date</label>
+                        <label class="oh-label" for="start_date">Start date</label>
                         <input id="start_date" class="oh-input h-10" type="date" name="start_date" value="{{ $startYmd }}"
                             @disabled(!$tenantId)>
                         @if ($errors?->first('start_date'))
@@ -221,19 +223,19 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="end_date">End date</label>
+                        <label class="oh-label" for="end_date">End date</label>
                         <input id="end_date" class="oh-input h-10" type="date" name="end_date" value="{{ $endYmd }}"
                             @disabled(!$tenantId)>
                         @if ($errors?->first('end_date'))
                             <p class="text-xs text-rose-600">{{ $errors->first('end_date') }}</p>
                         @else
-                            <p class="text-xs text-text-subtle">Optional. We’ll prevent end date earlier than start.</p>
+                            <p class="oh-help">Optional. We’ll prevent end date earlier than start.</p>
                         @endif
                     </div>
 
                     {{-- Budget --}}
                     <div class="space-y-1.5">
-                        <label class="text-sm font-medium text-text-base" for="budgeted_hours">Budgeted hours</label>
+                        <label class="oh-label" for="budgeted_hours">Budgeted hours</label>
                         <input id="budgeted_hours" class="oh-input h-10" type="number" step="0.25" min="0" name="budgeted_hours"
                             value="{{ $currentBudget }}" placeholder="e.g. 40" @disabled(!$tenantId)>
                         @if ($errors?->first('budgeted_hours'))
@@ -241,9 +243,152 @@
                         @endif
                     </div>
 
+                    {{-- Billing model --}}
+                    <div class="space-y-1.5">
+                        <label class="oh-label" for="billing_model">Billing model</label>
+                        <select id="billing_model" name="billing_model" class="oh-select h-10" @disabled(!$tenantId)>
+                            <option value="fixed" @selected($currentBillingModel === 'fixed')>Fixed fee</option>
+                            <option value="hourly" @selected($currentBillingModel === 'hourly')>Hourly</option>
+                        </select>
+                        <p class="text-xs text-text-subtle">Use fixed fee for milestone billing. Hourly keeps invoicing time-based.</p>
+                    </div>
+
+                    @if ($currentBillingModel === 'fixed')
+                        <div class="space-y-1.5" id="billing">
+                            <p class="text-sm font-semibold text-text-base">Billing &amp; profitability</p>
+                            <p class="text-xs text-text-subtle">These inputs help estimate earning rate and project health.</p>
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <label class="space-y-1">
+                                    <span class="text-xs uppercase tracking-[0.3em] text-text-subtle">Project fee</span>
+                                    <input type="number" step="0.01" min="0" name="project_fee_total" class="oh-input h-10"
+                                        value="{{ old('project_fee_total', data_get($project, 'project_fee_total')) }}" placeholder="$0.00"
+                                        @disabled(!$tenantId)>
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs uppercase tracking-[0.3em] text-text-subtle">External costs</span>
+                                    <input type="number" step="0.01" min="0" name="external_costs" class="oh-input h-10"
+                                        value="{{ old('external_costs', data_get($project, 'external_costs', 0)) }}" placeholder="$0.00"
+                                        @disabled(!$tenantId)>
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs uppercase tracking-[0.3em] text-text-subtle">Target rate</span>
+                                    <input type="number" step="0.01" min="0" name="target_hourly_rate" class="oh-input h-10"
+                                        value="{{ old('target_hourly_rate', data_get($project, 'target_hourly_rate')) }}" placeholder="$0.00"
+                                        @disabled(!$tenantId)>
+                                </label>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Payment plan (milestones) --}}
+                    @if ($currentBillingModel === 'fixed')
+                        <div class="space-y-3 md:col-span-2">
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <div>
+                                <p class="text-sm font-semibold text-text-base">Payment plan</p>
+                                <p class="text-xs text-text-subtle">Milestone invoices are tied to this project and stay separate from time tracking.</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            @forelse ($milestoneInvoices ?? [] as $milestone)
+                                <div class="rounded-xl border border-border-default/70 bg-surface-card p-3">
+                                    <form method="POST"
+                                        action="{{ route('tenant.projects.milestones.update', ['tenant' => $tenantId, 'project' => $projectId, 'invoice' => $milestone->id]) }}"
+                                        class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                                        @csrf
+                                        @method('PUT')
+                                        <label class="grid gap-1 text-sm md:col-span-2">
+                                            <span class="text-text-subtle">Milestone</span>
+                                            <input type="text" name="milestone_label" class="oh-input h-10"
+                                                value="{{ old('milestone_label', $milestone->milestone_label) }}"
+                                                placeholder="e.g. Initial deposit">
+                                        </label>
+                                        <label class="grid gap-1 text-sm">
+                                            <span class="text-text-subtle">Amount</span>
+                                            <input type="number" step="0.01" min="0" name="amount" class="oh-input h-10"
+                                                value="{{ old('amount', $milestone->total_amount ?? $milestone->total ?? 0) }}">
+                                        </label>
+                                        <label class="grid gap-1 text-sm">
+                                            <span class="text-text-subtle">Due date</span>
+                                            <input type="date" name="due_date" class="oh-input h-10"
+                                                value="{{ old('due_date', optional($milestone->due_date)->format('Y-m-d')) }}">
+                                        </label>
+                                        <label class="grid gap-1 text-sm">
+                                            <span class="text-text-subtle">Status</span>
+                                            <select name="status" class="oh-select h-10">
+                                                @foreach (['draft','sent','paid','overdue'] as $s)
+                                                    <option value="{{ $s }}" @selected(old('status', $milestone->status) === $s)>{{ ucfirst($s) }}</option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+                                        <label class="grid gap-1 text-sm">
+                                            <span class="text-text-subtle">Order</span>
+                                            <input type="number" min="1" name="milestone_order" class="oh-input h-10"
+                                                value="{{ old('milestone_order', $milestone->milestone_order) }}">
+                                        </label>
+                                        <div class="flex items-center gap-2">
+                                            <button class="oh-btn oh-btn--primary" type="submit">Update</button>
+                                            <button class="oh-btn" type="submit" form="delete-milestone-{{ $milestone->id }}"
+                                                onclick="return confirm('Delete this milestone invoice?');">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <form id="delete-milestone-{{ $milestone->id }}" method="POST"
+                                        action="{{ route('tenant.projects.milestones.destroy', ['tenant' => $tenantId, 'project' => $projectId, 'invoice' => $milestone->id]) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                    </form>
+                                </div>
+                            @empty
+                                <div class="rounded-xl border border-dashed border-border-default/70 bg-surface-card p-4 text-sm text-text-subtle">
+                                    No milestone invoices yet.
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <div class="rounded-xl border border-border-default/70 bg-surface-card p-3">
+                            <form method="POST"
+                                action="{{ route('tenant.projects.milestones.store', ['tenant' => $tenantId, 'project' => $projectId]) }}"
+                                class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                                @csrf
+                                <label class="grid gap-1 text-sm md:col-span-2">
+                                    <span class="text-text-subtle">New milestone</span>
+                                    <input type="text" name="milestone_label" class="oh-input h-10"
+                                        placeholder="e.g. Final delivery">
+                                </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Amount</span>
+                                    <input type="number" step="0.01" min="0" name="amount" class="oh-input h-10" value="0">
+                                </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Due date</span>
+                                    <input type="date" name="due_date" class="oh-input h-10">
+                                </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Status</span>
+                                    <select name="status" class="oh-select h-10">
+                                        @foreach (['draft','sent','paid','overdue'] as $s)
+                                            <option value="{{ $s }}">{{ ucfirst($s) }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                                <label class="grid gap-1 text-sm">
+                                    <span class="text-text-subtle">Order</span>
+                                    <input type="number" min="1" name="milestone_order" class="oh-input h-10">
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <button class="oh-btn oh-btn--primary" type="submit">Add milestone</button>
+                                </div>
+                            </form>
+                        </div>
+                        </div>
+                    @endif
+
                     {{-- Description --}}
                     <div class="space-y-1.5 md:col-span-2">
-                        <label class="text-sm font-medium text-text-base" for="description">Description</label>
+                        <label class="oh-label" for="description">Description</label>
                         <textarea id="description" name="description" class="oh-input min-h-[110px]" rows="3" @disabled(!$tenantId)>{{ old('description', $desc) }}</textarea>
                         @if ($errors?->first('description'))
                             <p class="text-xs text-rose-600">{{ $errors->first('description') }}</p>
@@ -304,17 +449,77 @@
                 </div>
             </form>
         </div>
+
+        {{-- File upload --}}
+        <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-6">
+            <div class="space-y-1">
+                <h2 class="text-sm font-semibold text-text-base">Project files</h2>
+                <p class="text-sm text-text-subtle">Upload files to the linked client profile for this project.</p>
+            </div>
+
+            @if ($contactId)
+                <form method="POST"
+                    action="{{ route('tenant.contacts.files.store', ['tenant' => $tenantId, 'contact' => $contactId]) }}"
+                    enctype="multipart/form-data" class="mt-4 grid gap-4 md:grid-cols-2">
+                    @csrf
+
+                    <div class="space-y-1.5 md:col-span-2">
+                        <label class="oh-label" for="projectFile">File</label>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <input id="projectFile" name="file" type="file" class="sr-only" required>
+                            <label for="projectFile"
+                                class="inline-flex items-center rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm font-medium text-[rgb(var(--text))] shadow-sm hover:bg-[rgb(var(--surface-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--ui-primary),0.35)] cursor-pointer">
+                                Choose file
+                            </label>
+                            <span id="projectFileName" class="text-sm text-text-subtle">No file chosen</span>
+                        </div>
+                        <p class="oh-help">Max 25MB. Files are visible to the client.</p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="oh-label" for="category">Category</label>
+                        <select id="category" name="category" class="oh-select h-10" required>
+                            @foreach ($fileCategories as $category)
+                                <option value="{{ $category }}">{{ $category }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="oh-label" for="description">Description (optional)</label>
+                        <input id="description" name="description" class="oh-input h-10" placeholder="Short context">
+                    </div>
+
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit" class="oh-btn oh-btn--primary">Upload file</button>
+                    </div>
+                </form>
+            @else
+                <div class="mt-4 rounded-xl border border-border-default/70 bg-surface-muted/60 px-4 py-3 text-sm text-text-subtle">
+                    Select a client to enable file uploads.
+                </div>
+            @endif
+        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggle = document.querySelector('input[name="uses_phases"]');
             const phaseFields = document.querySelector('[data-phase-fields]');
-            if (!toggle || !phaseFields) return;
-            const sync = () => {
-                phaseFields.classList.toggle('hidden', !toggle.checked);
-            };
-            toggle.addEventListener('change', sync);
-            sync();
+            const fileInput = document.getElementById('projectFile');
+            const fileName = document.getElementById('projectFileName');
+            if (toggle && phaseFields) {
+                const sync = () => {
+                    phaseFields.classList.toggle('hidden', !toggle.checked);
+                };
+                toggle.addEventListener('change', sync);
+                sync();
+            }
+
+            if (fileInput && fileName) {
+                fileInput.addEventListener('change', () => {
+                    fileName.textContent = fileInput.files?.[0]?.name || 'No file chosen';
+                });
+            }
         });
     </script>
 @endsection

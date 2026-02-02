@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Client;
 use App\Models\PaymentIntegration;
+use App\Models\TenantPaymentAccount;
+use App\Services\StripeConnectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -62,11 +64,17 @@ class ClientInvoiceController extends Controller
       ->orderBy('label')
       ->get();
 
+    $stripeAccount = TenantPaymentAccount::query()
+      ->where('tenant_id', $tenant->id)
+      ->where('provider', 'stripe')
+      ->first();
+
     return view('portal.invoices.show', [
       'tenant'  => $tenant,
       'invoice' => $invoice,
       'items'   => $invoice->items,
       'manualMethods' => $manualMethods,
+      'stripeAccount' => $stripeAccount,
     ]);
   }
   public function invoices()
@@ -99,7 +107,7 @@ class ClientInvoiceController extends Controller
     $invoice->load(['contact', 'lineItems', 'payments']);
 
     // View: resources/views/client/invoices/pdf.blade.php
-    $pdf = Pdf::loadView('client.invoices.pdf', [
+    $pdf = Pdf::loadView('invoices.pdf', [
       'invoice' => $invoice,
     ]);
 
@@ -108,14 +116,14 @@ class ClientInvoiceController extends Controller
     return $pdf->download($fileName);
   }
 
-  public function pay(Request $request, Invoice $invoice)
+  public function pay(Request $request, Invoice $invoice, StripeConnectService $stripe)
   {
     $client    = Auth::guard('client')->user();
     Gate::authorize('portal-view-invoice', $invoice);
 
     if ($invoice->is_paid) {
       return redirect()
-        ->route('portal.invoices.show', $invoice)
+        ->route('portal.invoices.show', ['invoice' => $invoice->id])
         ->with('status', 'This invoice is already paid.');
     }
 
@@ -127,15 +135,49 @@ class ClientInvoiceController extends Controller
     if (! $tenant?->allow_partial_payments) {
       if (abs($amount - $balance) > 0.0001) {
         return redirect()
-          ->route('portal.invoices.show', $invoice)
+          ->route('portal.invoices.show', ['invoice' => $invoice->id])
           ->with('status', 'Full payment is required for this invoice.');
       }
     } else {
       if ($amount < $minPartial || $amount > $balance + 0.0001) {
         return redirect()
-          ->route('portal.invoices.show', $invoice)
+          ->route('portal.invoices.show', ['invoice' => $invoice->id])
           ->with('status', 'Invalid payment amount.');
       }
+    }
+
+    $stripeAccount = TenantPaymentAccount::query()
+      ->where('tenant_id', $tenant->id)
+      ->where('provider', 'stripe')
+      ->first();
+
+    if ($stripeAccount && $stripeAccount->status === 'active' && $stripe->enabled()) {
+      $accountId = $stripeAccount->secret_data['stripe_account_id'] ?? null;
+
+      if (! $accountId) {
+        return redirect()
+          ->route('portal.invoices.show', ['invoice' => $invoice->id])
+          ->with('status', 'Stripe connection is not ready yet.');
+      }
+
+      $successUrl = route('portal.invoices.show', ['invoice' => $invoice->id]) . '?paid=1';
+      $cancelUrl = route('portal.invoices.show', ['invoice' => $invoice->id]);
+
+      $session = $stripe->createCheckoutSession($invoice, $amount, $successUrl, $cancelUrl, $accountId);
+
+      \App\Models\InvoicePayment::create([
+        'tenant_id' => $tenant->id,
+        'invoice_id' => $invoice->id,
+        'amount' => $amount,
+        'method' => 'stripe',
+        'provider' => 'stripe',
+        'status' => 'pending',
+        'currency' => strtolower($invoice->currency ?? 'usd'),
+        'provider_checkout_id' => $session->id,
+        'raw' => ['checkout_url' => $session->url],
+      ]);
+
+      return redirect()->away($session->url);
     }
 
     \App\Models\InvoicePayment::create([
@@ -144,6 +186,8 @@ class ClientInvoiceController extends Controller
       'amount' => $amount,
       'method' => 'portal',
       'paid_at' => now(),
+      'provider' => 'manual',
+      'status' => 'succeeded',
     ]);
 
     $paid = (float) \App\Models\InvoicePayment::where('tenant_id', $tenant->id)
@@ -159,7 +203,7 @@ class ClientInvoiceController extends Controller
     $invoice->save();
 
     return redirect()
-      ->route('portal.invoices.show', $invoice)
+      ->route('portal.invoices.show', ['invoice' => $invoice->id])
       ->with('status', 'Payment recorded successfully.');
   }
 
@@ -169,7 +213,7 @@ class ClientInvoiceController extends Controller
 
     $invoice->load(['contact', 'lineItems', 'payments']);
 
-    $pdf = Pdf::loadView('client.invoices.pdf', [
+    $pdf = Pdf::loadView('invoices.pdf', [
       'invoice' => $invoice,
     ]);
 

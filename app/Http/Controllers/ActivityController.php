@@ -13,11 +13,30 @@ class ActivityController extends Controller
   public function index()
   {
     $tenantId = Auth::user()->tenant_id;
+    $actionFilter = request('action');
+    $from = request('from');
+    $to = request('to');
 
-    $recentActivity = ActivityLog::with(['user:id,first_name,last_name,username', 'related'])
+    $recentActivityQuery = ActivityLog::with(['user:id,first_name,last_name,email', 'related'])
       ->forTenant($tenantId)
-      ->latest()
-      ->paginate(25);
+      ->when($actionFilter, fn($q) => $q->where('action', $actionFilter))
+      ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
+      ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
+      ->latest();
+
+    $recentActivity = $recentActivityQuery->paginate(25)->appends([
+      'action' => $actionFilter,
+      'from' => $from,
+      'to' => $to,
+    ]);
+
+    $actionOptions = ActivityLog::forTenant($tenantId)
+      ->select('action')
+      ->whereNotNull('action')
+      ->distinct()
+      ->orderBy('action')
+      ->pluck('action')
+      ->toArray();
 
     // Fallback: synthesize activity if no logs yet
     if ($recentActivity->count() === 0) {
@@ -58,9 +77,31 @@ class ActivityController extends Controller
       }
 
       $recentActivity = $fallback->sortByDesc('created_at');
+      if ($actionFilter) {
+        $recentActivity = $recentActivity
+          ->filter(fn($row) => ($row->action ?? null) === $actionFilter)
+          ->values();
+      }
+      if ($from || $to) {
+        $recentActivity = $recentActivity
+          ->filter(function ($row) use ($from, $to) {
+            $created = $row->created_at ?? null;
+            if (!$created) {
+              return false;
+            }
+            if ($from && $created->toDateString() < $from) {
+              return false;
+            }
+            if ($to && $created->toDateString() > $to) {
+              return false;
+            }
+            return true;
+          })
+          ->values();
+      }
     }
 
-    return view('admin.activity.index', compact('recentActivity'));
+    return view('admin.activity.index', compact('recentActivity', 'actionOptions', 'actionFilter', 'from', 'to'));
   }
 
   public function showRelated(string $relatedType, int $relatedId)
@@ -81,7 +122,7 @@ class ActivityController extends Controller
 
     $tenantId = Auth::user()->tenant_id;
 
-    $activity = ActivityLog::with('user:id,first_name,last_name,username')
+    $activity = ActivityLog::with('user:id,first_name,last_name,email')
       ->forTenant($tenantId)
       ->where('related_type', $modelClass)
       ->where('related_id', $relatedId)

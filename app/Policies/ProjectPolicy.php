@@ -17,13 +17,12 @@ class ProjectPolicy
     {
         // normalize just in case
         $role = strtolower((string) $user->role);
-        $org  = strtolower((string) $user->organization_type);
+        $org  = strtolower((string) (session('organization_type') ?? $user->organization_type ?? ''));
 
-        if (
-            in_array($role, ['admin', 'provider'], true)   // ← include provider
-            && in_array($org, ['provider', 'saas_tenant'], true)
-        ) {
-            return true;
+        if (in_array($role, ['admin', 'provider'], true)) {
+            if (empty($org) || in_array($org, ['provider', 'saas_tenant', 'provider_org'], true)) {
+                return true;
+            }
         }
         return null;
     }
@@ -31,10 +30,13 @@ class ProjectPolicy
     public function create(User $user): bool
     {
         $role = strtolower((string) $user->role);
-        $org  = strtolower((string) $user->organization_type);
+        $org  = strtolower((string) (session('organization_type') ?? $user->organization_type ?? ''));
 
-        return in_array($org, ['provider', 'saas_tenant'], true)
-            && in_array($role, ['admin', 'employee', 'provider'], true); // ← include provider
+        if (in_array($role, ['admin', 'employee', 'provider'], true)) {
+            return empty($org) || in_array($org, ['provider', 'saas_tenant', 'provider_org'], true);
+        }
+
+        return false;
     }
 
     /**

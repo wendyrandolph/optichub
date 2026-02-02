@@ -20,13 +20,12 @@
         {{-- Header --}}
         <div class="flex items-start justify-between gap-3">
             <div>
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Settings</p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle">Settings</p>
                 <h1 class="text-2xl font-semibold text-text-base">Edit tenant</h1>
                 <p class="text-sm text-text-subtle mt-1">Update workspace details, subscription labels, and branding.</p>
             </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('admin.tenants.show', $tenant) }}" class="oh-btn">Cancel</a>
-                <button type="submit" form="tenantEditForm" class="oh-btn oh-btn--primary">Save changes</button>
+            <div>
+                <a href="{{ route('admin.tenants.index') }}" class="oh-btn">Back to Tenants</a>
             </div>
         </div>
 
@@ -60,7 +59,7 @@
                     </label>
                     <label class="grid gap-1 text-sm">
                         <span class="text-text-subtle">Public website (optional)</span>
-                        <input type="text" name="domain" value="{{ $domain }}" placeholder="https://example.com" class="oh-input h-10">
+                        <input type="text" name="website" value="{{ $domain }}" placeholder="https://example.com" class="oh-input h-10">
                         <span class="text-[11px] text-text-subtle">Context only. Leave blank if not needed.</span>
                     </label>
                     <label class="grid gap-1 text-sm sm:col-span-2">
@@ -80,7 +79,7 @@
             <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-5 space-y-4">
                 <div>
                     <h2 class="text-sm font-semibold text-text-base">Subscription</h2>
-                    <p class="text-xs text-text-subtle">Status and plan labels for this workspace.</p>
+                    <p class="text-xs text-text-subtle">Updates admin labels and current subscription metadata.</p>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <label class="grid gap-1 text-sm">
@@ -90,7 +89,7 @@
                                 <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
-                        <span class="text-[11px] text-text-subtle">Internal label; not wired to billing yet.</span>
+                        <span class="text-[11px] text-text-subtle">Used for admin reporting and access checks.</span>
                     </label>
                     <label class="grid gap-1 text-sm">
                         <span class="text-text-subtle">Plan</span>

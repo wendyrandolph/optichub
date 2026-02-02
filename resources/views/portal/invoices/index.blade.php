@@ -3,95 +3,115 @@
 @section('title', 'Invoices')
 
 @section('content')
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <p class="text-[11px] uppercase tracking-[0.12em] text-text-subtle mb-1">Billing</p>
-                <h1 class="text-2xl font-semibold text-text-base">Invoices</h1>
-                <p class="text-sm text-text-subtle">
-                    View your invoices and download receipts.
-                </p>
-            </div>
+    @php
+        $totalInvoices = $invoices->count();
+        $openInvoices = $invoices
+            ->filter(fn($invoice) => !in_array($invoice->status, ['paid', 'void'], true))
+            ->count();
+        $overdueInvoices = $invoices->filter(fn($invoice) => ($invoice->status ?? '') === 'overdue')->count();
 
-            <a href="{{ route('portal.dashboard') }}" class="oh-btn oh-btn--ghost text-xs sm:text-sm">
-                ← Back to dashboard
-            </a>
+        $statusTone = function ($status) {
+            return match (strtolower((string) $status)) {
+                'paid' => 'oh-pill oh-pill--success',
+                'sent', 'pending' => 'oh-pill oh-pill--info',
+                'overdue' => 'oh-pill oh-pill--danger',
+                default => 'oh-pill',
+            };
+        };
+    @endphp
+
+    <div class="oh-page space-y-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div class="space-y-1">
+                <h1 class="text-2xl font-semibold text-text-base">Invoices</h1>
+                <p class="text-sm text-text-subtle">View and manage your billing in one place.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-text-subtle">
+                <div class="inline-flex items-center gap-2 rounded-full border border-border-default bg-surface-card px-3 py-1.5">
+                    <span class="h-2 w-2 rounded-full bg-[rgb(var(--brand-primary))]"></span>
+                    {{ $totalInvoices }} total
+                </div>
+                <div class="inline-flex items-center gap-2 rounded-full border border-border-default bg-surface-card px-3 py-1.5">
+                    <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                    {{ $openInvoices }} open
+                </div>
+                <div class="inline-flex items-center gap-2 rounded-full border border-border-default bg-surface-card px-3 py-1.5">
+                    <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+                    {{ $overdueInvoices }} overdue
+                </div>
+            </div>
         </div>
 
-        <div class="rounded-2xl border border-border-default bg-surface-card shadow-card overflow-hidden">
-            <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border-default/70">
-                <h2 class="text-sm font-semibold text-text-base">Your invoices</h2>
-                <span class="text-xs text-text-subtle">
-                    {{ $invoices->count() }} total
-                </span>
+        <div class="grid gap-3 lg:grid-cols-3">
+            <div class="oh-card p-5 lg:col-span-1">
+                <div class="flex items-start gap-3">
+                    <div class="h-10 w-10 rounded-lg bg-[rgba(var(--brand-primary),0.12)] text-[rgb(var(--brand-primary))] flex items-center justify-center">
+                        <i class="fa-regular fa-credit-card text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Billing overview</h2>
+                        <p class="text-xs text-text-subtle mt-1">
+                            Keep track of balances, due dates, and receipts in one view.
+                        </p>
+                    </div>
+                </div>
             </div>
+            <div class="oh-card p-5 lg:col-span-2">
+                <div class="flex items-start gap-3">
+                    <div class="h-10 w-10 rounded-lg bg-surface-muted text-text-subtle flex items-center justify-center">
+                        <i class="fa-regular fa-file-lines text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Auto-recorded receipts</h2>
+                        <p class="text-xs text-text-subtle mt-1">
+                            Download PDFs for your records or share them with your accounting team.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            @if ($invoices->isEmpty())
-                <div class="px-4 sm:px-6 py-6 text-sm text-text-subtle">
-                    You don’t have any invoices yet. When your provider issues one,
-                    it will appear here and you’ll be able to download the PDF.
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @forelse ($invoices as $invoice)
+                <a href="{{ route('portal.invoices.show', $invoice) }}"
+                    class="group rounded-xl border border-border-default bg-surface-card p-4 shadow-sm hover:border-[rgb(var(--brand-primary))] hover:shadow-md transition">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs text-text-subtle uppercase tracking-wide">Invoice</p>
+                            <p class="text-sm font-semibold text-text-base">
+                                {{ $invoice->invoice_number ?? 'INV-' . $invoice->id }}
+                            </p>
+                        </div>
+                        <span class="{{ $statusTone($invoice->status ?? 'draft') }} text-[11px]">
+                            {{ ucfirst($invoice->status ?? 'draft') }}
+                        </span>
+                    </div>
+                    <div class="mt-3 space-y-2 text-xs text-text-subtle">
+                        <div class="flex items-center justify-between">
+                            <span>Issued</span>
+                            <span class="text-text-base">{{ optional($invoice->issue_date)->format('M j, Y') ?? '—' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>Due</span>
+                            <span class="text-text-base">{{ optional($invoice->due_date)->format('M j, Y') ?? '—' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>Total</span>
+                            <span class="text-text-base">${{ number_format($invoice->total_amount ?? ($invoice->balance_due ?? 0), 2) }}</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between text-xs text-text-subtle">
+                        <span>Open invoice</span>
+                        <span class="text-text-base group-hover:text-[rgb(var(--brand-primary))]">View details →</span>
+                    </div>
+                </a>
+            @empty
+                <div class="sm:col-span-2 lg:col-span-3">
+                    <div class="rounded-xl border border-border-default bg-surface-card p-6 text-sm text-text-subtle">
+                        You don’t have any invoices yet. When one is issued, it will appear here with a PDF to download.
+                    </div>
                 </div>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
-                        <thead class="bg-surface-accent border-b border-border-default/70">
-                            <tr>
-                                <th class="px-4 sm:px-6 py-2 text-left text-xs font-semibold text-text-subtle">Invoice #
-                                </th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-text-subtle">Issued</th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-text-subtle">Due</th>
-                                <th class="px-4 py-2 text-right text-xs font-semibold text-text-subtle">Amount</th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-text-subtle">Status</th>
-                                <th class="px-4 sm:px-6 py-2 text-right text-xs font-semibold text-text-subtle">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($invoices as $invoice)
-                                <tr class="border-t border-border-default/60">
-                                    <td class="px-4 sm:px-6 py-2 whitespace-nowrap">
-                                        {{ $invoice->invoice_number ?? 'INV-' . $invoice->id }}
-                                    </td>
-                                    <td class="px-4 py-2 whitespace-nowrap">
-                                        {{ optional($invoice->issue_date)->format('M j, Y') ?? '—' }}
-                                    </td>
-                                    <td class="px-4 py-2 whitespace-nowrap">
-                                        {{ optional($invoice->due_date)->format('M j, Y') ?? '—' }}
-                                    </td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">
-                                        ${{ number_format($invoice->total_amount ?? ($invoice->balance_due ?? 0), 2) }}
-                                    </td>
-                                    <td class="px-4 py-2 whitespace-nowrap">
-                                        <span
-                                            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                                        @class([
-                                            'bg-emerald-50 text-emerald-700' => $invoice->status === 'paid',
-                                            'bg-amber-50 text-amber-700' => $invoice->status === 'sent',
-                                            'bg-rose-50 text-rose-700' => $invoice->status === 'overdue',
-                                            'bg-surface-muted text-text-subtle' => !in_array($invoice->status, [
-                                                'paid',
-                                                'sent',
-                                                'overdue',
-                                            ]),
-                                        ])">
-                                            {{ ucfirst($invoice->status ?? 'draft') }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 sm:px-6 py-2 text-right whitespace-nowrap">
-                                        <a href="{{ route('portal.invoices.show', $invoice) }}"
-                                            class="text-brand-primary hover:underline text-xs sm:text-sm mr-3">
-                                            View
-                                        </a>
-                                        <a href="{{ route('portal.invoices.pdf', $invoice) }}"
-                                            class="text-text-subtle hover:text-brand-primary hover:underline text-xs sm:text-sm">
-                                            PDF
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+            @endforelse
         </div>
     </div>
 @endsection

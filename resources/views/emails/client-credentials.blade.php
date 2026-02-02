@@ -8,7 +8,7 @@ We've created a temporary login for you below. Please use this link and these cr
 @component('mail::panel')
 Login URL: {{ url('/portal/login') }}
 
-Username: {{ $username }}
+Email: {{ $email }}
 
 Temporary Password: {{ $tempPassword }}
 @endcomponent

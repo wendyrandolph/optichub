@@ -32,19 +32,22 @@
                     <p class="text-sm text-text-subtle mt-1">API keys are for integrations and webhooks—most users don’t need them.</p>
                     <p class="text-xs text-text-subtle mt-1">Safety note: Treat this like a password. Anyone with this key can send data into your workspace.</p>
                 </div>
+                <a href="{{ $tenantId ? route('tenant.settings.index', ['tenant' => $tenantId]) : '#' }}" class="oh-btn">
+                    <i class="fa-solid fa-arrow-left text-[12px] mr-2"></i> Back to settings
+                </a>
             </div>
         </div>
 
         {{-- Alerts --}}
         @if (session('flash_success'))
-            <div class="oh-card border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 text-sm">
+            <div class="oh-card p-3 text-sm text-text-subtle">
                 {{ session('flash_success') }}
             </div>
         @endif
 
         {{-- New key banner (only immediately after generation) --}}
         @if ($plainKey)
-            <div class="oh-card border border-brand-primary/40 bg-surface-muted/60 rounded-2xl p-4 md:p-5 flex items-start justify-between gap-3">
+            <div class="oh-card p-4 md:p-5 flex items-start justify-between gap-3">
                 <div>
                     <h2 class="text-sm font-semibold text-text-base">Your new API key</h2>
                     <p class="text-sm text-text-subtle">Shown once. Copy and store it somewhere safe.</p>
@@ -61,7 +64,7 @@
         @endif
 
         {{-- Card 1: Status --}}
-        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 flex flex-col gap-4">
+        <div class="oh-card p-4 md:p-5 flex flex-col gap-4">
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
                     <h2 class="text-sm font-semibold text-text-base">API Key Status</h2>
@@ -112,7 +115,7 @@
 
         {{-- Card 2: Generate --}}
         @if (! $hasKey)
-            <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-3">
+            <div class="oh-card p-4 md:p-5 space-y-3">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-sm font-semibold text-text-base">Generate new key</h2>
@@ -129,34 +132,34 @@
         @endif
 
         {{-- Card 3: How to use --}}
-        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-4">
+        <div class="oh-card p-4 md:p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-sm font-semibold text-text-base">How to use</h2>
                     <p class="text-sm text-text-subtle">Use server-side code; do not expose keys in front-end scripts.</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" class="oh-btn oh-btn--ghost tab-btn" data-tab="curl">cURL</button>
+                    <button type="button" class="oh-btn tab-btn oh-btn--secondary" data-tab="curl">cURL</button>
                     <button type="button" class="oh-btn tab-btn" data-tab="fetch">JavaScript (fetch)</button>
                 </div>
             </div>
 
             <div class="space-y-2">
                 <div class="text-xs text-text-subtle">Base URL</div>
-                <div class="oh-card border border-border-default/60 bg-surface-muted/40 p-3 text-sm font-mono text-text-base">
+                <div class="oh-card p-3 text-sm font-mono text-text-base">
                     {{ $baseUrl }}/api/v1
                 </div>
             </div>
 
             <div id="code-curl" class="code-block space-y-2">
-<pre class="oh-card border border-border-default/60 bg-surface-muted/40 p-3 text-sm font-mono overflow-x-auto rounded-lg">curl -X POST "{{ $baseUrl }}/api/v1/leads" \
+<pre class="oh-card p-3 text-sm font-mono overflow-x-auto rounded-lg">curl -X POST "{{ $baseUrl }}/api/v1/leads" \
 -H "Content-Type: application/json" \
 -H "X-Api-Key: YOUR_KEY" \
 -d '{"first_name":"Jane","email":"jane@example.com"}'</pre>
             </div>
 
             <div id="code-fetch" class="code-block space-y-2 hidden">
-<pre class="oh-card border border-border-default/60 bg-surface-muted/40 p-3 text-sm font-mono overflow-x-auto rounded-lg">fetch("{{ $baseUrl }}/api/v1/leads", {
+<pre class="oh-card p-3 text-sm font-mono overflow-x-auto rounded-lg">fetch("{{ $baseUrl }}/api/v1/leads", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -170,23 +173,23 @@
         </div>
 
         {{-- Card 4: Security guidelines --}}
-        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-3">
+        <div class="oh-card p-4 md:p-5 space-y-3">
             <h2 class="text-sm font-semibold text-text-base">Security guidelines</h2>
             <div class="space-y-2 text-sm text-text-subtle">
                 <div class="flex items-start gap-2">
-                    <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                    <i class="fa-solid fa-check text-text-subtle mt-0.5"></i>
                     <span>Don’t commit keys to source control or expose them in front-end code.</span>
                 </div>
                 <div class="flex items-start gap-2">
-                    <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                    <i class="fa-solid fa-check text-text-subtle mt-0.5"></i>
                     <span>Rotate keys if you suspect exposure.</span>
                 </div>
                 <div class="flex items-start gap-2">
-                    <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                    <i class="fa-solid fa-check text-text-subtle mt-0.5"></i>
                     <span>Limit who can view or regenerate keys.</span>
                 </div>
                 <div class="flex items-start gap-2">
-                    <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                    <i class="fa-solid fa-check text-text-subtle mt-0.5"></i>
                     <span>Use HTTPS for all API requests.</span>
                 </div>
             </div>
@@ -197,7 +200,7 @@
     <div id="revokeModal" class="fixed inset-0 z-50 hidden">
         <button type="button" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]" data-close aria-label="Close"></button>
         <div class="relative flex min-h-screen items-center justify-center p-4 sm:p-6 overflow-y-auto">
-            <div class="oh-card w-full max-w-md border border-border-default shadow-card relative">
+            <div class="oh-card w-full max-w-md relative">
                 <div class="flex items-center justify-between p-4 border-b border-border-default/70">
                     <h3 class="text-lg font-semibold text-text-base">Revoke API key</h3>
                     <button type="button" class="oh-icon-btn" data-close aria-label="Close">
@@ -236,6 +239,8 @@
             tabBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     tabBtns.forEach(b => b.classList.remove('oh-btn--primary'));
+                    tabBtns.forEach(b => b.classList.add('oh-btn--secondary'));
+                    btn.classList.remove('oh-btn--secondary');
                     btn.classList.add('oh-btn--primary');
                     const target = btn.dataset.tab;
                     document.querySelectorAll('.code-block').forEach(el => el.classList.add('hidden'));

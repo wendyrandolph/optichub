@@ -12,19 +12,14 @@
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <header class="flex items-start justify-between gap-3">
             <div class="space-y-1">
-                <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}"
-                    class="oh-link-underline inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
-                    <i class="fa-solid fa-arrow-left mr-2 text-[10px]"></i>
-                    Back to Email Log
-                </a>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Emails</p>
                 <h1 class="text-2xl font-semibold text-text-base">{{ $email->subject ?? 'Email' }}</h1>
-                <p class="text-sm text-text-subtle">Sent to {{ $email->recipient_email ?? '—' }}
-                    @if ($email->recipient_name)
-                        ({{ $email->recipient_name }})
-                    @endif
-                </p>
             </div>
             <div class="flex items-center gap-2">
+                <a href="{{ route('tenant.emails.index', ['tenant' => $tenantId]) }}" class="oh-btn oh-btn--secondary">
+                    <i class="fa-solid fa-arrow-left text-[12px]"></i>
+                    Back to Email Log
+                </a>
                 <a href="{{ route('tenant.emails.edit', ['tenant' => $tenantId, 'email' => $email->id]) }}"
                     class="oh-btn oh-btn--secondary">
                     <i class="fa-regular fa-pen-to-square text-[12px]"></i>
@@ -34,6 +29,17 @@
         </header>
 
         <div class="oh-card p-6 space-y-4 border border-border-default">
+            @php
+                $statusRaw = strtolower((string) ($email->status ?? 'sent'));
+                $statusLabel = ucwords(str_replace('_', ' ', $statusRaw));
+                $statusPill = match ($statusRaw) {
+                    'sent' => 'oh-pill oh-pill--success',
+                    'failed' => 'oh-pill oh-pill--danger',
+                    'draft' => 'oh-pill oh-pill--muted',
+                    'scheduled' => 'oh-pill oh-pill--info',
+                    default => 'oh-pill oh-pill--muted',
+                };
+            @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                     <div class="text-text-subtle text-xs uppercase tracking-wide">Subject</div>
@@ -54,7 +60,7 @@
                 </div>
                 <div>
                     <div class="text-text-subtle text-xs uppercase tracking-wide">Status</div>
-                    <div class="oh-pill oh-pill--muted text-[11px]">{{ ucfirst($email->status ?? 'sent') }}</div>
+                    <div class="{{ $statusPill }} text-[11px]">{{ $statusLabel }}</div>
                 </div>
             </div>
 

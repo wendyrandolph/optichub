@@ -25,12 +25,17 @@ class StoreProjectRequest extends FormRequest
         return [
             'project_name'      => ['required', 'string', 'max:255'],
             'description'       => ['nullable', 'string'],
-            'status'            => ['required', 'in:open,closed'],
+            'status'            => ['nullable', 'in:open,closed,in_progress,on_hold'],
             'color'             => ['nullable', 'string', 'max:10'],
             'start_date'        => ['nullable', 'date'],
             'end_date'          => ['nullable', 'date', 'after_or_equal:start_date'],
             'budgeted_hours'    => ['nullable', 'numeric', 'min:0'],
+            'project_fee_total'  => ['nullable', 'numeric', 'min:0'],
+            'external_costs'     => ['nullable', 'numeric', 'min:0'],
+            'target_hourly_rate' => ['nullable', 'numeric', 'min:0'],
+            'billing_model'      => ['nullable', Rule::in(['fixed', 'hourly'])],
             'owner_id'          => ['nullable', 'integer'],
+            'template_id'       => ['nullable', 'integer'],
             'client_id'         => [
                 'nullable',
                 Rule::exists('contacts', 'id')->where(fn ($q) => $q->where('tenant_id', $this->route('tenant')?->id)),

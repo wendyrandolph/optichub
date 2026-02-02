@@ -74,23 +74,23 @@
                 </div>
 
                 {{-- Header actions --}}
-                <div class="flex flex-wrap gap-2 md:justify-end">
-                    <a href="{{ route('tenant.chat.project', ['tenant' => $tenant, 'project' => $project->id]) }}"
-                        class="oh-btn">
-                        <i class="fa-solid fa-comments text-[12px]"></i>
-                        Project Chat
-                    </a>
-
-                    <a href="{{ route('tenant.projects.edit', ['tenant' => $tenant, 'project' => $project->id]) }}"
-                        class="oh-btn" title="Edit project" aria-label="Edit project">
-                        <i class="fa-solid fa-pen text-[12px]"></i>
-                        Edit Project
-                    </a>
-
+                <div class="flex flex-col gap-2 md:items-end">
                     <a href="{{ route('tenant.tasks.create', ['tenant' => $tenant, 'project_id' => $project->id]) }}"
                         class="oh-btn oh-btn--primary">
                         <i class="fa-solid fa-plus text-[12px]"></i>
                         Add Task
+                    </a>
+
+                    <a href="{{ route('tenant.projects.edit', ['tenant' => $tenant, 'project' => $project->id]) }}"
+                        class="oh-btn oh-btn--ghost" title="Edit project" aria-label="Edit project">
+                        <i class="fa-solid fa-pen text-[12px]"></i>
+                        Edit Project
+                    </a>
+
+                    <a href="{{ route('tenant.chat.project', ['tenant' => $tenant, 'project' => $project->id]) }}"
+                        class="oh-btn oh-btn--ghost">
+                        <i class="fa-solid fa-comments text-[12px]"></i>
+                        Project Chat
                     </a>
 
                     @if (($project->status ?? '') !== 'closed')
@@ -117,36 +117,189 @@
         </header>
 
         {{-- Main layout --}}
-        <div class="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        <div class="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
 
             {{-- Left: Status + Assigned Tasks --}}
             <section class="xl:col-span-2 space-y-6">
                 <div class="oh-card">
                     <h2 class="text-sm font-semibold text-text-base">Status</h2>
 
-                    <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
-                            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Progress</p>
-                            <p class="mt-1 text-lg font-semibold text-text-base tabular-nums">{{ $progress ?? 0 }}%</p>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="oh-stat">
+                            <div class="oh-stat__label">Progress</div>
+                            <div class="oh-stat__value tabular-nums">{{ $progress ?? 0 }}%</div>
                         </div>
-                        <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
-                            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Open Tasks</p>
-                            <p class="mt-1 text-lg font-semibold text-text-base tabular-nums">{{ $openTasks ?? 0 }}</p>
+                        <div class="oh-stat">
+                            <div class="oh-stat__label">Open Tasks</div>
+                            <div class="oh-stat__value tabular-nums">{{ $openTasks ?? 0 }}</div>
                         </div>
-                        <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
-                            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Overdue</p>
-                            <p class="mt-1 text-lg font-semibold text-text-base tabular-nums">{{ $overdueTasks ?? 0 }}</p>
+                        <div class="oh-stat">
+                            <div class="oh-stat__label">Overdue</div>
+                            <div class="oh-stat__value tabular-nums">{{ $overdueTasks ?? 0 }}</div>
                         </div>
-                        <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
-                            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Blocked</p>
-                            <p class="mt-1 text-lg font-semibold text-text-base tabular-nums">{{ $blockedTasks ?? 0 }}</p>
+                        <div class="oh-stat">
+                            <div class="oh-stat__label">Blocked</div>
+                            <div class="oh-stat__value tabular-nums">{{ $blockedTasks ?? 0 }}</div>
                         </div>
                     </div>
                 </div>
+
+                <div class="oh-card">
+                    <h2 class="text-sm font-semibold text-text-base">Time summary</h2>
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card px-3 py-3">
+                            <div class="text-xs text-text-subtle">Total</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($totalHours ?? 0, 2) }}h
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card px-3 py-3">
+                            <div class="text-xs text-text-subtle">Billable</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($projectBillableHours ?? 0, 2) }}h
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card px-3 py-3">
+                            <div class="text-xs text-text-subtle">Non-billable</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($projectNonBillableHours ?? 0, 2) }}h
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @php
+                    $signal = $profitability['signal'] ?? 'neutral';
+                    $signalLabel = match ($signal) {
+                        'healthy' => 'Healthy',
+                        'drifting' => 'Drifting',
+                        'time-heavy' => 'Time-heavy',
+                        default => 'Tracking',
+                    };
+                    $signalCopy = match ($signal) {
+                        'healthy' => 'Projected rate meets or exceeds your target.',
+                        'drifting' => 'Projected rate sits near your goal—keep an eye on scope.',
+                        'time-heavy' => 'Projected rate trails the target; extra hours are stacking up.',
+                        default => 'Earning rate will update as more time logs come in.',
+                    };
+                    $gap = $profitability['target_gap'] ?? null;
+                @endphp
+
+                <div class="oh-card space-y-4">
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                            <p class="text-xs uppercase tracking-[0.3em] text-text-subtle">Profitability snapshot</p>
+                            <h3 class="text-lg font-semibold text-text-base">Project billing + hours</h3>
+                        </div>
+                        <span class="oh-pill {{ $signal === 'healthy' ? 'oh-pill--success' : ($signal === 'drifting' ? 'oh-pill--warning' : 'oh-pill--muted') }}">
+                            {{ $signalLabel }}
+                        </span>
+                    </div>
+
+                    <div class="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 text-sm">
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Project fee</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['project_fee'] ? '$' . number_format($profitability['project_fee'], 2) : '—' }}
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">External costs</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['external_costs'] ? '$' . number_format($profitability['external_costs'], 2) : '—' }}
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Budgeted hours</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($profitability['budgeted_hours'] ?? 0, 2) }}h
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Invoiced total</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['invoiced_total'] ? '$' . number_format($profitability['invoiced_total'], 2) : '—' }}
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Paid total</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['paid_total'] ? '$' . number_format($profitability['paid_total'], 2) : '—' }}
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Actual hours</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($profitability['actual_hours'] ?? 0, 2) }}h
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Billable hours</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ number_format($profitability['billable_hours'] ?? 0, 2) }}h
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Current earning rate</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['ehr'] ? '$' . number_format($profitability['ehr'], 2) : '—' }}/hr
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-border-default/70 bg-surface-card p-3">
+                            <div class="text-xs text-text-subtle">Projected rate</div>
+                            <div class="text-base font-semibold text-text-base tabular-nums">
+                                {{ $profitability['forecast_ehr'] ? '$' . number_format($profitability['forecast_ehr'], 2) : '—' }}/hr
+                            </div>
+                            @if ($profitability['target_rate'] ?? 0)
+                                <div class="text-xs text-text-subtle mt-1">
+                                    {{ $gap !== null && $gap > 0 ? 'Below target by $' . number_format($gap, 2) : 'At or above target' }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-text-subtle">{{ $signalCopy }}</p>
+                </div>
+
+                @if (($project->billing_model ?? 'fixed') === 'fixed')
+                    <div class="oh-card space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.3em] text-text-subtle">Payment plan</p>
+                                <h3 class="text-lg font-semibold text-text-base">Milestone invoices</h3>
+                            </div>
+                            <a href="{{ route('tenant.projects.edit', ['tenant' => $tenant->id ?? $tenant, 'project' => $project->id]) }}#billing"
+                                class="oh-btn oh-btn--ghost">Manage</a>
+                        </div>
+                        @if (($milestoneInvoices ?? collect())->isEmpty())
+                            <p class="text-sm text-text-subtle">No milestone invoices yet.</p>
+                        @else
+                            <div class="divide-y" style="--tw-divide-color: rgb(var(--border)/.35);">
+                                @foreach ($milestoneInvoices as $milestone)
+                                    <div class="flex flex-wrap items-center justify-between gap-3 py-2">
+                                        <div>
+                                            <div class="text-sm font-semibold text-text-base">
+                                                {{ $milestone->milestone_label ?: 'Milestone' }}
+                                            </div>
+                                            <div class="text-xs text-text-subtle">
+                                                Due {{ $milestone->due_date ? $milestone->due_date->format('M j, Y') : '—' }}
+                                                · {{ ucfirst($milestone->status ?? 'draft') }}
+                                            </div>
+                                        </div>
+                                        <div class="text-sm font-semibold text-text-base tabular-nums">
+                                            {{ $milestone->total_amount ? '$' . number_format($milestone->total_amount, 2) : '—' }}
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
                 <section class="xl:col-span-3">
                     <div class="oh-card" id="assigned-tasks">
 
-                        <div class="rounded-xl bg-[rgb(var(--surface-muted))] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                        <div
+                            class="rounded-xl border border-border-default/70 bg-surface-muted/60 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                             <div class="flex items-center gap-2">
                                 <h2 class="text-sm font-semibold text-text-base">Assigned Tasks</h2>
                                 @php
@@ -159,8 +312,8 @@
                                 @endphp
                                 @if (($pendingApprovals ?? 0) > 0)
                                     <a href="{{ $firstPendingId ? '#' . $firstPendingId : '#assigned-tasks' }}"
-                                        class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition">
-                                        <i class="fa-regular fa-flag text-[11px]"></i>
+                                        class="oh-pill oh-pill--warning inline-flex items-center gap-1">
+                                        <i class="fa-regular fa-flag text-xs"></i>
                                         Approvals pending ({{ $pendingApprovals }})
                                     </a>
                                 @endif
@@ -220,14 +373,13 @@
                                             (collect($tasksForView)->firstWhere('assign_name', $key)['assign_name'] ??
                                                 'Unknown');
                                     @endphp
-                                    <span
-                                        class="inline-flex items-center gap-2 px-2 py-1 rounded-full border border-border-default/70 bg-[rgb(var(--surface))]">
+                                    <span class="oh-pill inline-flex items-center gap-2">
                                         <span
-                                            class="h-6 w-6 rounded-full grid place-items-center text-[11px] font-semibold text-white"
+                                            class="h-6 w-6 rounded-full grid place-items-center text-xs font-semibold text-white"
                                             style="background: {{ $color }};">
                                             {{ $assigneeInitials($name) }}
                                         </span>
-                                        <span class="text-text-subtle text-[11px]">{{ $name }}</span>
+                                        <span class="text-text-subtle text-xs">{{ $name }}</span>
                                     </span>
                                 @endforeach
                             </div>
@@ -270,8 +422,7 @@
                                         };
                                     @endphp
 
-                                    <div
-                                        class="rounded-2xl ring-1 ring-[rgb(var(--border)/.55)] bg-[rgb(var(--surface))] p-4">
+                                    <div class="rounded-2xl border border-border-default/70 bg-surface-card p-4">
                                         <div class="flex items-start justify-between gap-3">
                                             <div class="min-w-0">
                                                 <div class="font-semibold text-text-base leading-snug">
@@ -280,7 +431,7 @@
 
                                                 <div class="mt-2 flex items-center gap-2 text-xs text-text-subtle">
                                                     <span
-                                                        class="h-6 w-6 rounded-full grid place-items-center text-[10px] font-semibold text-white"
+                                                        class="h-6 w-6 rounded-full grid place-items-center text-xs font-semibold text-white"
                                                         style="background: {{ $color }};">
                                                         {{ $assigneeInitials($name) }}
                                                     </span>
@@ -289,7 +440,7 @@
                                             </div>
 
                                             <a href="{{ route('tenant.tasks.index', ['tenant' => $tenant->id ?? $tenant, 'edit' => $t['id'], 'back' => $backUrl]) }}"
-                                                class="h-9 w-9 grid place-items-center rounded-lg border border-border-default bg-surface-card text-text-base"
+                                                class="oh-icon-btn"
                                                 aria-label="Edit task">
                                                 <i class="fa-solid fa-pen text-[12px]"></i>
                                             </a>
@@ -311,15 +462,15 @@
                                             @endif
                                         </div>
 
-                                        <div class="mt-3 space-y-1 text-[12px] text-text-subtle">
+                                        <div class="mt-3 space-y-1 text-xs text-text-subtle">
                                             <div class="flex items-center gap-2">
-                                                <i class="fa-regular fa-circle-play text-[11px] opacity-70"></i>
+                                                <i class="fa-regular fa-circle-play text-xs opacity-70"></i>
                                                 <span>{{ $started ? "Started: {$started}" : 'Not started' }}</span>
                                             </div>
 
                                             @if ($completed)
                                                 <div class="flex items-center gap-2">
-                                                    <i class="fa-regular fa-circle-check text-[11px] opacity-70"></i>
+                                                    <i class="fa-regular fa-circle-check text-xs opacity-70"></i>
                                                     <span>Completed: {{ $completed }}</span>
                                                 </div>
                                             @endif
@@ -334,7 +485,7 @@
                                                 </summary>
 
                                                 <div
-                                                    class="mt-3 rounded-xl border border-border-default/70 bg-[rgb(var(--surface-muted))] p-3 space-y-3">
+                                                    class="mt-3 rounded-xl border border-border-default/70 bg-surface-muted/60 p-3 space-y-3">
                                                     <form method="POST"
                                                         action="{{ route('tenant.tasks.approve', ['tenant' => $tenant->id ?? $tenant, 'task' => $t['id']]) }}">
                                                         @csrf
@@ -363,11 +514,10 @@
 
                             {{-- Desktop: table --}}
                             <div class="hidden md:block mt-4">
-                                <div
-                                    class="rounded-2xl ring-1 ring-[rgb(var(--border)/.55)] bg-[rgb(var(--surface))] overflow-hidden">
+                                <div class="rounded-2xl border border-border-default/70 bg-surface-card overflow-hidden">
                                     <div class="overflow-x-auto">
                                         <table class="min-w-full text-sm">
-                                            <thead class="bg-[rgb(var(--surface-muted))]">
+                                            <thead class="bg-surface-muted/50">
                                                 <tr class="text-left text-text-subtle border-b border-border-default/70">
                                                     <th class="px-4 py-3 w-6/12">Task &amp; Details</th>
                                                     <th class="px-4 py-3 w-2/12">Assignee</th>
@@ -429,22 +579,20 @@
                                                                 </div>
 
                                                                 <div
-                                                                    class="flex flex-wrap items-center gap-2 text-[11px] text-text-subtle">
+                                                                    class="flex flex-wrap items-center gap-2 text-xs text-text-subtle">
                                                                     <span
                                                                         class="oh-pill {{ $isClient ? 'oh-pill--info' : '' }}">
                                                                         {{ $isClient ? 'Client' : 'Admin/Internal' }}
                                                                     </span>
                                                                     <span class="h-1 w-1 rounded-full bg-[rgb(var(--border))]"></span>
                                                                     <span class="inline-flex items-center gap-1">
-                                                                        <i
-                                                                            class="fa-regular fa-circle-play text-[10px] opacity-70"></i>
+                                                                        <i class="fa-regular fa-circle-play text-xs opacity-70"></i>
                                                                         <span>{{ $started ? "Started: {$started}" : 'Not started' }}</span>
                                                                     </span>
                                                                     @if ($completed)
                                                                         <span class="h-1 w-1 rounded-full bg-[rgb(var(--border))]"></span>
                                                                         <span class="inline-flex items-center gap-1">
-                                                                            <i
-                                                                                class="fa-regular fa-circle-check text-[10px] opacity-70"></i>
+                                                                            <i class="fa-regular fa-circle-check text-xs opacity-70"></i>
                                                                             <span>Completed: {{ $completed }}</span>
                                                                         </span>
                                                                     @endif
@@ -455,7 +603,7 @@
                                                         <td class="px-4 py-4">
                                                             <div class="flex items-center gap-2">
                                                                 <span
-                                                                    class="h-8 w-8 rounded-full grid place-items-center text-[11px] font-semibold text-white"
+                                                                    class="h-8 w-8 rounded-full grid place-items-center text-xs font-semibold text-white"
                                                                     style="background: {{ $color }};">
                                                                     {{ $assigneeInitials($name) }}
                                                                 </span>
@@ -464,7 +612,7 @@
                                                                         class="text-sm font-semibold text-text-base leading-snug truncate">
                                                                         {{ $name }}
                                                                     </div>
-                                                                    <div class="text-[11px] text-text-subtle">
+                                                                    <div class="text-xs text-text-subtle">
                                                                         {{ $isClient ? 'External client' : 'Team member' }}
                                                                     </div>
                                                                 </div>
@@ -488,17 +636,17 @@
                                                                         data-target="approval-panel-{{ $t['id'] }}"
                                                                         aria-controls="approval-panel-{{ $t['id'] }}"
                                                                         aria-expanded="false">
-                                                                        <i class="fa-regular fa-flag text-[11px]"></i>
+                                                                        <i class="fa-regular fa-flag text-xs"></i>
                                                                         Review approval
                                                                     </button>
 
                                                                     @if (!empty($t['approval_note']))
-                                                                        <div class="text-[11px] text-text-subtle">
+                                                                        <div class="text-xs text-text-subtle">
                                                                             Note: {{ $t['approval_note'] }}
                                                                         </div>
                                                                     @endif
                                                                 @elseif (!$completed)
-                                                                    <div class="text-[11px] text-text-subtle">Watching for
+                                                                    <div class="text-xs text-text-subtle">Watching for
                                                                         completion</div>
                                                                 @endif
                                                             </div>
@@ -512,7 +660,7 @@
                                                                 </div>
 
                                                                 <a href="{{ route('tenant.tasks.index', ['tenant' => $tenant->id ?? $tenant, 'edit' => $t['id'], 'back' => $backUrl]) }}"
-                                                                    class="h-9 w-9 grid place-items-center rounded-lg border border-border-default bg-surface-card text-text-base"
+                                                                    class="oh-icon-btn"
                                                                     aria-label="Edit task">
                                                                     <i class="fa-solid fa-pen text-[12px]"></i>
                                                                 </a>
@@ -524,7 +672,7 @@
                                                         <tr id="approval-panel-{{ $t['id'] }}" class="hidden">
                                                             <td colspan="4" class="px-4 pb-4">
                                                                 <div
-                                                                    class="rounded-xl border border-border-default/70 bg-[rgb(var(--surface-muted))] p-4 space-y-3">
+                                                                    class="rounded-xl border border-border-default/70 bg-surface-muted/60 p-4 space-y-3">
                                                                     <div class="flex flex-wrap items-center gap-2">
                                                                         <span
                                                                             class="text-xs font-semibold uppercase tracking-wide text-text-subtle">Approval</span>
@@ -570,7 +718,7 @@
                                             </tbody>
                                             @if (!empty($unassignedHours) && $unassignedHours > 0)
                                                 <tfoot>
-                                                    <tr class="border-t border-border-default/60 bg-[rgb(var(--surface-muted)/.5)]">
+                                                    <tr class="border-t border-border-default/60 bg-surface-muted/50">
                                                         <td class="px-4 py-3" colspan="3">
                                                             <div class="text-sm font-semibold text-text-base">Unassigned time</div>
                                                             <div class="text-xs text-text-subtle">Logged to the project without a task</div>
@@ -587,7 +735,7 @@
                             </div>
                         @else
                             <div
-                                class="mt-4 rounded-xl ring-1 ring-[rgb(var(--border)/.55)] bg-[rgb(var(--surface))] p-4 text-sm text-text-subtle">
+                                class="mt-4 rounded-xl border border-border-default/70 bg-surface-card p-4 text-sm text-text-subtle">
                                 No tasks yet.
                             </div>
                         @endif
@@ -596,7 +744,7 @@
 
             </section>
             {{-- Right: tabbed support panel --}}
-            <aside class="oh-card flex flex-col min-h-[520px] space-y-4">
+            <aside class="space-y-4">
                 @php
                     $projectFiles = collect();
                     if (isset($project->uploads)) {
@@ -608,7 +756,7 @@
                     // Keep tabs visible even when empty so users can still manage uploads or see an empty state
                     $hasFilesTab = true;
                     $hasActivityTab = true;
-                    $threadBadge = ($pendingApprovals ?? 0) > 0 ? (int) $pendingApprovals : null;
+                    $threadBadge = ($clientUnreadCount ?? 0) > 0 ? (int) $clientUnreadCount : null;
                     $status = $conversation->approval_status ?? 'pending';
                     $pill = match ($status) {
                         'approved' => ['label' => 'Approved', 'class' => 'oh-pill oh-pill--success'],
@@ -620,15 +768,15 @@
                     };
                 @endphp
 
-                <div class="rounded-2xl ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
+                <div class="oh-card oh-card--soft min-h-[520px]">
                     {{-- Tabs --}}
-                    <div class="flex items-center gap-2 border-b border-border-default/70 px-3 py-2">
+                    <div class="flex items-center gap-2 border-b border-border-default/70 px-2 py-2">
                         <button type="button"
                             class="oh-pill text-xs font-semibold js-thread-tab is-active"
                             data-target="#tab-thread">
                             Client Thread
                             @if ($threadBadge)
-                                <span class="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 text-white px-1 text-[11px] tabular-nums">{{ $threadBadge }}</span>
+                                <span class="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 text-white px-1 text-xs tabular-nums">{{ $threadBadge }}</span>
                             @endif
                         </button>
                         <button type="button" class="oh-pill text-xs font-semibold js-thread-tab"
@@ -654,16 +802,17 @@
                         </div>
 
                         {{-- Share link compact --}}
-                        <div class="rounded-lg border border-border-default/70 bg-[rgb(var(--surface-muted))] px-3 py-2 flex items-center gap-2">
-                            <i class="fa-regular fa-link text-text-subtle text-[12px]"></i>
+                        <div
+                            class="rounded-lg border border-border-default/70 bg-surface-muted/60 px-3 py-2 flex items-center gap-2">
+                            <i class="fa-regular fa-link text-text-subtle text-xs"></i>
                             <input readonly value="{{ $publicUrl }}"
                                 class="w-full h-8 rounded-md px-2 text-xs bg-transparent text-text-base focus:outline-none" />
                             <button type="button" class="oh-icon-btn"
                                 onclick="navigator.clipboard.writeText('{{ $publicUrl }}')" aria-label="Copy review link">
-                                <i class="fa-regular fa-copy text-[11px]"></i>
+                                <i class="fa-regular fa-copy text-xs"></i>
                             </button>
                         </div>
-                        <p class="text-[11px] text-text-subtle">
+                        <p class="text-xs text-text-subtle">
                             Expires: {{ optional($conversation->public_expires_at)->format('M d, Y') ?? '—' }}
                         </p>
 
@@ -687,10 +836,11 @@
                         @endphp
 
                         {{-- Messages --}}
-                        <div class="space-y-3 overflow-y-auto pr-1" style="max-height: 360px; --client-msg: {{ $clientMsgRgb }}; --team-msg: {{ $teamMsgRgb }};">
+                        <div class="space-y-3 overflow-y-auto pr-1"
+                            style="max-height: 360px; --client-msg: {{ $clientMsgRgb }}; --team-msg: {{ $teamMsgRgb }};">
                             @forelse ($messages as $m)
                                 @php
-                                    $isClient = ($m->sender_type ?? '') === 'client';
+                                    $isClient = strtolower((string) ($m->user?->role ?? '')) === 'client';
                                     $bubbleBg = $isClient
                                         ? 'rgba(' . $clientMsgRgb . ', 0.22)'
                                         : 'rgba(' . $teamMsgRgb . ', 0.5)';
@@ -704,9 +854,9 @@
                                     <div class="max-w-[92%] rounded-2xl px-3 py-2 border"
                                         style="background-color: {{ $bubbleBg }}; border-color: {{ $bubbleBorder }};">
                                         <div class="flex items-center justify-between gap-3">
-                                            <span class="text-[11px] font-semibold text-text-base">{{ $label }}</span>
+                                            <span class="text-xs font-semibold text-text-base">{{ $label }}</span>
                                             <span
-                                                class="text-[11px] text-text-subtle">{{ optional($m->created_at)->format('M d · g:i A') }}</span>
+                                                class="text-xs text-text-subtle">{{ optional($m->created_at)->format('M d · g:i A') }}</span>
                                         </div>
                                         <div class="mt-1 text-sm text-text-base whitespace-pre-wrap">
                                             {{ $m->body ?? '' }}
@@ -714,7 +864,7 @@
                                     </div>
                                 </div>
                             @empty
-                                <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))]">
+                                <div class="rounded-xl border border-border-default/70 bg-surface-card p-3">
                                     <p class="text-sm text-text-subtle">
                                         No messages yet. Send the client a note to start the thread.
                                     </p>
@@ -726,15 +876,16 @@
                         <form method="POST"
                             action="{{ route('tenant.projects.messages.store', ['tenant' => $tenant, 'project' => $project->id]) }}">
                             @csrf
-                            <div class="rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-[rgb(var(--surface-muted))] space-y-2">
+                            <div
+                                class="rounded-xl border border-border-default/70 bg-surface-muted/60 p-3 space-y-2">
                                 <textarea name="body" rows="3" placeholder="Write an update to the client…"
                                     class="w-full bg-transparent text-sm text-text-base placeholder:text-[rgb(var(--text-subtle))]
                                focus:outline-none resize-none"></textarea>
 
                                 <div class="flex items-center justify-between">
-                                    <span class="text-[11px] text-text-subtle">Visible to client</span>
+                                    <span class="text-xs text-text-subtle">Visible to client</span>
                                     <button type="submit" class="oh-btn oh-btn--primary">
-                                        <i class="fa-regular fa-paper-plane text-[10px]"></i>
+                                        <i class="fa-regular fa-paper-plane text-xs"></i>
                                         Send
                                     </button>
                                 </div>
@@ -794,7 +945,7 @@
                                             <div class="text-[12px] text-text-subtle">{{ $desc }}</div>
                                         @endif
                                     </div>
-                                    <span class="text-[11px] text-text-subtle whitespace-nowrap">{{ $when }}</span>
+                                    <span class="text-xs text-text-subtle whitespace-nowrap">{{ $when }}</span>
                                 </li>
                                 @php $count++; @endphp
                                 @if ($count >= 10)

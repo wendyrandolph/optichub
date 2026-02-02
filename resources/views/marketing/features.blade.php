@@ -1,333 +1,178 @@
 @extends('layouts.marketing')
-@section('title', 'Renlo — Features')
+@section('title', 'Renlo — Feature stack')
 
 @section('content')
     @php
-        $pageTitle = 'Features | Renlo — Client work clarity';
-    @endphp
+        $sections = [
+            [
+                'id' => 'clients',
+                'eyebrow' => 'Clients & Records',
+                'title' => 'Every client record keeps projects, notes, and invoices aligned.',
+                'body' => 'Import contacts, add tags, and see linked projects, invoices, and portal activity from one screen.',
+                'bullets' => [
+                    'CSV import maps names, emails, tags, and notes in minutes',
+                    'Attach files, call notes, and approvals to the client record',
+                    'See open projects and billing status without context switching',
+                ],
+                'img' => 'images/feat-clients@2x.jpg',
+                'alt' => 'Client record with notes, files, and invoices',
+                'reverse' => false,
+            ],
+            [
+                'id' => 'projects',
+                'eyebrow' => 'Projects & Tasks',
+                'title' => 'Stages, tasks, and templates keep you ahead of blockers.',
+                'body' => 'Plan work with stages, assign owners, and filter by clients, statuses, or dates to keep momentum.',
+                'bullets' => [
+                    'Drag-and-drop tasks between stages with dependencies',
+                    'Save templates with stages, owners, and dates for repeat work',
+                    'Filters surface stalled work across clients and projects',
+                ],
+                'img' => 'images/features/projects-tasks@2x.jpg',
+                'alt' => 'Project board with stages and tasks in Renlo',
+                'reverse' => true,
+            ],
+            [
+                'id' => 'billing',
+                'eyebrow' => 'Billing & Payments',
+                'title' => 'Invoices live with projects, not in a separate tool.',
+                'body' => 'Create branded invoices from jobs, track paid/overdue status, and let clients pay securely through Stripe.',
+                'bullets' => [
+                    'Convert estimates to invoices in one click',
+                    'Track payment status and send reminders automatically',
+                    'Keep receipts, histories, and reconciliations on the same project',
+                ],
+                'img' => 'images/features/invoices-payments@2x.jpg',
+                'alt' => 'Invoice dashboard showing payment status and Stripe checkout',
+                'reverse' => false,
+            ],
+            [
+                'id' => 'portal',
+                'eyebrow' => 'Client Portal',
+                'title' => 'Clients see updates, files, and approvals without extra check-ins.',
+                'body' => 'Share project updates, request approvals, and upload files inside a branded portal that mirrors your workflow.',
+                'bullets' => [
+                    'Approve files, leave comments, and review timelines in one place',
+                    'Share secure, time-limited links when clients need quick access',
+                    'Control what clients see with private or shared views',
+                ],
+                'img' => 'images/features/client-portal@2x.jpg',
+                'alt' => 'Client portal dashboard with updates and approvals',
+                'reverse' => true,
+            ],
+            [
+                'id' => 'templates',
+                'eyebrow' => 'Templates & Automations',
+                'title' => 'Turn a project into a reusable workflow in minutes.',
+                'body' => 'Save stages, tasks, owners, and reminders, then launch with relative dates for a consistent kickoff.',
+                'bullets' => [
+                    'Save any project as a template with stages and owners',
+                    'Apply relative due dates from a chosen start point',
+                    'Enable reminders for “due soon” and “overdue” notifications',
+                ],
+                'img' => 'images/features/templates-automations@2x.jpg',
+                'alt' => 'Project template with stages and relative dates',
+                'reverse' => false,
+            ],
+            [
+                'id' => 'calendar',
+                'eyebrow' => 'Scheduling',
+                'title' => 'Your schedule mirrors real commitments, not wishful planning.',
+                'body' => 'Deadlines, milestones, and meetings appear alongside projects so you always know what needs attention.',
+                'bullets' => [
+                    'Color-coded clarity for today, this week, and upcoming work',
+                    'Lightweight reminders and statuses you can scan at a glance',
+                    'Sync milestones while keeping the timeline tied to each project',
+                ],
+                'img' => 'images/features/templates-automations@2x.jpg',
+                'alt' => 'Calendar showing milestones, meetings, and dates',
+                'reverse' => true,
+            ],
+        ];
+@endphp
 
-    <!-- HERO -->
+    <style>
+        .workflow-section {
+            scroll-margin-top: 120px;
+        }
+
+        .feature-subnav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .feature-subnav__row {
+            gap: 1rem;
+            justify-content: center;
+        }
+    </style>
+
     <section class="section section--features-hero" id="features-hero">
-        <div class="container">
-            <p class="eyebrow">What Renlo does</p>
-            <h1 class="h2">Everything you need to run client work—without the clutter.</h1>
-            <p class="copy">
-                Clients, projects, calendar, invoices, a client portal, and templates—organized in one place so work keeps
-                moving.
+        <div class="container max-w-5xl text-center space-y-4">
+            <p class="text-xs uppercase tracking-[0.3em] text-text-subtle">What Renlo does</p>
+            <h1 class="text-4xl font-semibold text-text-base leading-tight">Projects, clients, billing, and portals kept together.</h1>
+            <p class="text-base text-text-subtle">
+                Run every client engagement—creative or trades—inside one system that brings projects, tasks, messaging, invoices, and portals into a single, reliable flow.
             </p>
-            <div class="btn-row">
-                <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
+            <div class="flex flex-wrap justify-center gap-3">
+                <a class="oh-btn oh-btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
+                <a class="oh-btn oh-btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
             </div>
+            <p class="text-xs text-text-subtle font-semibold tracking-[0.3em]">14-day trial · No credit card required</p>
         </div>
     </section>
 
-    <!-- STICKY SUBNAV -->
     <nav class="feature-subnav" aria-label="Feature navigation">
         <div class="container feature-subnav__row">
-            <a href="#clients">Clients</a>
-            <a href="#projects">Projects</a>
-            <a href="#calendar">Calendar</a>
-            <a href="#invoices">Invoices</a>
-            <a href="#portal">Client Portal</a>
-            <a href="#templates">Templates</a>
+            @foreach ($sections as $section)
+                <a href="#{{ $section['id'] }}">{{ explode('&', $section['eyebrow'])[0] }}</a>
+            @endforeach
         </div>
     </nav>
 
-    {{-- FEATURE STACK --}}
-    <section class="section section--feature-stack pb-50">
-        <div class="container feature-stack">
-
-            {{-- CLIENTS --}}
-            <article id="clients" class="feature-card feature-card--left">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/feat-clients@2x.jpg') }}"
-                            alt="Client record with notes, files, and linked invoices">
-                    </figure>
-                </div>
-                <div class="feature-card__content">
-                    <p class="eyebrow">Clients & Contacts</p>
-                    <h2 class="h3">When you need context, it’s already there.</h2>
-                    <p class="copy">
-                        From first inquiry to paid invoice, every client’s information, notes, and files stay together—no
-                        hunting through spreadsheets or email threads.
-                    </p>
-                    <ul class="checklist">
-                        <li>Tag and filter clients instantly</li>
-                        <li>Attach files and call notes to the record</li>
-                        <li>See linked projects, invoices, and status</li>
-                        <li>Share updates via the client portal</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> scattered docs and email chains.
-                        <strong>After:</strong> one clean record.
-                    </p>
-                    <details class="faq">
-                        <summary>Can I import my existing contacts?</summary>
-                        <p>Yes. CSV import maps name, email, phone, tags, and notes in minutes.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “I stopped hunting for files—everything’s on the client record.”
-                        <span>— Jamie, Studio Owner</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
+    <section class="py-16 bg-slate-50">
+        <div class="mx-auto max-w-6xl space-y-16 px-6 lg:px-0">
+            @foreach ($sections as $section)
+                @include('marketing.features._workflow-section', $section)
+                @if ($loop->iteration === 3)
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <div class="oh-card oh-card--muted p-6 space-y-3">
+                            <p class="text-xs uppercase tracking-[0.3em] text-text-subtle">Without structure</p>
+                            <h3 class="text-lg font-semibold text-text-base">Scattered tools</h3>
+                            <ul class="space-y-2 text-sm text-text-subtle list-disc list-inside">
+                                <li>Tasks, billing, and messaging live in different tabs.</li>
+                                <li>Clients track progress via email, not the portal.</li>
+                                <li>Invoicing status gets lost in spreadsheets.</li>
+                            </ul>
+                        </div>
+                        <div class="oh-card p-6 space-y-3">
+                            <p class="text-xs uppercase tracking-[0.3em] text-text-subtle">With Renlo</p>
+                            <h3 class="text-lg font-semibold text-text-base">One connected workflow</h3>
+                            <ul class="space-y-2 text-sm text-text-subtle list-disc list-inside">
+                                <li>Projects show tasks, clients, and invoices side-by-side.</li>
+                                <li>Clients interact inside the portal rather than email.</li>
+                                <li>Invoices stay tied to the project so you always know what’s true.</li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-            </article>
-
-            {{-- PROJECTS --}}
-            <article id="projects" class="feature-card feature-card--right">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/features/projects-tasks@2x.jpg') }}"
-                            alt="Projects and task board with stages, due dates, and assignments in Renlo">
-                    </figure>
-                </div>
-                <div class="feature-card__content">
-                    <p class="eyebrow">Projects & Tasks</p>
-                    <h3 class="h3">You always know what’s next—and what’s blocked.</h3>
-                    <p class="copy">
-                        Plan stages, assign work, and see status at a glance so you can focus on delivering, not chasing
-                        updates.
-                    </p>
-                    <ul class="checklist">
-                        <li>Stage-based project views for clear progress</li>
-                        <li>Assign owners, set due dates, and track status</li>
-                        <li>Drag-and-drop tasks between stages</li>
-                        <li>Save reusable templates for repeat work</li>
-                        <li>Filter by client, status, or date for instant clarity</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> scattered to-dos and sticky notes.
-                        <strong>After:</strong> one organized view that moves projects forward.
-                    </p>
-                    <details class="faq">
-                        <summary>Can I create recurring project templates?</summary>
-                        <p>Yes. Save any project setup—including stages, due dates, and assigned roles—and reuse it with one
-                            click.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “Now I know exactly what’s in progress and what’s next. It keeps my team aligned every day.”
-                        <span>— Riley, Design Studio Lead</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-                </div>
-            </article>
-
-            {{-- INVOICES --}}
-            <article id="invoices" class="feature-card feature-card--left">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/features/invoices-payments@2x.jpg') }}"
-                            alt="Invoice dashboard showing payment status and secure Stripe checkout in Renlo">
-                    </figure>
-                </div>
-                <div class="feature-card__content">
-                    <p class="eyebrow">Invoices & Payments</p>
-                    <h3 class="h3">Get paid without chasing clients.</h3>
-                    <p class="copy">
-                        From first estimate to final payment, Renlo keeps billing organized. Create branded invoices, track
-                        status in real time, and let clients pay securely online—no awkward reminders.
-                    </p>
-                    <ul class="checklist">
-                        <li>Create and send invoices or estimates in seconds</li>
-                        <li>Convert estimates to invoices with one click</li>
-                        <li>Track paid and overdue statuses automatically</li>
-                        <li>Accept credit card payments via Stripe</li>
-                        <li>Generate receipts and payment history instantly</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> chasing payments across emails and spreadsheets.
-                        <strong>After:</strong> invoices sent, tracked, and paid—all in one place.
-                    </p>
-                    <details class="faq">
-                        <summary>Can clients pay directly through Renlo?</summary>
-                        <p>Yes. Each invoice includes a secure Stripe checkout link for instant online payment.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “Getting paid used to take weeks. Now, I send an invoice and see it cleared within a day.”
-                        <span>— Morgan, Branding Consultant</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-                </div>
-            </article>
-
-            {{-- CLIENT PORTAL --}}
-            <article id="portal" class="feature-card feature-card--right">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/features/client-portal@2x.jpg') }}"
-                            alt="Client portal dashboard showing shared updates, files, and approvals in Renlo">
-                    </figure>
-                </div>
-                <div class="feature-card__content">
-                    <p class="eyebrow">Client Portal</p>
-                    <h3 class="h3">Clients stay informed without constant check-ins.</h3>
-                    <p class="copy">
-                        Give clients a simple, branded space to see progress, review files, and leave feedback—without
-                        endless email threads.
-                    </p>
-                    <ul class="checklist">
-                        <li>Share project updates, timelines, and deliverables</li>
-                        <li>Upload files for review and collect client feedback</li>
-                        <li>Keep comments and approvals tied to the right project</li>
-                        <li>Control client visibility with private or shared views</li>
-                        <li>Branded portal that reflects your studio identity</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> scattered feedback and missed messages.
-                        <strong>After:</strong> one calm, professional space your clients will actually enjoy using.
-                    </p>
-                    <details class="faq">
-                        <summary>Can clients access the portal without an account?</summary>
-                        <p>Yes. You can share secure, time-limited links for quick reviews—no login required.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “My clients love how easy it is to see updates. It keeps everything clear, and I spend less time
-                        chasing replies.”
-                        <span>— Jordan, Web Designer</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-                </div>
-            </article>
-
-            {{-- TEMPLATES --}}
-            <article id="templates" class="feature-card feature-card--left">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/features/templates-automations@2x.jpg') }}"
-                            alt="Project template in Renlo with stages, tasks, and date offsets">
-                    </figure>
-                </div>
-                <div class="feature-card__content">
-                    <p class="eyebrow">Templates & Automations</p>
-                    <h3 class="h3">Do the setup once—reuse it every time.</h3>
-                    <p class="copy">
-                        Turn a project you like into a reusable template. Set the start date and Renlo pre-fills stages,
-                        tasks, and due dates for you.
-                    </p>
-                    <ul class="checklist">
-                        <li>Save any project as a template</li>
-                        <li>Auto-apply stages, tasks, and owners</li>
-                        <li>Relative due dates from a chosen start date</li>
-                        <li>Optional “due soon” and “overdue” reminders</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> rebuilding the same plan from scratch.
-                        <strong>After:</strong> consistent projects that start in minutes.
-                    </p>
-                    <details class="faq">
-                        <summary>Do I need full automation to start?</summary>
-                        <p>No. Start with templates and relative dates; add reminders later if you need them.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “Templates turned our kickoff from 2 hours into 10 minutes.”
-                        <span>— Casey, Agency Owner</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-                </div>
-            </article>
-
-
-
-            {{-- CALENDAR FEATURE BAND --}}
-            <article id="calendar" class="feature-card feature-card--right">
-                <div class="feature-card__visual">
-                    <figure class="screenshot-frame">
-                        <img src="{{ asset('images/features/templates-automations@2x.jpg') }}"
-                            alt="Project template in Renlo with stages, tasks, and date offsets">
-                    </figure>
-                </div>
-
-                <div class="feature-card__content">
-                    <p class="eyebrow">Calendar & Scheduling</p>
-                    <h3 class="h3">Your schedule reflects real work—not wishful planning.</h3>
-
-                    <p class="copy">
-                        Deadlines, meetings, and milestones mirror your real schedule, so you know what needs attention next.
-                    </p>
-
-
-                    <ul class="checklist">
-                        <li>Milestones and task due dates in one timeline</li>
-                        <li>Lightweight reminders and statuses you can scan at a glance</li>
-                        <li>Color-coded clarity for today, this week, and what’s coming up</li>
-                    </ul>
-                    <p class="before-after">
-                        <strong>Before:</strong> overstuffed calendars that didn’t match reality.<br>
-                        <strong>After:</strong> a timeline you can actually follow.
-                    </p>
-
-
-                    <details class="faq">
-                        <summary>Do I need full automation to start?</summary>
-                        <p>No. Start with templates and relative dates; add reminders later if you need them.</p>
-                    </details>
-                    <blockquote class="micro-quote">
-                        “Templates turned our kickoff from 2 hours into 10 minutes.”
-                        <span>— Casey, Agency Owner</span>
-                    </blockquote>
-                    <div class="btn-row">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-                </div>
-            </article>
-
+                @endif
+            @endforeach
         </div>
-        <div class="section-divider"></div>
-        {{-- FINAL CTA SECTION --}}
-        <section class="section section--cta final-cta final-cta--dark">
-            <div class="container final-cta__container">
-                <div class="final-cta__content">
-                    <p class="final-cta__eyebrow">Ready for a calmer way to run your studio?</p>
+    </section>
 
-                    <h2 class="h2 final-cta__headline">Turn your client work into one calm hub.</h2>
-
-                    <p class="final-cta__copy">
-                        Bring clients, projects, invoices, your calendar, and a client portal into one place—so you always
-                        know what’s next and nothing slips through the cracks.
-                    </p>
-
-                    <ul class="checklist final-cta__features">
-                        <li>See your week, projects, and clients at a glance</li>
-                        <li>Keep files, feedback, and invoices tied to every record</li>
-                        <li>Replace scattered tools with one streamlined workflow</li>
-                    </ul>
-
-                    <blockquote class="micro-quote final-cta__proof">
-                        “Templates turned our kickoff from 2 hours into 10 minutes.”
-                        <span id="cta-proof">— Casey, Agency Owner</span>
-                    </blockquote>
-
-                    <div class="btn-row final-cta__actions">
-                        <a class="btn btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
-                        <a class="btn btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
-                    </div>
-
-                    <p class="meta final-cta__meta">
-                        14-day free trial · No credit card required.
-                    </p>
-                </div>
+    <section class="py-16 bg-slate-100">
+        <div class="mx-auto max-w-5xl space-y-4 px-6">
+            <h2 class="text-3xl font-semibold text-text-base">Finish features with one confident move.</h2>
+            <p class="text-base text-text-subtle leading-relaxed">
+                Bring projects, client records, billing, and scheduling into Renlo and move from plan to payment without flipping between tools.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a class="oh-btn oh-btn--primary" href="{{ url('/trial/start') }}">Start Free Trial</a>
+                <a class="oh-btn oh-btn--ghost" href="{{ route('marketing.home') }}#demo">Book a Demo</a>
             </div>
-        </section>
-
-
-
+        </div>
     </section>
 @endsection

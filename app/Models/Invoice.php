@@ -29,6 +29,9 @@ class Invoice extends Model
         'project_id',
         'trade_job_id',
         'invoice_number',
+        'is_milestone',
+        'milestone_label',
+        'milestone_order',
         'issue_date',
         'due_date',
         'status',
@@ -41,6 +44,8 @@ class Invoice extends Model
         'discount_type',
         'discount_value',
         'total',
+        'total_amount',
+        'balance_due',
         'currency',
         'stripe_link',
         'tenant_id' // Will be automatically set by the HasTenantScope trait
@@ -52,6 +57,8 @@ class Invoice extends Model
     protected $casts = [
         'issue_date'   => 'date',
         'due_date'     => 'date',
+        'is_milestone' => 'boolean',
+        'milestone_order' => 'integer',
         'subtotal'     => 'decimal:2',
         'tax_total'    => 'decimal:2',
         'tax_rate'     => 'decimal:2',
@@ -87,6 +94,11 @@ class Invoice extends Model
     {
         // Your Client model is an alias to contacts table
         return $this->belongsTo(\App\Models\Client::class, 'contact_id');
+    }
+
+    public function contact()
+    {
+        return $this->client();
     }
     public function lineItems()
     {

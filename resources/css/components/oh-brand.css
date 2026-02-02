@@ -77,8 +77,8 @@
   .oh-pill {
     @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ring-1 select-none;
     background: rgb(var(--surface-muted));
-    color: rgb(var(--text-subtle));
-    --tw-ring-color: rgb(var(--border) / 0.55);
+    color: rgb(var(--text));
+    --tw-ring-color: rgb(var(--border) / 0.7);
   }
 
   /* Active (for toggle chips) */
@@ -86,42 +86,52 @@
   .oh-pill[aria-pressed='true'] {
     background: rgb(var(--surface));
     color: rgb(var(--text));
-    --tw-ring-color: rgb(var(--brand-primary) / 0.35);
+    --tw-ring-color: rgb(var(--brand-primary) / 0.45);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
   /* Status pills (token-based) */
   .oh-pill--brand {
-    background: rgba(var(--brand-primary) / 0.1);
-    color: rgb(var(--brand-primary));
-    --tw-ring-color: rgba(var(--brand-primary) / 0.28);
+    background: rgba(var(--brand-primary) / 0.18);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--brand-primary) / 0.4);
   }
   .oh-pill--secondary {
-    background: rgba(var(--brand-secondary) / 0.1);
-    color: rgb(var(--brand-secondary));
-    --tw-ring-color: rgba(var(--brand-secondary) / 0.28);
+    background: rgba(var(--brand-secondary) / 0.18);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--brand-secondary) / 0.4);
   }
   .oh-pill--accent {
-    background: rgba(var(--brand-accent) / 0.12);
-    color: rgb(var(--brand-accent));
-    --tw-ring-color: rgba(var(--brand-accent) / 0.28);
+    background: rgba(var(--brand-accent) / 0.2);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--brand-accent) / 0.4);
+  }
+  .oh-pill--info {
+    background: rgba(var(--status-info) / 0.2);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--status-info) / 0.4);
+  }
+  .oh-pill--beta {
+    background: rgba(var(--status-beta) / 0.2);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--status-beta) / 0.4);
   }
   .oh-pill--success {
-    background: rgba(var(--status-success) / 0.12);
-    color: rgb(var(--status-success));
-    --tw-ring-color: rgba(var(--status-success) / 0.25);
+    background: rgba(var(--status-success) / 0.2);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--status-success) / 0.4);
   }
   .oh-pill--danger {
-    background: rgba(var(--status-danger) / 0.12);
-    color: rgb(var(--status-danger));
-    --tw-ring-color: rgba(var(--status-danger) / 0.25);
+    background: rgba(var(--status-danger) / 0.2);
+    color: rgb(var(--text));
+    --tw-ring-color: rgba(var(--status-danger) / 0.4);
   }
 
   /* Neutral / “scheduled” style */
   .oh-pill--muted {
     background: rgb(var(--surface-muted));
-    color: rgb(var(--text-subtle));
-    --tw-ring-color: rgb(var(--border) / 0.55);
+    color: rgb(var(--text));
+    --tw-ring-color: rgb(var(--border) / 0.7);
   }
 
   .oh-provider-banner {
@@ -233,10 +243,13 @@
     transition: opacity 120ms ease;
   }
   .oh-tooltip:hover::after,
-  .oh-tooltip:hover::before {
+  .oh-tooltip:hover::before,
+  .oh-tooltip:focus-visible::after,
+  .oh-tooltip:focus-visible::before {
     opacity: 1;
   }
-  .oh-tooltip:hover::after {
+  .oh-tooltip:hover::after,
+  .oh-tooltip:focus-visible::after {
     transform: translate(6px, 6px);
   }
   .oh-tooltip::after,
@@ -249,8 +262,20 @@
     z-index: 50;
     pointer-events: auto;
   }
-  .oh-tooltip:hover {
+  .oh-tooltip:hover,
+  .oh-tooltip:focus-visible {
     z-index: 12000;
+  }
+
+  /* Allow tooltips to escape table/card clipping in list views */
+  .oh-tooltip-scope,
+  .oh-tooltip-scope table,
+  .oh-tooltip-scope thead,
+  .oh-tooltip-scope tbody,
+  .oh-tooltip-scope tr,
+  .oh-tooltip-scope td,
+  .oh-tooltip-scope th {
+    overflow: visible;
   }
 
   /* Ensure hovered row + actions stack above neighbors */

@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\Service;
 use App\Models\Task;
+use App\Models\Meeting;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class CalendarEventsController extends Controller
         $startAt = $start ? Carbon::parse($start) : now()->startOfMonth()->subWeek();
         $endAt = $end ? Carbon::parse($end) : now()->endOfMonth()->addWeek();
 
-        $types = (array) $request->input('types', ['task', 'opportunity', 'invoice', 'service']);
+        $types = (array) $request->input('types', ['task', 'opportunity', 'invoice', 'service', 'meeting']);
         $memberId = $request->input('member_id');
         $projectId = $request->input('project_id');
 
@@ -118,6 +119,29 @@ class CalendarEventsController extends Controller
                     'status' => $svc->status ?? '',
                     'colorKey' => 'service',
                     'url' => route('services.show', ['service' => $svc->id]),
+                ]);
+            }
+        }
+
+        // Meetings
+        if (in_array('meeting', $types, true)) {
+            $meetings = Meeting::where('tenant_id', $tenantId)
+                ->when($projectId, fn($q) => $q->where('project_id', $projectId))
+                ->when($memberId, fn($q) => $q->where('member_id', $memberId))
+                ->whereBetween('start_at', [$startAt, $endAt])
+                ->get();
+
+            foreach ($meetings as $meeting) {
+                $events->push([
+                    'id' => 'meeting:' . $meeting->id,
+                    'type' => 'meeting',
+                    'title' => 'Meeting: ' . ($meeting->title ?? 'Meeting'),
+                    'start' => optional($meeting->start_at)->toIso8601String(),
+                    'end' => optional($meeting->end_at)->toIso8601String(),
+                    'allDay' => (bool) $meeting->all_day,
+                    'status' => 'scheduled',
+                    'colorKey' => 'meeting',
+                    'url' => route('tenant.meetings.show', ['tenant' => $tenantId, 'meeting' => $meeting->id]),
                 ]);
             }
         }

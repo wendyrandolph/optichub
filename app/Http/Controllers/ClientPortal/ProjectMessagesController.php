@@ -6,8 +6,9 @@ namespace App\Http\Controllers\ClientPortal;
 use App\Http\Controllers\Controller;
 use App\Models\Client; // your "clients" table model
 use App\Models\Project;
-use App\Models\ProjectConversation;
-use App\Models\ProjectMessage;
+use App\Models\ChatChannel;
+use App\Models\ChatMessage;
+use App\Models\ChatRead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -16,30 +17,7 @@ class ProjectMessagesController extends Controller
 {
     public function index()
     {
-        $user = Auth::guard('client')->user();
-        $client = Client::where('tenant_id', $user->tenant_id)->where('id', $user->contact_id)->firstOrFail();
-
-        $companyId = $client->client_company_id;
-
-        // Show projects for the client contact or their company.
-        $projects = Project::query()
-            ->where('tenant_id', $user->tenant_id)
-            ->where(function ($q) use ($client, $companyId) {
-                $q->where('contact_id', $client->id);
-                if ($companyId) {
-                    $q->orWhere('client_company_id', $companyId)
-                        ->orWhereIn('contact_id', function ($sub) use ($companyId) {
-                            $sub->select('id')
-                                ->from('contacts')
-                                ->where('client_company_id', $companyId);
-                        });
-                }
-            })
-            ->with(['conversation'])
-            ->latest('updated_at')
-            ->get();
-
-        return view('portal.messages.index', compact('projects'));
+        return redirect()->route('portal.projects.index');
     }
 
     public function show(Project $project)
@@ -63,23 +41,7 @@ class ProjectMessagesController extends Controller
             403
         );
 
-        // Create the conversation if missing (client can initiate)
-        $companyName = $client->company?->company_name
-            ?? $project->company?->company_name
-            ?? $projectContact?->company?->company_name;
-        $conversation = ProjectConversation::firstOrCreate(
-            ['project_id' => $project->id],
-            [
-                'tenant_id' => $project->tenant_id,
-                'company_name' => $companyName,
-                'last_message_at' => now(),
-            ]
-        );
-
-        $messages = $conversation->messages()->orderBy('created_at')->get();
-        $conversation->update(['public_last_viewed_at' => now()]);
-
-        return view('portal.messages.show', compact('project', 'conversation', 'messages', 'client'));
+        return redirect()->to(route('portal.projects.index', ['chat_project' => $project->id]) . '#project-chat-' . $project->id);
     }
 
     public function store(Request $request, Project $project)
@@ -106,26 +68,23 @@ class ProjectMessagesController extends Controller
             403
         );
 
-        $companyName = $client->company?->company_name
-            ?? $project->company?->company_name
-            ?? $projectContact?->company?->company_name;
-        $conversation = ProjectConversation::firstOrCreate(
-            ['project_id' => $project->id],
-            [
-                'tenant_id' => $project->tenant_id,
-                'company_name' => $companyName,
-            ]
+        $channel = ChatChannel::firstOrCreate(
+            ['tenant_id' => $project->tenant_id, 'type' => 'project', 'project_id' => $project->id],
+            ['name' => $project->project_name]
         );
 
-        ProjectMessage::create([
-            'conversation_id' => $conversation->id,
-            'sender_type' => 'client',
-            'sender_id' => $user->id,
+        ChatMessage::create([
+            'channel_id' => $channel->id,
+            'user_id' => $user->id,
             'body' => $request->body,
         ]);
 
-        $conversation->update(['last_message_at' => now()]);
+        ChatRead::updateOrCreate(
+            ['channel_id' => $channel->id, 'user_id' => $user->id],
+            ['last_read_at' => now()]
+        );
 
-        return redirect()->route('portal.projects.messages.index', $project)->with('success', 'Message sent.');
+        return redirect()->to(route('portal.projects.index', ['chat_project' => $project->id]) . '#project-chat-' . $project->id)
+            ->with('success', 'Message sent.');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -458,14 +459,43 @@ class ClientController extends Controller
   {
     $this->authorize('delete', $contact);
 
-    $name = "{$contact->firstName} {$contact->lastName}";
+    if ($contact->tenant_id !== $tenant->id) {
+      abort(404);
+    }
+
+    $name = trim("{$contact->firstName} {$contact->lastName}") ?: ($contact->email ?? 'Contact');
+    $companyId = $contact->client_company_id ?? null;
+
+    ActivityLog::record(
+      $tenant->id,
+      auth()->id(),
+      $contact,
+      'contact.deleted',
+      'Contact deleted',
+      [
+        'contact_name' => $name,
+        'contact_id' => $contact->id,
+        'company_id' => $companyId,
+      ]
+    );
+
     $contact->delete();
 
-    activity()
-      ->useLog('client')
-      ->performedOn($contact)
-      ->causedBy(Auth::user())
-      ->log("client_deleted: {$name} (ID {$contact->id})");
+    $referer = url()->previous();
+    if ($companyId) {
+      $companyUrl = route('tenant.companies.show', ['tenant' => $tenant->id, 'company' => $companyId]);
+      if (Str::startsWith($referer, $companyUrl)) {
+        return redirect()
+          ->route('tenant.companies.show', ['tenant' => $tenant->id, 'company' => $companyId])
+          ->with('success_message', 'Contact deleted successfully!');
+      }
+    }
+
+    if (Str::contains($referer, '/contacts/') && Str::endsWith($referer, (string) $contact->id)) {
+      return redirect()
+        ->route('tenant.contacts.index', ['tenant' => $tenant->id])
+        ->with('success_message', 'Contact deleted successfully!');
+    }
 
     return redirect()->route('tenant.contacts.index', ['tenant' => $tenant->id])
       ->with('success_message', 'Contact deleted successfully!');
@@ -706,19 +736,6 @@ class ClientController extends Controller
     $user->first_name = $contact->firstName ?? $contact->first_name ?? null;
     $user->last_name = $contact->lastName ?? $contact->last_name ?? null;
 
-    // Set username if column exists and is required
-    if (Schema::hasColumn('users', 'username')) {
-      $base = explode('@', $user->email)[0] ?: Str::slug(trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')));
-      $base = $base ?: 'user';
-      $username = $base;
-      $i = 1;
-      while (User::where('username', $username)->exists()) {
-        $username = $base . $i;
-        $i++;
-      }
-      $user->username = $username;
-    }
-
     $user->save();
 
     try {
@@ -837,14 +854,37 @@ class ClientController extends Controller
 
     $clientId = (int) $user->contact_id;
 
+    $client = Client::where('tenant_id', $user->tenant_id)
+      ->where('id', $clientId)
+      ->firstOrFail();
+
     $project = Project::with(['phases', 'tasks'])->findOrFail($projectId);
     Gate::authorize('portal-view-project', $project);
+
+    $projectContact = $project->contact_id
+      ? Client::where('tenant_id', $user->tenant_id)->where('id', $project->contact_id)->first()
+      : null;
+
+    $isProjectContact = $projectContact && (int) $projectContact->id === (int) $client->id;
+    $projectCompanyId = $project->client_company_id ?? $projectContact?->client_company_id;
+    $clientCompanyId = $client->client_company_id;
+
+    abort_unless(
+      $isProjectContact || ($projectCompanyId && $clientCompanyId && (int) $projectCompanyId === (int) $clientCompanyId),
+      403
+    );
 
     $clientVisibleTasks = $project->tasks->filter(function ($task) use ($clientId) {
       $assignedByContact = (int) ($task->contact_id ?? 0) === $clientId;
       $assignedByAssign = ($task->assign_type ?? '') === 'client'
         && (int) ($task->assign_id ?? 0) === $clientId;
-      return $assignedByContact || $assignedByAssign;
+      $clientVisible = (bool) ($task->client_visible ?? false);
+      $needsApproval = (bool) ($task->requires_approval ?? false)
+        || in_array(($task->approval_status ?? ''), ['needs_approval', 'awaiting_approval', 'approval'], true);
+      $title = strtolower((string) ($task->title ?? ''));
+      $titleTagged = str_starts_with($title, 'client:');
+
+      return $assignedByContact || $assignedByAssign || $clientVisible || $needsApproval || $titleTagged;
     });
 
     $phaseGroups = $project->phases
@@ -882,7 +922,7 @@ class ClientController extends Controller
     return view('portal.projects.show', [
       'project'      => $project,
       'phaseGroups'  => $phaseGroups->values(),
-      'currentPhase' => $currentPhase
+      'currentPhase' => $currentPhase,
     ]);
   }
 

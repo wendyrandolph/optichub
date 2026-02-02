@@ -38,7 +38,7 @@
         {{-- Header + primary action --}}
         <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div class="space-y-1">
-                <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-subtle">Projects</div>
+                <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-subtle">Projects</div>
                 <h1 class="text-2xl font-semibold text-text-base leading-tight">Projects Overview</h1>
                 <p class="text-sm text-text-subtle">All projects in your workspace.</p>
             </div>
@@ -51,40 +51,49 @@
             </div>
         </header>
 
-        {{-- Quick actions + KPI band (two-column) --}}
-        <section class="oh-card">
-            <div class="grid gap-4 lg:grid-cols-1 xl:grid-cols-2 lg:items-start">
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold tracking-wide text-text-subtle uppercase">
-                            Quick actions & Stats
-                        </span>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        {{-- Adjust these routes to match your app --}}
-                        <a href="{{ Route::has('tenant.tasks.create') ? route('tenant.tasks.create', ['tenant' => $tenantId]) : '#' }}"
-                            class="oh-btn">
-                            + New Task
-                        </a>
-
-                        <a href="{{ Route::has('tenant.time.index') ? route('tenant.time.index', ['tenant' => $tenantId]) : '#' }}"
-                            class="oh-btn">
-                            Log Time
-                        </a>
-
-                        <a href="{{ Route::has('tenant.invoices.create') ? route('tenant.invoices.create', ['tenant' => $tenantId]) : '#' }}"
-                            class="oh-btn">
-                            New Invoice
-                        </a>
-
-                        <a href="{{ Route::has('tenant.leads.create') ? route('tenant.leads.create', ['tenant' => $tenantId]) : '#' }}"
-                            class="oh-btn">
-                            New Lead
-                        </a>
-                    </div>
+        {{-- Quick actions + KPI band (separate cards) --}}
+        <section class="grid gap-4 xl:grid-cols-2 xl:items-stretch">
+            <div class="oh-card space-y-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold tracking-wide text-text-subtle uppercase">
+                        Quick actions
+                    </span>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                    {{-- Adjust these routes to match your app --}}
+                    <a href="{{ Route::has('tenant.tasks.create') ? route('tenant.tasks.create', ['tenant' => $tenantId]) : '#' }}"
+                        class="oh-btn w-full justify-center">
+                        <i class="fa-solid fa-list-check mr-2 text-xs"></i>
+                        + New Task
+                    </a>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full xl:min-w-[520px]">
+                    <a href="{{ Route::has('tenant.time.index') ? route('tenant.time.index', ['tenant' => $tenantId]) : '#' }}"
+                        class="oh-btn w-full justify-center">
+                        <i class="fa-regular fa-clock mr-2 text-xs"></i>
+                        Log Time
+                    </a>
+
+                    <a href="{{ Route::has('tenant.invoices.create') ? route('tenant.invoices.create', ['tenant' => $tenantId]) : '#' }}"
+                        class="oh-btn w-full justify-center">
+                        <i class="fa-regular fa-file-lines mr-2 text-xs"></i>
+                        New Invoice
+                    </a>
+
+                    <a href="{{ Route::has('tenant.leads.create') ? route('tenant.leads.create', ['tenant' => $tenantId]) : '#' }}"
+                        class="oh-btn w-full justify-center">
+                        <i class="fa-solid fa-user-plus mr-2 text-xs"></i>
+                        New Lead
+                    </a>
+                </div>
+            </div>
+
+            <div class="oh-card space-y-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold tracking-wide text-text-subtle uppercase">
+                        Project stats
+                    </span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
                     {{-- Uses your existing KPI component + accent bar language --}}
                     <x-kpi-card title="Total Projects" value="{{ number_format((int) $totalProjects) }}"
                         icon="fa-layer-group" colorType="secondary"
@@ -143,10 +152,10 @@
 
         {{-- Projects table (xl ~1224px+) + cards below that --}}
         <section class="oh-card">
-            <div class="overflow-x-auto hidden xl:block">
+            <div class="overflow-visible hidden xl:block oh-tooltip-scope">
                 <table class="min-w-full text-sm">
-                    <thead>
-                        <tr class="text-[11px] uppercase tracking-wide text-text-subtle">
+                    <thead class="bg-surface-muted/50">
+                        <tr class="text-xs uppercase tracking-wide text-text-subtle">
                             <th class="py-3 pr-4 text-left">Project</th>
                             <th class="py-3 pr-4 text-left">Client Company</th>
                             <th class="py-3 pr-4 text-left">Status</th>
@@ -235,11 +244,13 @@
 
                                 <td class="py-4 text-right">
                                     <div class="inline-flex items-center gap-2">
-                                        <a href="{{ $showHref }}" class="oh-btn oh-btn--primary" title="View">
-                                            <i class="fa-solid fa-circle-info text-xs"></i>
+                                        <a href="{{ $showHref }}" class="oh-icon-btn oh-tooltip" data-tooltip="View"
+                                            title="View" aria-label="View project">
+                                            <i class="fa-solid fa-eye text-[12px]"></i>
                                         </a>
-                                        <a href="{{ $editHref }}" class="oh-btn" title="Edit">
-                                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                        <a href="{{ $editHref }}" class="oh-icon-btn oh-tooltip" data-tooltip="Edit"
+                                            title="Edit" aria-label="Edit project">
+                                            <i class="fa-solid fa-pen-to-square text-[12px]"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -288,7 +299,7 @@
                             ? route('tenant.projects.edit', ['tenant' => $tenantId, 'project' => $pid])
                             : '#';
                     @endphp
-                    <article class="oh-card border border-[rgb(var(--border)/0.6)] p-4 space-y-3 relative">
+                    <article class="oh-card border border-border-default/70 p-4 space-y-3 relative">
                         <span class="absolute inset-y-4 left-0 w-[4px] rounded-full" style="background: {{ $accent }};"></span>
                         <div class="pl-3">
                             <a href="{{ $showHref }}"

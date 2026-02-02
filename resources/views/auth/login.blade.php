@@ -68,7 +68,7 @@
                 <label class="grid gap-1 text-sm">
                     <span class="text-[rgb(var(--ui-text-subtle))]">{{ __('Email') }}</span>
                     <x-text-input id="email" class="block w-full" type="email" name="email"
-                        :value="old('email')" required autofocus autocomplete="username" />
+                        :value="old('email')" required autofocus autocomplete="email" />
                     <x-input-error :messages="$errors->get('email')" class="mt-1" />
                 </label>
 

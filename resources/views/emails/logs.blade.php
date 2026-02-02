@@ -15,31 +15,35 @@
         </div>
 
         <div class="oh-card border border-border-default/60 rounded-xl p-4 md:p-5 space-y-4">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                    <p class="text-sm font-semibold text-text-base">Sync status</p>
-                    @if (!$gmailConfigured)
-                        <p class="text-xs text-text-subtle">Gmail not configured. Enable in Settings → Mailbox Sync.</p>
-                    @elseif (!$currentAccount)
-                        <p class="text-xs text-text-subtle">No mailbox connected for your user.</p>
-                    @else
-                        <p class="text-xs text-text-subtle">
-                            {{ $currentAccount->email_address ?? 'Mailbox' }} • Status: {{ ucfirst($currentAccount->status ?? 'disconnected') }}
-                        </p>
-                        <p class="text-xs text-text-subtle">
-                            Last sync: {{ $currentAccount->last_sync_finished_at?->diffForHumans() ?? ($currentAccount->last_synced_at?->diffForHumans() ?? '—') }}
-                        </p>
-                        @if ($currentAccount->last_sync_stats)
-                            <p class="text-xs text-text-subtle">
-                                Stats: processed {{ $currentAccount->last_sync_stats['processed'] ?? 0 }},
-                                inserted {{ $currentAccount->last_sync_stats['inserted'] ?? 0 }},
-                                updated {{ $currentAccount->last_sync_stats['updated'] ?? 0 }},
-                                skipped {{ $currentAccount->last_sync_stats['skipped_unmatched'] ?? 0 }},
-                                errors {{ $currentAccount->last_sync_stats['errors'] ?? 0 }}.
-                            </p>
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold text-text-base">Sync status</p>
+                        @if (!$gmailConfigured)
+                            <p class="text-xs text-text-subtle">Gmail not configured. Enable in Settings → Mailbox Sync.</p>
+                        @elseif (!$currentAccount)
+                            <p class="text-xs text-text-subtle">No mailbox connected for your user.</p>
+                        @else
+                            <div class="text-xs text-text-subtle space-y-1">
+                                <div>
+                                    {{ $currentAccount->email_address ?? 'Mailbox' }} • Status:
+                                    {{ ucfirst($currentAccount->status ?? 'disconnected') }}
+                                </div>
+                                <div>
+                                    Last sync:
+                                    {{ $currentAccount->last_sync_finished_at?->diffForHumans() ?? ($currentAccount->last_synced_at?->diffForHumans() ?? '—') }}
+                                </div>
+                                @if ($currentAccount->last_sync_stats)
+                                    <div>
+                                        Stats: processed {{ $currentAccount->last_sync_stats['processed'] ?? 0 }},
+                                        inserted {{ $currentAccount->last_sync_stats['inserted'] ?? 0 }},
+                                        updated {{ $currentAccount->last_sync_stats['updated'] ?? 0 }},
+                                        skipped {{ $currentAccount->last_sync_stats['skipped_unmatched'] ?? 0 }},
+                                        errors {{ $currentAccount->last_sync_stats['errors'] ?? 0 }}.
+                                    </div>
+                                @endif
+                            </div>
                         @endif
-                    @endif
-                </div>
+                    </div>
                 <div class="flex items-center gap-2">
                     @if ($gmailConfigured && $currentAccount)
                         <form method="POST" action="{{ route('tenant.settings.mailbox.sync', ['tenant' => $tenantId]) }}">
@@ -105,12 +109,6 @@
                             @endforeach
                         </select>
                     @endif
-
-                    <label class="inline-flex items-center gap-2 text-xs text-text-subtle">
-                        <input type="checkbox" name="needs_review" value="1" class="rounded border-border-default"
-                            @checked(request('needs_review'))>
-                        Needs review
-                    </label>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -141,6 +139,16 @@
                     </thead>
                     <tbody class="divide-y divide-border/50">
                         @forelse ($logs as $log)
+                            @php
+                                $statusRaw = strtolower((string) ($log->status ?? ''));
+                                $statusLabel = ucwords(str_replace('_', ' ', $statusRaw));
+                                $statusPill = match ($statusRaw) {
+                                    'needs_review' => 'oh-pill oh-pill--warning',
+                                    'ignored' => 'oh-pill oh-pill--muted',
+                                    'logged' => 'oh-pill oh-pill--success',
+                                    default => 'oh-pill',
+                                };
+                            @endphp
                             <tr class="hover:bg-surface-accent/40 transition">
                                 <td class="px-4 py-3">
                                     <div class="font-semibold text-text-base truncate">{{ $log->subject ?? '(No subject)' }}</div>
@@ -154,7 +162,7 @@
                                     <span class="oh-pill">{{ ucfirst($log->direction ?? '—') }}</span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="oh-pill">{{ str_replace('_',' ', $log->status) }}</span>
+                                    <span class="{{ $statusPill }}">{{ $statusLabel }}</span>
                                     @if ($log->needs_review)
                                         <span class="oh-pill oh-pill--warning ml-1">Needs review</span>
                                     @endif
@@ -188,7 +196,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-6 text-center text-text-subtle">
+                                <td colspan="6" class="px-4 py-6 text-center text-text-subtle">
                                     No email logs yet. Connect Gmail in Settings → Mailbox Sync.
                                 </td>
                             </tr>
@@ -199,6 +207,16 @@
 
             <div class="md:hidden grid gap-3">
                 @forelse ($logs as $log)
+                    @php
+                        $statusRaw = strtolower((string) ($log->status ?? ''));
+                        $statusLabel = ucwords(str_replace('_', ' ', $statusRaw));
+                        $statusPill = match ($statusRaw) {
+                            'needs_review' => 'oh-pill oh-pill--warning',
+                            'ignored' => 'oh-pill oh-pill--muted',
+                            'logged' => 'oh-pill oh-pill--success',
+                            default => 'oh-pill',
+                        };
+                    @endphp
                     <div class="oh-card border border-border-default/60 rounded-lg p-3 space-y-2">
                         <div class="flex items-center justify-between gap-2">
                             <div class="font-semibold text-text-base truncate">{{ $log->subject ?? '(No subject)' }}</div>
@@ -208,12 +226,12 @@
                                 <div>From: {{ $log->from_email }}</div>
                                 <div>To: {{ implode(', ', $log->to_emails ?? []) }}</div>
                             </div>
-                            <div class="flex items-center justify-between text-xs text-text-subtle">
-                                <span class="oh-pill">{{ str_replace('_',' ', $log->status) }}</span>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-text-subtle">
+                                <span class="{{ $statusPill }}">{{ $statusLabel }}</span>
                                 @if ($log->needs_review)
                                     <span class="oh-pill oh-pill--warning">Needs review</span>
                                 @endif
-                                <span>{{ optional($log->sent_at)->diffForHumans() ?? '—' }}</span>
+                                <span class="ml-auto">{{ optional($log->sent_at)->diffForHumans() ?? '—' }}</span>
                             </div>
                             @if ($log->needs_review && $isTenantAdmin)
                                 <form method="POST"

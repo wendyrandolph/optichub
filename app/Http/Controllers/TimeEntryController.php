@@ -28,10 +28,37 @@ class TimeEntryController extends Controller
 
   public function index(Tenant $tenant)
   {
-    $query = \App\Models\TimeEntry::with(['user', 'project', 'task'])
-      ->where('tenant_id', $tenant->id);
+    $user = auth()->user();
+    $role = strtolower((string) ($user->role ?? ''));
+    $timerAllowedAll = $user && in_array($role, ['provider', 'admin', 'super_admin', 'superadmin'], true);
+    $timerAllowedTaskIds = collect();
+    if ($user && ! $timerAllowedAll) {
+      $timerAllowedTaskIds = Task::where('tenant_id', $tenant->id)
+        ->where(function ($query) use ($user) {
+          $query->where(function ($q) use ($user) {
+            $q->where('assign_type', 'admin')
+              ->where('assign_id', $user->id);
+          })->orWhere('user_id', $user->id);
+        })
+        ->pluck('id')
+        ->flip();
+    }
 
-    $timestampColumn = TimeEntry::query()->first()?->getDates()[0] ?? 'created_at';
+    $runningTaskTimers = collect();
+    if ($user) {
+      $runningTaskTimers = TimeEntry::where('tenant_id', $tenant->id)
+        ->where('user_id', $user->id)
+        ->whereNotNull('task_id')
+        ->whereNull('end_time')
+        ->get(['task_id', 'start_time'])
+        ->keyBy('task_id')
+        ->map(fn ($entry) => optional($entry->start_time)->toIso8601String());
+    }
+
+    $query = \App\Models\TimeEntry::with(['user', 'project', 'task'])
+      ->where('time_entries.tenant_id', $tenant->id);
+
+    $timestampColumn = DB::raw('COALESCE(time_entries.start_time, time_entries.date, time_entries.created_at)');
 
     $baseSummaryQuery = TimeEntry::where('tenant_id', $tenant->id);
 
@@ -61,7 +88,15 @@ class TimeEntryController extends Controller
     }
     if ($q = request('q'))             $query->where('notes', 'like', "%{$q}%");
 
-    $entries = $query->orderByDesc($timestampColumn)->paginate(15);
+    $entries = $query
+      ->leftJoin('users', 'time_entries.user_id', '=', 'users.id')
+      ->leftJoin('projects', 'time_entries.project_id', '=', 'projects.id')
+      ->select('time_entries.*')
+      ->orderByDesc($timestampColumn)
+      ->orderBy('users.last_name')
+      ->orderBy('users.first_name')
+      ->orderBy('projects.project_name')
+      ->paginate(15);
 
     // Summary stats (tenant-wide, not filter-limited)
     $defaultRate = (float) config('optichub.default_hourly_rate', 100);
@@ -89,7 +124,7 @@ class TimeEntryController extends Controller
     // Filters data
     $members = User::where('tenant_id', $tenant->id)
       ->orderBy('last_name')
-      ->select('id', 'first_name', 'last_name', 'username')
+      ->select('id', 'first_name', 'last_name', 'email')
       ->selectRaw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''))) as name")
       ->get();
 
@@ -118,7 +153,19 @@ class TimeEntryController extends Controller
       'billing_status' => null,
     ], request()->only(['range', 'member_id', 'project_id', 'q', 'billable', 'billing_status']));
 
-    return view('time.index', compact('tenant', 'entries', 'summary', 'members', 'projects', 'filters', 'draftInvoices', 'tasks'));
+    return view('time.index', compact(
+      'tenant',
+      'entries',
+      'summary',
+      'members',
+      'projects',
+      'filters',
+      'draftInvoices',
+      'tasks',
+      'timerAllowedAll',
+      'timerAllowedTaskIds',
+      'runningTaskTimers'
+    ));
   }
 
   // GET {tenant}/time/create 
@@ -127,7 +174,7 @@ class TimeEntryController extends Controller
     $tenantParam = request()->route('tenant');
     $tenantId = $tenantParam instanceof \App\Models\Tenant ? $tenantParam->getKey() : (int)$tenantParam;
 
-    $users    = User::where('tenant_id', $tenantId)->select('id', 'first_name', 'last_name',  'username')->orderBy('last_name')->get();
+    $users    = User::where('tenant_id', $tenantId)->select('id', 'first_name', 'last_name', 'email')->orderBy('last_name')->orderBy('first_name')->get();
     $projects = Project::where('tenant_id', $tenantId)
       ->select('id', 'project_name as name')
       ->orderBy('project_name')
@@ -152,6 +199,29 @@ class TimeEntryController extends Controller
         ->where('id', $data['project_id'])
         ->value('hourly_rate');
       $data['hourly_rate'] = $projectRate ?? null;
+    }
+
+    if (!empty($data['start_time']) && empty($data['end_time'])) {
+      return back()
+        ->withInput()
+        ->with('error', 'Please stop the timer to set an end time.');
+    }
+
+    if (empty($data['hours']) && !empty($data['start_time']) && !empty($data['end_time'])) {
+      $start = Carbon::parse($data['start_time']);
+      $end = Carbon::parse($data['end_time']);
+      $minutes = max(0, $start->diffInMinutes($end));
+      $data['hours'] = round($minutes / 60, 2);
+    }
+
+    if (!empty($data['start_time']) && empty($data['date'])) {
+      $data['date'] = Carbon::parse($data['start_time'])->toDateString();
+    }
+
+    if (empty($data['hours'])) {
+      return back()
+        ->withInput()
+        ->with('error', 'Please enter hours or use the timer.');
     }
 
     // If a project has tasks, encourage linking the time to a task
@@ -184,7 +254,7 @@ class TimeEntryController extends Controller
 
     $tenantId = $entry->tenant_id;
     $users    = User::where('tenant_id', $tenantId)
-      ->select('id', 'first_name', 'last_name', 'username')
+      ->select('id', 'first_name', 'last_name', 'email')
       ->selectRaw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''))) as name")
       ->orderBy('last_name')
       ->get();

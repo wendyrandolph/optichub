@@ -55,7 +55,7 @@
         <header class="flex flex-col gap-2">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                 <div>
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-subtle">Tasks</div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-subtle">Tasks</div>
                     <h1 class="text-2xl font-semibold tracking-tight text-text-base">Tasks Overview</h1>
                     <p class="text-sm text-text-subtle">Track progress and keep work moving.</p>
                 </div>
@@ -113,7 +113,7 @@
         </section>
 
         {{-- Toolbar -> same surface language as other pages --}}
-        <section class="oh-card bg-white">
+        <section class="oh-card">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                     <label class="sr-only" for="projectFilter">Filter by project</label>
@@ -134,7 +134,8 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap justify-start lg:justify-end w-full lg:w-auto">
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap justify-start lg:justify-end w-full lg:w-auto">
                     <label class="sr-only" for="taskSearch">Search tasks</label>
                     <input id="taskSearch" type="search" placeholder="Search tasks…"
                         class="oh-input w-full sm:w-64 md:w-72" />
@@ -151,7 +152,7 @@
         </section>
 
         {{-- Project Color Key -> keep, but make it match the system --}}
-        <section id="colorKey" class="oh-card bg-white py-3">
+        <section id="colorKey" class="oh-card py-3">
             <div class="flex items-center gap-3 flex-wrap text-sm">
                 <span class="font-semibold text-text-base">Project Color Key</span>
                 <ul class="flex flex-wrap gap-4">
@@ -167,7 +168,7 @@
         </section>
 
         {{-- Kanban Board --}}
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-start">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
             @foreach ($columns as $status => $label)
                 @php
                     $groups = $tasksByStatus[$status] ?? [];
@@ -181,20 +182,24 @@
                 @endphp
 
                 {{-- Column matches report tile language: left accent strip + oh-card --}}
-                <section class="oh-card relative overflow-hidden p-0 {{ $statusCount ? '' : 'opacity-85' }}"
-                    data-status="{{ $status }}" style="--tile-accent: {{ $colAccent }};">
-                    <span class="absolute inset-y-0 left-0 w-[4px]"></span>
+                <section class="oh-card relative overflow-hidden p-0 {{ $statusCount ? '' : 'opacity-85' }} w-full max-w-[100%] lg:max-w-[100%] lg:mx-auto min-[1221px]:max-w-none min-[1221px]:mx-0"
+                    data-status="{{ $status }}">
 
                     <header class="p-4 pb-3">
-                        <div class="flex items-center justify-between">
+                        <button type="button"
+                            class="w-full flex items-center justify-between text-left min-[1221px]:cursor-default"
+                            data-column-toggle="{{ $status }}" aria-expanded="true">
                             <h3 class="text-sm font-semibold text-text-base">
                                 {{ $label }}
                                 <span class="oh-chip-muted ml-2">{{ $statusCount }}</span>
                             </h3>
-                        </div>
+                            <span class="min-[1221px]:hidden text-text-subtle">
+                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                            </span>
+                        </button>
                     </header>
 
-                    <div class="px-4 pb-4 space-y-3">
+                    <div class="px-4 pb-4 space-y-3" data-column-body="{{ $status }}">
                         @forelse ($groups as $phaseId => $phaseGroup)
                             @php
                                 $phaseName = data_get($phaseGroup, 'phase_name', 'No Phase');
@@ -221,11 +226,13 @@
                                             );
                                             $badge = $dueBadge(data_get($task, 'due_date'));
                                             $assignId = data_get($task, 'assign_id');
+                                            $running = $runningEntries[$tid] ?? null;
+                                            $runningStart = $running?->start_time?->toIso8601String();
                                         @endphp
 
                                         {{-- Task card surface matches system; project color strip stays --}}
                                         <article id="task-{{ $tid }}"
-                                            class="relative rounded-xl border border-[rgb(var(--border)/.6)] bg-[rgb(var(--surface))] p-4 shadow-sm hover:shadow-md transition"
+                                            class="relative rounded-xl border border-border-default/60 bg-surface-card p-4 shadow-sm hover:shadow-md transition"
                                             style="--proj-color: {{ $projColor }};"
                                             data-assign-type="{{ $assign }}"
                                             data-project-id="{{ data_get($task, 'project_id') ?? '' }}"
@@ -235,33 +242,38 @@
                                             <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-xl"
                                                 style="background: var(--proj-color);"></span>
 
-                                            {{-- Meta pills row -> switch to oh-pill family for unity --}}
-                                            <div class="flex flex-wrap items-center gap-2 pl-2">
-                                                <span class="oh-pill oh-pill--muted">
-                                                    <i class="fa-solid fa-briefcase text-[rgb(var(--brand-primary))]"></i>
+                                            <div class="pl-2 mt-1 space-y-1">
+                                                <div
+                                                    class="text-xs font-semibold uppercase tracking-wide text-text-subtle">
                                                     {{ data_get($task, 'project_name', '—') }}
-                                                </span>
+                                                </div>
 
-                                                <span class="oh-pill oh-pill--muted">
-                                                    {{ $isAdmin ? 'Admin/Internal' : 'Client' }}
-                                                </span>
-
-                                                @if (!empty(data_get($task, 'phase_name')))
-                                                    <span class="oh-pill oh-pill--muted">
-                                                        {{ data_get($task, 'phase_name') }}
-                                                    </span>
-                                                @endif
-
-                                                <span class="{{ $badge['class'] }}" title="Due date">
-                                                    <i class="fa-regular fa-calendar"></i>
-                                                    {{ data_get($task, 'due_date', '—') }} • {{ $badge['label'] }}
-                                                </span>
-                                            </div>
-
-                                            <div class="pl-2 mt-2 space-y-1">
                                                 <h5 class="text-sm font-semibold text-text-base">
                                                     {{ data_get($task, 'title', 'Untitled Task') }}
                                                 </h5>
+
+                                                <div class="border-t border-border-default/60 pt-2"></div>
+
+                                                {{-- Meta pills row -> mapped color system --}}
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span
+                                                        class="oh-pill {{ $isAdmin ? 'oh-pill--info' : 'oh-pill--brand' }}">
+                                                        <i
+                                                            class="fa-solid {{ $isAdmin ? 'fa-user-gear' : 'fa-user' }} text-xs"></i>
+                                                        {{ $isAdmin ? 'Admin/Internal' : 'Client' }}
+                                                    </span>
+
+                                                    @if (!empty(data_get($task, 'phase_name')))
+                                                        <span class="oh-pill oh-pill--accent">
+                                                            {{ data_get($task, 'phase_name') }}
+                                                        </span>
+                                                    @endif
+
+                                                    <span class="{{ $badge['class'] }}" title="Due date">
+                                                        <i class="fa-regular fa-calendar"></i>
+                                                        {{ data_get($task, 'due_date', '—') }} • {{ $badge['label'] }}
+                                                    </span>
+                                                </div>
 
                                                 @if (!empty(data_get($task, 'description')))
                                                     <p class="text-xs text-text-subtle line-clamp-2">
@@ -269,35 +281,108 @@
                                                     </p>
                                                 @endif
 
-                                                <p class="text-[11px] text-text-subtle space-x-2">
+                                                <div class="text-xs text-text-subtle space-y-1">
+                                                    @if (!empty(data_get($task, 'assigned_user_name')))
+                                                        <div>Assignee: {{ data_get($task, 'assigned_user_name') }}</div>
+                                                    @endif
+                                                    @if (!empty(data_get($task, 'estimated_minutes')))
+                                                        <div>Estimated: {{ data_get($task, 'estimated_minutes') }}m</div>
+                                                    @endif
                                                     @if (!empty(data_get($task, 'started_at')))
-                                                        <span>Started:
-                                                            {{ \Carbon\Carbon::parse(data_get($task, 'started_at'))->format('M j, Y') }}</span>
+                                                        <div>Started:
+                                                            {{ \Carbon\Carbon::parse(data_get($task, 'started_at'))->format('M j, Y') }}
+                                                        </div>
                                                     @endif
                                                     @if (!empty(data_get($task, 'completed_at')))
-                                                        <span>Completed:
-                                                            {{ \Carbon\Carbon::parse(data_get($task, 'completed_at'))->format('M j, Y') }}</span>
+                                                        <div>Completed:
+                                                            {{ \Carbon\Carbon::parse(data_get($task, 'completed_at'))->format('M j, Y') }}
+                                                        </div>
                                                     @endif
-                                                    @if (!empty(data_get($task, 'hours_spent')))
-                                                        <span>Hours:
-                                                            {{ number_format(data_get($task, 'hours_spent'), 2) }}</span>
+                                                    @php
+                                                        $trackedHours = (float) data_get($task, 'tracked_hours', 0);
+                                                    @endphp
+                                                    <div>
+                                                        Tracked:
+                                                        {{ number_format($trackedHours, 2) }}h
+                                                    </div>
+                                                    @if (!empty($runningStart))
+                                                        @php
+                                                            $runningMinutes = \Carbon\Carbon::parse($runningStart)->diffInMinutes(now());
+                                                        @endphp
+                                                        <div class="text-text-base">
+                                                            Running · {{ $runningMinutes }}m
+                                                        </div>
                                                     @endif
-                                                </p>
-                                            </div>
+                                                </div>
 
-                                            {{-- Actions -> make consistent buttons (oh-btn sized icon buttons) --}}
-                                            <div
-                                                class="mt-3 pt-3 border-t border-[rgb(var(--border)/.55)] flex justify-end gap-2">
+                                            @php
+                                                $currentUser = auth()->user();
+                                                $role = strtolower((string) ($currentUser?->role ?? ''));
+                                                $isAdminRole = in_array($role, ['provider', 'admin', 'super_admin', 'superadmin'], true);
+                                                $isAssignee =
+                                                    auth()->check() &&
+                                                    (data_get($task, 'assign_type') ?? '') === 'admin' &&
+                                                    (int) (data_get($task, 'assign_id') ?? 0) === auth()->id();
+                                                $legacyAssignee =
+                                                    auth()->check() &&
+                                                    (int) (data_get($task, 'user_id') ?? 0) === auth()->id();
+                                                $isClientTask = strtolower((string) (data_get($task, 'assign_type') ?? '')) === 'client';
+                                                $canTimer = ! $isClientTask && ($isAssignee || $legacyAssignee || $isAdminRole);
+                                                $runningBillable = $running?->billable ?? true;
+                                            @endphp
+
+                                            @if (! $isClientTask)
+                                                <div class="mt-3 rounded-lg border border-border-default/60 bg-surface-muted/40 p-3 js-timer-shell"
+                                                    data-task-id="{{ $tid }}"
+                                                    data-start-url="{{ route('tenant.tasks.timer.start', ['tenant' => $tenantParam, 'task' => $tid]) }}"
+                                                    data-stop-url="{{ route('tenant.tasks.timer.stop', ['tenant' => $tenantParam, 'task' => $tid]) }}"
+                                                    data-running-start="{{ $runningStart ?? '' }}"
+                                                    data-can-timer="{{ $canTimer ? '1' : '0' }}">
+                                                    <div class="flex items-center justify-between text-xs text-text-subtle">
+                                                        <span>Timer</span>
+                                                        <span class="js-timer-display tabular-nums">00:00:00</span>
+                                                    </div>
+                                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                        <button type="button"
+                                                            class="oh-btn h-8 px-3 text-xs js-timer-start"
+                                                            @disabled(! $canTimer)>
+                                                            <i class="fa-solid fa-play text-[10px] mr-1"></i>Start
+                                                        </button>
+                                                        <button type="button"
+                                                            class="oh-btn h-8 px-3 text-xs js-timer-stop"
+                                                            @disabled(true)>
+                                                            <i class="fa-solid fa-stop text-[10px] mr-1"></i>Stop
+                                                        </button>
+                                                        <label class="inline-flex items-center gap-2 text-xs text-text-subtle">
+                                                            <input type="checkbox"
+                                                                class="h-4 w-4 rounded border-border-default text-[rgb(var(--brand-primary))] js-timer-billable"
+                                                                @checked($runningBillable) @disabled(! $canTimer)>
+                                                            Billable
+                                                        </label>
+                                                        @unless($canTimer)
+                                                            <span class="text-xs text-text-subtle">Assigned member only.</span>
+                                                        @endunless
+                                                        @if ($isAdminRole && ! $isAssignee && ! $legacyAssignee)
+                                                            <span class="text-xs text-text-subtle">Admin override.</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        {{-- Actions -> make consistent buttons (oh-btn sized icon buttons) --}}
+                                        <div
+                                            class="mt-3 pt-3 border-t border-border-default/60 flex justify-end gap-2">
                                                 @php
-                                                    $currentUser = auth()->user();
-                                                    $role = strtolower((string) ($currentUser?->role ?? ''));
                                                     $canDelete =
-                                                        in_array($role, ['provider', 'admin', 'super_admin', 'superadmin'], true) ||
-                                                        ((int) (data_get($task, 'user_id') ?? 0) === (int) ($currentUser?->id ?? 0));
-                                                    $isMine =
-                                                        auth()->check() &&
-                                                        (data_get($task, 'assign_type') ?? '') === 'admin' &&
-                                                        (int) (data_get($task, 'assign_id') ?? 0) === auth()->id();
+                                                        in_array(
+                                                            $role,
+                                                            ['provider', 'admin', 'super_admin', 'superadmin'],
+                                                            true,
+                                                        ) ||
+                                                        (int) (data_get($task, 'user_id') ?? 0) ===
+                                                            (int) ($currentUser?->id ?? 0);
+                                                    $isMine = $isAssignee;
                                                     $isMagicLinkTask =
                                                         \Illuminate\Support\Str::startsWith(
                                                             (string) data_get($task, 'title', ''),
@@ -309,34 +394,21 @@
                                                     <form method="POST"
                                                         action="{{ route('tenant.tasks.start', ['tenant' => $tenantParam, 'task' => $tid]) }}">
                                                         @csrf
-                                                        <button type="submit" class="oh-btn oh-tooltip"
-                                                            aria-label="Start task" data-tooltip="Start" title="Start"
-                                                            style="width:2rem;padding:0;">
+                                                        <button type="submit"
+                                                            class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                            aria-label="Start task" data-tooltip="Start" title="Start">
                                                             <i class="fa-solid fa-circle-play text-xs"></i>
                                                         </button>
                                                     </form>
                                                 @elseif ($status === 'in_progress' && $isMine)
                                                     <form method="POST"
-                                                        action="{{ data_get($task, 'timer_started_at')
-                                                            ? route('tenant.tasks.pause', ['tenant' => $tenantParam, 'task' => $tid])
-                                                            : route('tenant.tasks.resume', ['tenant' => $tenantParam, 'task' => $tid]) }}">
-                                                        @csrf
-                                                        <button type="submit" class="oh-btn oh-tooltip"
-                                                            aria-label="{{ data_get($task, 'timer_started_at') ? 'Pause task' : 'Resume task' }}"
-                                                            data-tooltip="{{ data_get($task, 'timer_started_at') ? 'Pause' : 'Resume' }}"
-                                                            title="{{ data_get($task, 'timer_started_at') ? 'Pause' : 'Resume' }}"
-                                                            style="width:2rem;padding:0;">
-                                                            <i
-                                                                class="fa-solid {{ data_get($task, 'timer_started_at') ? 'fa-pause' : 'fa-play' }} text-xs"></i>
-                                                        </button>
-                                                    </form>
-
-                                                    <form method="POST"
                                                         action="{{ route('tenant.tasks.complete', ['tenant' => $tenantParam, 'task' => $tid]) }}">
                                                         @csrf
-                                                        <button type="submit" class="oh-btn oh-btn--primary oh-tooltip"
-                                                            aria-label="Mark complete" data-tooltip="Complete" title="Complete"
-                                                            style="width:2rem;padding:0;background: rgb(var(--status-success));border-color: rgb(var(--status-success));">
+                                                        <button type="submit"
+                                                            class="oh-btn oh-btn--primary oh-tooltip h-8 w-8 p-0 justify-center"
+                                                            aria-label="Mark complete" data-tooltip="Complete"
+                                                            title="Complete"
+                                                            style="background: rgb(var(--status-success));border-color: rgb(var(--status-success));">
                                                             <i class="fa-solid fa-check text-xs"></i>
                                                         </button>
                                                     </form>
@@ -344,35 +416,34 @@
                                                     <form method="POST"
                                                         action="{{ route('tenant.tasks.archive', ['tenant' => $tenantParam, 'task' => $tid]) }}">
                                                         @csrf
-                                                        <button type="submit" class="oh-btn oh-tooltip"
-                                                            aria-label="Archive task" data-tooltip="Archive" title="Archive"
-                                                            style="width:2rem;padding:0;">
+                                                        <button type="submit"
+                                                            class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                            aria-label="Archive task" data-tooltip="Archive"
+                                                            title="Archive">
                                                             <i class="fa-solid fa-box-archive text-xs"></i>
                                                         </button>
                                                     </form>
                                                 @endif
 
                                                 <a href="{{ route('tenant.tasks.show', ['tenant' => $tenantParam, 'task' => $tid]) }}"
-                                                    class="oh-btn oh-tooltip" aria-label="View task" data-tooltip="View"
-                                                    title="View"
-                                                    style="width:2rem;padding:0;">
+                                                    class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                    aria-label="View task" data-tooltip="View" title="View">
                                                     <i class="fa-solid fa-eye text-xs"></i>
                                                 </a>
 
                                                 @if (!empty(data_get($task, 'project_id')))
                                                     <a href="{{ route('tenant.projects.messages.index', ['tenant' => $tenantParam, 'project' => (int) data_get($task, 'project_id')]) }}"
-                                                        class="oh-btn oh-tooltip" aria-label="Project messages"
-                                                        data-tooltip="Project chat" title="Project chat"
-                                                        style="width:2rem;padding:0;">
+                                                        class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                        aria-label="Project messages" data-tooltip="Project chat"
+                                                        title="Project chat">
                                                         <i class="fa-solid fa-comments text-xs"></i>
                                                     </a>
                                                 @else
                                                     <button type="button"
-                                                        class="oh-btn oh-tooltip opacity-60 cursor-not-allowed"
+                                                        class="oh-btn oh-tooltip opacity-60 cursor-not-allowed h-8 w-8 p-0 justify-center"
                                                         aria-label="Project messages unavailable"
                                                         data-tooltip="Project chat unavailable"
-                                                        title="Project chat unavailable"
-                                                        style="width:2rem;padding:0;" aria-disabled="true">
+                                                        title="Project chat unavailable" aria-disabled="true">
                                                         <i class="fa-solid fa-comments text-xs"></i>
                                                     </button>
                                                 @endif
@@ -381,9 +452,10 @@
                                                     <form method="POST"
                                                         action="{{ route('tenant.contacts.magic-link', ['tenant' => $tenantParam, 'contact' => (int) data_get($task, 'contact_id')]) }}">
                                                         @csrf
-                                                        <button type="submit" class="oh-btn oh-btn--primary oh-tooltip"
-                                                            aria-label="Send magic link" data-tooltip="Send link" title="Send link"
-                                                            style="width:2rem;padding:0;">
+                                                        <button type="submit"
+                                                            class="oh-btn oh-btn--primary oh-tooltip h-8 w-8 p-0 justify-center"
+                                                            aria-label="Send magic link" data-tooltip="Send link"
+                                                            title="Send link">
                                                             <i class="fa-solid fa-link text-xs"></i>
                                                         </button>
                                                     </form>
@@ -401,20 +473,25 @@
                                                             'project_id' => data_get($task, 'project_id'),
                                                             'phase_id' => data_get($task, 'phase_id'),
                                                             'status' => data_get($task, 'status', $status),
+                                                            'requires_approval' => (bool) data_get($task, 'requires_approval', false),
+                                                            'client_must_upload' => (bool) data_get($task, 'client_must_upload', false),
+                                                            'external_url' => data_get($task, 'external_url'),
+                                                            'feedback_image_url' => data_get($task, 'feedback_image_url'),
                                                         ];
                                                     @endphp
 
-                                                    <button type="button" class="oh-btn oh-tooltip js-edit"
+                                                    <button type="button"
+                                                        class="oh-btn oh-tooltip js-edit h-8 w-8 p-0 justify-center"
                                                         aria-label="Edit task" data-tooltip="Edit" title="Edit"
-                                                        style="width:2rem;padding:0;"
                                                         data-task-id="{{ $tid }}"
                                                         data-update-url="{{ route('tenant.tasks.update', ['tenant' => $tenantParam, 'task' => (int) data_get($task, 'id', 0)]) }}"
                                                         data-payload='@json($payload)'>
                                                         <i class="fa-solid fa-pencil text-xs"></i>
                                                     </button>
                                                 @else
-                                                    <span class="oh-btn oh-tooltip" style="width:2rem;padding:0;opacity:.85;"
-                                                        aria-label="Completed" data-tooltip="Completed" title="Completed">
+                                                    <span class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                        style="opacity:.85;" aria-label="Completed"
+                                                        data-tooltip="Completed" title="Completed">
                                                         <i class="fa-solid fa-square-check text-xs"></i>
                                                     </span>
                                                 @endif
@@ -425,9 +502,10 @@
                                                         onsubmit="return confirm('Delete this task? This cannot be undone.');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="oh-btn oh-tooltip"
-                                                            aria-label="Delete task" data-tooltip="Delete" title="Delete"
-                                                            style="width:2rem;padding:0;">
+                                                        <button type="submit"
+                                                            class="oh-btn oh-tooltip h-8 w-8 p-0 justify-center"
+                                                            aria-label="Delete task" data-tooltip="Delete"
+                                                            title="Delete">
                                                             <i class="fa-solid fa-trash text-xs"></i>
                                                         </button>
                                                     </form>
@@ -468,13 +546,12 @@
 
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-semibold text-text-base">Edit Task</h2>
-                <button type="button" id="closeEditModal" class="text-text-subtle hover:text-text-base"
-                    aria-label="Close">
+                <button type="button" id="closeEditModal" class="oh-icon-btn" aria-label="Close">
                     &times;
                 </button>
             </div>
 
-            <form id="editTaskForm" method="POST" action="#">
+            <form id="editTaskForm" method="POST" action="#" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
@@ -486,51 +563,32 @@
                 <div class="grid gap-4">
                     <label class="grid gap-1 text-sm">
                         <span class="text-text-subtle">Title</span>
-                        <input type="text" name="title" id="task-title"
-                            class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm"
-                            required>
+                        <input type="text" name="title" id="task-title" class="oh-input" required>
                     </label>
 
                     <label class="grid gap-1 text-sm">
                         <span class="text-text-subtle">Description</span>
-                        <textarea name="description" id="task-description"
-                            class="min-h-[96px] rounded-lg bg-surface-card text-text-base border border-border-default px-3 py-2 text-sm"></textarea>
+                        <textarea name="description" id="task-description" class="oh-textarea min-h-[96px]"></textarea>
                     </label>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Due Date</span>
-                            <input type="date" name="due_date" id="task-due-date"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
-                        </label>
-
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Hours spent</span>
-                            <input type="number" step="0.25" min="0" name="hours_spent" id="task-hours"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
-                        </label>
-
-                        <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Assign Type</span>
                             <select name="assign_type" id="task-assign-type" required
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
-                                <option value="">Choose...</option>
-                                <option value="admin">Admin</option>
+                                class="oh-select">
+                                <option value="">Choose…</option>
+                                <option value="admin">Team member</option>
                                 <option value="client">Client</option>
                             </select>
                         </label>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Admin</span>
-                            <select id="task-assign-admin"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
-                                <option value="">Choose Admin</option>
+                            <span class="text-text-subtle">Assigned team member</span>
+                            <select id="task-assign-admin" class="oh-select">
+                                <option value="">Unassigned</option>
                                 @foreach ($users as $user)
                                     @php
                                         $name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-                                        $label = $name ?: $user['username'] ?? 'User';
+                                        $label = $name ?: $user['email'] ?? 'User';
                                     @endphp
                                     <option value="{{ $user['id'] ?? '' }}">
                                         {{ $label }}</option>
@@ -539,36 +597,30 @@
                         </label>
 
                         <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Client</span>
-                            <select id="task-assign-client"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
-                                <option value="">Choose Client</option>
+                            <span class="text-text-subtle">Assigned client</span>
+                            <select id="task-assign-client" class="oh-select">
+                                <option value="">Unassigned</option>
                                 @foreach ($clients as $client)
-                                    <option value="{{ $client['id'] ?? '' }}">
-                                        {{ $client['client_name'] ?? ($client['name'] ?? 'Client') }}</option>
+                                    @php
+                                        $first = $client['client_name'] ?? $client['firstName'] ?? $client['first_name'] ?? '';
+                                        $last = $client['lastName'] ?? $client['last_name'] ?? '';
+                                        $clientLabel = trim($first . ' ' . $last);
+                                        $clientLabel = $clientLabel !== '' ? $clientLabel : ($client['name'] ?? 'Client');
+                                    @endphp
+                                    <option value="{{ $client['id'] ?? '' }}">{{ $clientLabel }}</option>
                                 @endforeach
                             </select>
                         </label>
+
+
                     </div>
 
-                    <div class="grid gap-3">
-                        <label
-                            class="flex items-start gap-3 rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-surface-card"
-                            id="requires-approval-wrap" style="display: none;">
-                            <input type="checkbox" name="requires_approval" id="task-requires-approval" value="1"
-                                class="mt-1 rounded border-border-default text-brand-primary" />
-                            <div>
-                                <div class="text-sm font-semibold text-text-base">Requires approval</div>
-                                <div class="text-xs text-text-subtle">Shows in the client thread as an approval item.</div>
-                            </div>
-                        </label>
-                    </div>
+
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Project</span>
-                            <select name="project_id" id="task-project-id"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
+                            <select name="project_id" id="task-project-id" class="oh-select">
                                 @foreach ($projects as $project)
                                     <option value="{{ data_get($project, 'id') ?? '' }}">
                                         {{ data_get($project, 'project_name') ?? data_get($project, 'name', 'Project') }}
@@ -579,8 +631,7 @@
 
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Phase</span>
-                            <select name="phase_id" id="task-phase-id"
-                                class="h-10 rounded-lg bg-surface-card text-text-base border border-border-default px-3 text-sm">
+                            <select name="phase_id" id="task-phase-id" class="oh-select">
                                 @foreach ($phases as $phase)
                                     <option value="{{ data_get($phase, 'id') ?? '' }}">{{ data_get($phase, 'name', '') }}
                                     </option>
@@ -589,15 +640,60 @@
                         </label>
                     </div>
 
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" id="cancelEditModal"
-                            class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
-                         border border-border-default bg-surface-card text-text-base hover:brightness-110">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Upload file (optional)</span>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <input id="task-upload" name="upload" type="file" class="sr-only" />
+                                <label for="task-upload"
+                                    class="inline-flex items-center rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm font-medium text-[rgb(var(--text))] shadow-sm hover:bg-[rgb(var(--surface-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--ui-primary),0.35)] cursor-pointer">
+                                    Choose file
+                                </label>
+                                <span id="taskUploadFileName" class="text-sm text-text-subtle">No file chosen</span>
+                            </div>
+                        </label>
+
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">External form URL</span>
+                            <input type="url" name="external_url" id="task-external-url" class="oh-input" placeholder="https://...">
+                        </label>
+                    </div>
+
+                    <label class="grid gap-1 text-sm">
+                        <span class="text-text-subtle">Image for feedback (URL)</span>
+                        <input type="url" name="feedback_image_url" id="task-feedback-image" class="oh-input" placeholder="https://...">
+                    </label>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-surface-card">
+                            <input type="checkbox" name="client_must_upload" id="task-client-must-upload" value="1"
+                                class="mt-1 rounded border-border-default text-brand-primary" />
+                            <div>
+                                <div class="text-sm font-semibold text-text-base">Client must upload a file</div>
+                                <div class="text-xs text-text-subtle">Great for “send your logo”, “upload content”, etc.</div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 rounded-xl p-3 ring-1 ring-[rgb(var(--border)/.6)] bg-surface-card">
+                            <input type="checkbox" name="requires_approval" id="task-requires-approval" value="1"
+                                class="mt-1 rounded border-border-default text-brand-primary" />
+                            <div>
+                                <div class="text-sm font-semibold text-text-base">Requires approval</div>
+                                <div class="text-xs text-text-subtle">Shows in the client thread as an approval item.</div>
+                            </div>
+                        </label>
+
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Due Date</span>
+                            <input type="date" name="due_date" id="task-due-date" class="oh-input">
+                        </label>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2">
+                        <button type="button" id="cancelEditModal" class="oh-btn w-full sm:w-auto justify-center">
                             Cancel
                         </button>
-                        <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white
-                         bg-gradient-to-b from-brand-primary to-blue-700 shadow-card">
+                        <button type="submit" class="oh-btn oh-btn--primary w-full sm:w-auto justify-center">
                             Save Changes
                         </button>
                     </div>
@@ -605,6 +701,92 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const shells = document.querySelectorAll('.js-timer-shell');
+
+            const formatDuration = (seconds) => {
+                const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+                const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+                const secs = String(seconds % 60).padStart(2, '0');
+                return `${hrs}:${mins}:${secs}`;
+            };
+
+            shells.forEach((shell) => {
+                const display = shell.querySelector('.js-timer-display');
+                const startBtn = shell.querySelector('.js-timer-start');
+                const stopBtn = shell.querySelector('.js-timer-stop');
+                const billable = shell.querySelector('.js-timer-billable');
+                const startUrl = shell.dataset.startUrl;
+                const stopUrl = shell.dataset.stopUrl;
+                const canTimer = shell.dataset.canTimer === '1';
+                const runningStart = shell.dataset.runningStart;
+                let timerInterval = null;
+                let startTime = runningStart ? new Date(runningStart) : null;
+
+                const updateDisplay = () => {
+                    if (!display || !startTime) return;
+                    const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                    display.textContent = formatDuration(elapsed);
+                };
+
+                const setRunning = (running) => {
+                    if (!startBtn || !stopBtn || !billable) return;
+                    startBtn.disabled = !canTimer || running;
+                    stopBtn.disabled = !canTimer || !running;
+                    billable.disabled = !canTimer || running;
+                };
+
+                if (startTime) {
+                    updateDisplay();
+                    timerInterval = setInterval(updateDisplay, 1000);
+                    setRunning(true);
+                } else {
+                    setRunning(false);
+                }
+
+                startBtn?.addEventListener('click', async () => {
+                    if (!canTimer || !startUrl) return;
+                    const isBillable = billable?.checked ?? true;
+                    const res = await fetch(startUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ billable: isBillable ? 1 : 0 }),
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    startTime = data.start_time ? new Date(data.start_time) : new Date();
+                    updateDisplay();
+                    if (timerInterval) clearInterval(timerInterval);
+                    timerInterval = setInterval(updateDisplay, 1000);
+                    setRunning(true);
+                });
+
+                stopBtn?.addEventListener('click', async () => {
+                    if (!canTimer || !stopUrl) return;
+                    const res = await fetch(stopUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json',
+                        },
+                    });
+                    if (!res.ok) return;
+                    if (timerInterval) clearInterval(timerInterval);
+                    timerInterval = null;
+                    startTime = null;
+                    if (display) display.textContent = '00:00:00';
+                    setRunning(false);
+                });
+            });
+        });
+    </script>
 
 
     @push('scripts')
@@ -758,20 +940,16 @@
                 function toggleAssignPickers(type) {
                     const adminWrap = document.getElementById('task-assign-admin')?.closest('label');
                     const clientWrap = document.getElementById('task-assign-client')?.closest('label');
-                    const reqWrap = document.getElementById('requires-approval-wrap');
                     if (!adminWrap || !clientWrap) return;
                     if (type === 'admin') {
                         adminWrap.style.display = '';
                         clientWrap.style.display = 'none';
-                        if (reqWrap) reqWrap.style.display = 'none';
                     } else if (type === 'client') {
                         adminWrap.style.display = 'none';
                         clientWrap.style.display = '';
-                        if (reqWrap) reqWrap.style.display = '';
                     } else {
-                        adminWrap.style.display = '';
-                        clientWrap.style.display = '';
-                        if (reqWrap) reqWrap.style.display = 'none';
+                        adminWrap.style.display = 'none';
+                        clientWrap.style.display = 'none';
                     }
                 }
 
@@ -789,8 +967,12 @@
                     const clientSel = document.getElementById('task-assign-client');
                     const hiddenId = document.getElementById('task-id');
                     const statusInput = document.getElementById('task-status');
-                    const hoursInput = document.getElementById('task-hours');
                     const reqApproval = document.getElementById('task-requires-approval');
+                    const clientMustUpload = document.getElementById('task-client-must-upload');
+                    const externalUrl = document.getElementById('task-external-url');
+                    const feedbackImage = document.getElementById('task-feedback-image');
+                    const uploadInput = document.getElementById('task-upload');
+                    const uploadName = document.getElementById('taskUploadFileName');
 
                     form.setAttribute('action', updateUrl);
                     if (hiddenId) hiddenId.value = data.id || '';
@@ -802,31 +984,26 @@
 
                     selectValue(proj, data.project_id);
                     selectValue(phase, data.phase_id);
-                    if (hoursInput) hoursInput.value = data.hours_spent ?? '';
                     if (reqApproval) reqApproval.checked = !!data.requires_approval;
+                    if (clientMustUpload) clientMustUpload.checked = !!data.client_must_upload;
+                    if (externalUrl) externalUrl.value = data.external_url || '';
+                    if (feedbackImage) feedbackImage.value = data.feedback_image_url || '';
+                    if (uploadName) uploadName.textContent = 'No file chosen';
 
                     typeSel.value = data.assign_type || '';
                     if (data.assign_type === 'admin') {
                         selectValue(adminSel, data.assign_id);
                         selectValue(clientSel, '');
-                        if (reqApproval) reqApproval.checked = false;
                     } else if (data.assign_type === 'client') {
                         selectValue(clientSel, data.assign_id);
                         selectValue(adminSel, '');
-                        if (reqApproval) reqApproval.checked = !!data.requires_approval;
                     } else {
                         selectValue(adminSel, '');
                         selectValue(clientSel, '');
-                        if (reqApproval) reqApproval.checked = false;
                     }
 
                     toggleAssignPickers(typeSel.value);
-                    typeSel.onchange = () => {
-                        toggleAssignPickers(typeSel.value);
-                        if (reqApproval) {
-                            reqApproval.checked = typeSel.value === 'client' ? reqApproval.checked : false;
-                        }
-                    };
+                    typeSel.onchange = () => toggleAssignPickers(typeSel.value);
 
                     modal.classList.remove('hidden');
                     document.body.classList.add('overflow-hidden');
@@ -860,6 +1037,10 @@
 
                 document.getElementById('closeEditModal')?.addEventListener('click', closeEditModal);
                 document.getElementById('cancelEditModal')?.addEventListener('click', closeEditModal);
+                uploadInput?.addEventListener('change', () => {
+                    if (!uploadName) return;
+                    uploadName.textContent = uploadInput.files?.[0]?.name || 'No file chosen';
+                });
 
                 // Write assign_id before submit
                 document.getElementById('editTaskForm')?.addEventListener('submit', () => {
@@ -892,3 +1073,42 @@
         </script>
     @endpush
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggles = document.querySelectorAll('[data-column-toggle]');
+            if (!toggles.length) return;
+
+                const sync = () => {
+                    const isMobile = window.matchMedia('(max-width: 1220px)').matches;
+                toggles.forEach((toggle, index) => {
+                    const key = toggle.getAttribute('data-column-toggle');
+                    const body = document.querySelector(`[data-column-body="${key}"]`);
+                    if (!body) return;
+                    const shouldOpen = !isMobile || index === 0;
+                    body.classList.toggle('hidden', !shouldOpen);
+                    toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                    const icon = toggle.querySelector('i');
+                    if (icon) icon.classList.toggle('fa-rotate-180', shouldOpen);
+                });
+            };
+
+            toggles.forEach((toggle) => {
+                toggle.addEventListener('click', () => {
+                    const key = toggle.getAttribute('data-column-toggle');
+                    const body = document.querySelector(`[data-column-body="${key}"]`);
+                    if (!body) return;
+                    const isOpen = !body.classList.contains('hidden');
+                    body.classList.toggle('hidden', isOpen);
+                    toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+                    const icon = toggle.querySelector('i');
+                    if (icon) icon.classList.toggle('fa-rotate-180', !isOpen);
+                });
+            });
+
+            sync();
+            window.addEventListener('resize', sync);
+        });
+    </script>
+@endpush

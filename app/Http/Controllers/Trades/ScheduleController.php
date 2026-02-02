@@ -263,7 +263,7 @@ class ScheduleController extends Controller
         $events = $query->get()->map(function (TradePtoRequest $requestItem) use ($tenant, $tz) {
             $userName = $requestItem->user?->name
                 ?? trim(($requestItem->user?->first_name ?? '') . ' ' . ($requestItem->user?->last_name ?? ''))
-                ?? $requestItem->user?->username
+                ?? $requestItem->user?->email
                 ?? 'Team member';
             $typeLabel = $requestItem->type?->name ?? 'PTO';
             $start = $requestItem->start_date?->startOfDay()->timezone($tz);
@@ -639,7 +639,7 @@ class ScheduleController extends Controller
                     $user->where('first_name', 'like', $search)
                         ->orWhere('last_name', 'like', $search)
                         ->orWhere('email', 'like', $search)
-                        ->orWhere('username', 'like', $search);
+                        ->orWhere('email', 'like', $search);
                 });
             });
         }
@@ -958,7 +958,7 @@ class ScheduleController extends Controller
             ->where('role', '!=', 'client')
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name', 'username', 'email', 'role']);
+            ->get(['id', 'first_name', 'last_name', 'email', 'role']);
     }
 
     protected function abortIfWrongTenant(Tenant $tenant, TradeAppointment $appointment): void

@@ -16,7 +16,7 @@
         ];
         $userLabel =
             trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?:
-            $user->username ??
+            $user->email ??
             $user->email;
         $cadence = old('cadence', $schedule?->cadence ?? 'weekly');
         $timezone = old('timezone', $schedule?->timezone ?? '');

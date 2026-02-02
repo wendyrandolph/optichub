@@ -13,6 +13,7 @@ class Task extends Model
   protected $fillable = [
     'tenant_id',
     'user_id',
+    'assigned_user_id',
     'project_id',
     'contact_id',
     'phase_id',
@@ -35,6 +36,7 @@ class Task extends Model
     'hours_spent',
     'worked_seconds',
     'timer_started_at',
+    'estimated_minutes',
   ];
 
   protected $casts = [
@@ -47,6 +49,7 @@ class Task extends Model
     'timer_started_at' => 'datetime',
     'client_visible' => 'boolean',
     'requires_approval' => 'boolean',
+    'estimated_minutes' => 'integer',
   ];
 
   public function tenant(): BelongsTo
@@ -57,6 +60,13 @@ class Task extends Model
   public function user(): BelongsTo
   {
     return $this->belongsTo(User::class)->withDefault([
+      'display_name' => 'Unassigned',
+    ]);
+  }
+
+  public function assignedUser(): BelongsTo
+  {
+    return $this->belongsTo(User::class, 'assigned_user_id')->withDefault([
       'display_name' => 'Unassigned',
     ]);
   }
@@ -77,6 +87,11 @@ class Task extends Model
   public function comments(): HasMany
   {
     return $this->hasMany(TaskComment::class);
+  }
+
+  public function timeEntries(): HasMany
+  {
+    return $this->hasMany(TimeEntry::class);
   }
 
   public function phase(): BelongsTo
@@ -154,7 +169,7 @@ class Task extends Model
   {
     $tasks = self::open()
       ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-      ->with(['user:id,first_name,last_name,username']) // <- snake_case
+      ->with(['user:id,first_name,last_name,email']) // <- snake_case
       ->get();
 
     return $tasks
@@ -192,7 +207,7 @@ class Task extends Model
     return self::where('status', 'completed')
       ->selectRaw('user_id, COUNT(*) as completed_count')
       ->groupBy('user_id')
-      ->with('user:id,first_name,last_name,username')
+      ->with('user:id,first_name,last_name,email')
       ->get();
   }
   public function assigneeName(): string

@@ -6,6 +6,8 @@ use App\Models\PaymentIntegration;
 use App\Payments\Contracts\PaymentProvider;
 use App\Payments\Providers\StripeProvider;
 use App\Payments\Providers\AuthNetProvider;
+use App\Payments\Providers\MockStripeProvider;
+use App\Payments\Providers\MockWaveProvider;
 use InvalidArgumentException;
 
 class ProviderFactory
@@ -20,6 +22,8 @@ class ProviderFactory
         apiKey: $cfg['secret'] ?? null,
         connectedAccountId: $cfg['account_id'] ?? null,
       ),
+      'mock_stripe' => new MockStripeProvider($cfg),
+      'mock_wave' => new MockWaveProvider($cfg),
       'authorizenet', 'authnet' => new AuthNetProvider(
         apiLoginId: $cfg['api_login_id'] ?? '',
         transactionKey: $cfg['transaction_key'] ?? '',

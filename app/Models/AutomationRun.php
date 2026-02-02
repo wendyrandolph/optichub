@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\AutomationRunItem;
 
 class AutomationRun extends Model
 {
@@ -10,11 +11,16 @@ class AutomationRun extends Model
         'tenant_id',
         'rule_id',
         'opportunity_id',
+        'trigger_key',
+        'context_type',
+        'context_id',
         'status',
         'error',
         'duration_ms',
         'payload',
         'run_key',
+        'started_at',
+        'finished_at',
     ];
 
     protected $casts = [
@@ -29,5 +35,10 @@ class AutomationRun extends Model
     public function opportunity()
     {
         return $this->belongsTo(Opportunity::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(AutomationRunItem::class, 'run_id');
     }
 }

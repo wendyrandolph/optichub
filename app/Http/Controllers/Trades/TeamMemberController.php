@@ -64,6 +64,47 @@ class TeamMemberController extends Controller
             }
         }
 
+        if ($user = Auth::user()) {
+            if ((int) $user->tenant_id === (int) $tenant->id && ($user->role ?? null) === 'admin') {
+                $hasUserId = Schema::hasColumn('team_members', 'user_id');
+
+                $existing = TeamMember::where('tenant_id', $tenant->id)
+                    ->where(function ($q) use ($user, $hasUserId) {
+                        if ($hasUserId) {
+                            $q->where('user_id', $user->id)
+                                ->orWhere('email', $user->email);
+                        } else {
+                            $q->where('email', $user->email);
+                        }
+                    })
+                    ->first();
+
+                if ($existing) {
+                    if ($hasUserId && empty($existing->user_id)) {
+                        $existing->user_id = $user->id;
+                    }
+                    $existing->firstName = $existing->firstName ?: ($user->first_name ?? '');
+                    $existing->lastName = $existing->lastName ?: ($user->last_name ?? '');
+                    $existing->role = $existing->role ?: ($user->role ?? 'member');
+                    $existing->status = $existing->status ?: 'active';
+                    $existing->save();
+                } else {
+                    $payload = [
+                        'tenant_id' => $tenant->id,
+                        'firstName' => $user->first_name ?? '',
+                        'lastName' => $user->last_name ?? '',
+                        'email' => $user->email,
+                        'role' => $user->role ?? 'member',
+                        'status' => 'active',
+                    ];
+                    if ($hasUserId) {
+                        $payload['user_id'] = $user->id;
+                    }
+                    TeamMember::create($payload);
+                }
+            }
+        }
+
         $query = TeamMember::where('tenant_id', $tenant->id);
 
         $search = request('q');
@@ -105,7 +146,19 @@ class TeamMemberController extends Controller
         $roles = ['admin', 'dispatcher', 'lead_tech', 'tech'];
         $defaultRole = 'tech';
 
-        return view('trades.team-members.create', compact('tenant', 'roles', 'defaultRole'));
+        $usedColors = TeamMember::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereNotNull('color_hex')
+            ->pluck('color_hex')
+            ->map(fn($color) => strtoupper(trim((string) $color)))
+            ->map(function ($color) {
+                return str_starts_with($color, '#') ? $color : '#' . $color;
+            })
+            ->unique()
+            ->values()
+            ->all();
+
+        return view('trades.team-members.create', compact('tenant', 'roles', 'defaultRole', 'usedColors'));
     }
 
     public function store(Request $request, Tenant $tenant): RedirectResponse
@@ -122,6 +175,8 @@ class TeamMemberController extends Controller
             'phone' => 'nullable|string|max:25',
             'password' => 'nullable|string|min:8|confirmed',
             'hired_at' => 'nullable|date',
+            'can_view_registered_users' => 'nullable|boolean',
+            'can_manage_support' => 'nullable|boolean',
         ];
         if ($canManageColors) {
             $rules['color_hex'] = [
@@ -138,6 +193,12 @@ class TeamMemberController extends Controller
 
         if ($canManageColors && !empty($validated['color_hex'])) {
             $validated['color_hex'] = strtoupper($validated['color_hex']);
+            $allowedColors = $this->teamMemberColors($tenant);
+            if (!empty($allowedColors) && !in_array($validated['color_hex'], $allowedColors, true)) {
+                return back()
+                    ->withErrors(['color_hex' => 'Select a color from the approved list in settings.'])
+                    ->withInput();
+            }
             $distinctError = $this->distinctColorError($validated['color_hex'], $tenant->id);
             if ($distinctError) {
                 return back()->withErrors(['color_hex' => $distinctError])->withInput();
@@ -153,13 +214,14 @@ class TeamMemberController extends Controller
         $user = User::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
-            'username' => $validated['email'],
             'email' => $validated['email'],
             'password' => $password ? bcrypt($password) : \Illuminate\Support\Str::random(12),
             'tenant_id' => $tenant->id,
             'role' => $validated['role'],
             'must_change_password' => $password ? false : true,
             'hired_at' => Schema::hasColumn('users', 'hired_at') ? ($validated['hired_at'] ?? null) : null,
+            'can_view_registered_users' => (bool) ($validated['can_view_registered_users'] ?? false),
+            'can_manage_support' => (bool) ($validated['can_manage_support'] ?? false),
         ]);
 
         $memberPayload = [
@@ -269,6 +331,18 @@ class TeamMemberController extends Controller
             'tenant' => $tenant,
             'team_member' => $team_member,
             'roles' => $roles,
+            'usedColors' => TeamMember::query()
+                ->where('tenant_id', $tenant->id)
+                ->whereNotNull('color_hex')
+                ->where('id', '!=', $team_member->id)
+                ->pluck('color_hex')
+                ->map(fn($color) => strtoupper(trim((string) $color)))
+                ->map(function ($color) {
+                    return str_starts_with($color, '#') ? $color : '#' . $color;
+                })
+                ->unique()
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -287,6 +361,8 @@ class TeamMemberController extends Controller
             'phone' => 'nullable|string|max:25',
             'status' => 'required|string|in:active,inactive',
             'hired_at' => 'nullable|date',
+            'can_view_registered_users' => 'nullable|boolean',
+            'can_manage_support' => 'nullable|boolean',
         ];
         if ($canManageColors) {
             $rules['color_hex'] = [
@@ -305,13 +381,32 @@ class TeamMemberController extends Controller
 
         if ($canManageColors && !empty($validated['color_hex'])) {
             $validated['color_hex'] = strtoupper($validated['color_hex']);
+            $allowedColors = $this->teamMemberColors($tenant);
+            if (!empty($allowedColors) && !in_array($validated['color_hex'], $allowedColors, true)) {
+                return back()
+                    ->withErrors(['color_hex' => 'Select a color from the approved list in settings.'])
+                    ->withInput();
+            }
             $distinctError = $this->distinctColorError($validated['color_hex'], $tenant->id, $team_member->id);
             if ($distinctError) {
                 return back()->withErrors(['color_hex' => $distinctError])->withInput();
             }
         }
 
-        $team_member->update($validated);
+        $memberPayload = [
+            'firstName' => $validated['first_name'],
+            'lastName' => $validated['last_name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'role' => $validated['role'],
+            'title' => $validated['title'] ?? null,
+            'status' => $validated['status'],
+        ];
+        if ($canManageColors && array_key_exists('color_hex', $validated)) {
+            $memberPayload['color_hex'] = $validated['color_hex'];
+        }
+
+        $team_member->update($memberPayload);
 
         $user = null;
         if (Schema::hasColumn('team_members', 'user_id') && $team_member->user_id) {
@@ -320,8 +415,20 @@ class TeamMemberController extends Controller
         if (!$user) {
             $user = User::where('email', $team_member->email)->first();
         }
-        if ($user && Schema::hasColumn('users', 'hired_at') && array_key_exists('hired_at', $validated)) {
-            $user->hired_at = $validated['hired_at'];
+        if ($user) {
+            $user->first_name = $validated['first_name'];
+            $user->last_name = $validated['last_name'];
+            $user->email = $validated['email'];
+            $user->role = $validated['role'];
+            if (Schema::hasColumn('users', 'hired_at') && array_key_exists('hired_at', $validated)) {
+                $user->hired_at = $validated['hired_at'];
+            }
+            if (array_key_exists('can_view_registered_users', $validated)) {
+                $user->can_view_registered_users = (bool) $validated['can_view_registered_users'];
+            }
+            if (array_key_exists('can_manage_support', $validated)) {
+                $user->can_manage_support = (bool) $validated['can_manage_support'];
+            }
             $user->save();
         }
 
@@ -476,6 +583,24 @@ class TeamMemberController extends Controller
         }
 
         return null;
+    }
+
+    private function teamMemberColors(Tenant $tenant): array
+    {
+        $colors = $tenant->team_member_colors ?? [];
+        if (!is_array($colors)) {
+            return [];
+        }
+
+        return collect($colors)
+            ->map(fn($color) => strtoupper(trim((string) $color)))
+            ->filter()
+            ->map(function ($color) {
+                return str_starts_with($color, '#') ? $color : '#' . $color;
+            })
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function hexToRgb(string $hex): array

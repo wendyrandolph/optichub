@@ -11,6 +11,20 @@
         $primaryColorVal = old('primary_color', $primarySeed) ?: $primarySeed;
         $secondaryColorVal = old('secondary_color', $secondarySeed) ?: $secondarySeed;
         $accentColorVal = old('accent_color', $accentSeed) ?: $accentSeed;
+
+        $defaultTeamColors = [
+            '#1F3C66',
+            '#2563EB',
+            '#10B981',
+            '#F59E0B',
+            '#EF4444',
+            '#9333EA',
+            '#14B8A6',
+            '#64748B',
+        ];
+        $teamMemberColors = old('team_member_colors', $tenant?->team_member_colors ?? $defaultTeamColors);
+        $teamMemberColors = is_array($teamMemberColors) ? $teamMemberColors : $defaultTeamColors;
+        $teamMemberColors = array_pad($teamMemberColors, 12, '');
     @endphp
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
@@ -139,6 +153,27 @@
                     <textarea id="invoice_footer" name="invoice_footer" rows="3" class="oh-input min-h-[110px]">{{ old('invoice_footer', $tenant->invoice_footer) }}</textarea>
                     <p class="text-xs text-text-subtle">Optional note shown on client invoices.</p>
                 </div>
+            </div>
+
+            <div class="oh-card p-6 space-y-4">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-text-base">Team member colors</h2>
+                    <p class="text-sm text-text-subtle">Choose the available colors for team members in this workspace.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    @foreach ($teamMemberColors as $idx => $color)
+                        <label class="grid gap-1 text-sm">
+                            <span class="text-text-subtle">Color {{ $idx + 1 }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="h-8 w-8 rounded-md border border-border-default/70"
+                                    style="background: {{ $color ?: '#FFFFFF' }}"></span>
+                                <input name="team_member_colors[]" value="{{ $color }}"
+                                    placeholder="#1F3C66" class="oh-input h-10">
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+                <p class="text-xs text-text-subtle">Add or replace colors using hex values (e.g., #1F3C66). Empty fields are ignored.</p>
             </div>
 
             <div class="flex justify-end">

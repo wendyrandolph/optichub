@@ -6,12 +6,29 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Global scope that automatically filters records by the authenticated user's tenant.
  */
 class TenantScope implements Scope
 {
+  /**
+   * Cache for table -> has tenant_id column lookups.
+   *
+   * @var array<string, bool>
+   */
+  protected static array $tenantIdColumnCache = [];
+
+  protected static function tableHasTenantId(string $table): bool
+  {
+    if (!array_key_exists($table, static::$tenantIdColumnCache)) {
+      static::$tenantIdColumnCache[$table] = Schema::hasColumn($table, 'tenant_id');
+    }
+
+    return static::$tenantIdColumnCache[$table];
+  }
+
   /**
    * Apply the scope to a given Eloquent query builder.
    */
@@ -20,6 +37,10 @@ class TenantScope implements Scope
     $user = Auth::user();
 
     if (!$user) {
+      return;
+    }
+
+    if (!static::tableHasTenantId($model->getTable())) {
       return;
     }
 

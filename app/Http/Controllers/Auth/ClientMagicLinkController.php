@@ -79,7 +79,9 @@ class ClientMagicLinkController extends Controller
             return redirect()->route('portal.magic.expired');
         }
 
-        Auth::guard('client')->login($user);
+        $clientGuard = Auth::guard('client');
+        $clientGuard->setRememberDuration(60 * 24 * 60); // 60 days
+        $clientGuard->login($user, true);
         Auth::shouldUse('client');
         $request->session()->regenerate();
         $request->session()->regenerateToken();

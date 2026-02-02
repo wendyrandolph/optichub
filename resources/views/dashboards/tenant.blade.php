@@ -7,186 +7,321 @@
         $tp = request()->route('tenant') ?? (auth()->user()->tenant ?? auth()->user()->tenant_id);
         $tenantId = $tp instanceof \App\Models\Tenant ? $tp->getKey() : (int) $tp;
 
-        $metrics = $metrics ?? ['new' => 0, 'convRate' => 0, 'avgDaysToConvert' => 0, 'active' => 0];
-        $byStatus = $byStatus ?? ['labels' => [], 'datasets' => []];
-        $bySource = $bySource ?? ['labels' => [], 'datasets' => []];
-        $growth = $growth ?? ['labels' => [], 'datasets' => []];
-        $funnel = $funnel ?? [
-            'labels' => ['New', 'Contacted', 'Qualified', 'Proposal', 'Won'],
-            'datasets' => [['label' => 'Leads', 'data' => [0, 0, 0, 0, 0], 'backgroundColor' => '#2E5D95']],
-        ];
-        $recentLeads = $recentLeads ?? collect();
-        $owners = $owners ?? [];
-        $sources = $sources ?? [];
+        $range = $range ?? request('range', 'wtd');
 
-        $range = request('range', 'mtd');
-        $owner = request('owner');
-        $src = request('source');
+        $tasksDueToday = $tasksDueToday ?? collect();
+        $tasksOverdue = $tasksOverdue ?? collect();
+        $tasksDueSoon = $tasksDueSoon ?? collect();
+        $tasksDueTodayCount = $tasksDueTodayCount ?? 0;
+        $tasksOverdueCount = $tasksOverdueCount ?? 0;
+        $tasksDueSoonCount = $tasksDueSoonCount ?? 0;
+        $tasksBlockedCount = $tasksBlockedCount ?? 0;
+        $tasksQueue = $tasksQueue ?? collect();
+        $queue = $queue ?? 'today';
+        $invoicesOverdueCount = $invoicesOverdueCount ?? 0;
+        $invoicesOverdueTotal = $invoicesOverdueTotal ?? 0;
+        $invoicesDueSoonCount = $invoicesDueSoonCount ?? 0;
+        $invoicesDueSoonTotal = $invoicesDueSoonTotal ?? 0;
+        $invoicesDueSoon = $invoicesDueSoon ?? collect();
+        $outstandingTotal = $outstandingTotal ?? 0;
+        $collectedTotal = $collectedTotal ?? 0;
+        $draftInvoicesCount = $draftInvoicesCount ?? 0;
+        $hoursLogged = $hoursLogged ?? 0;
+        $showHoursLogged = $showHoursLogged ?? false;
+        $atRiskProjects = $atRiskProjects ?? collect();
+        $atRiskProjectsCount = $atRiskProjectsCount ?? 0;
+        $recentActivity = $recentActivity ?? collect();
+
+        $formatCurrency = fn ($value) => '$' . number_format((float) $value, 2);
+        $rangeLabel = match ($range) {
+            'today' => 'Today',
+            'wtd' => 'WTD',
+            'mtd' => 'MTD',
+            '30d' => '30D',
+            default => strtoupper($range),
+        };
     @endphp
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {{-- Header --}}
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Dashboard</p>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Workspace</p>
                 <h1 class="text-2xl md:text-3xl font-semibold text-text-base">Workspace Overview</h1>
-                <p class="text-sm text-text-subtle mt-1">Key metrics for your leads, tasks, and projects.</p>
+                <p class="text-sm text-text-subtle mt-1">See what needs attention, what’s at risk, and what money is in motion.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ Route::has('tenant.projects.create') ? route('tenant.projects.create', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn oh-btn--primary">
+                    <i class="fa-solid fa-plus mr-2 text-[12px]"></i>
+                    New Project
+                </a>
+                <a href="{{ Route::has('tenant.invoices.create') ? route('tenant.invoices.create', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn">
+                    <i class="fa-solid fa-file-invoice-dollar mr-2 text-[12px]"></i>
+                    New Invoice
+                </a>
+                <a href="{{ Route::has('tenant.time.create') ? route('tenant.time.create', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn">
+                    <i class="fa-solid fa-clock mr-2 text-[12px]"></i>
+                    Log Time
+                </a>
             </div>
         </div>
 
-        {{-- Filter bar --}}
-        <form method="GET" class="oh-card border border-border-default/70 shadow-sm rounded-2xl p-4 md:p-5">
-            <div class="grid gap-3 md:grid-cols-4">
+        {{-- Filters --}}
+        <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">Date range</p>
+                    <p class="text-sm text-text-subtle mt-1">Quick filters for this overview.</p>
+                </div>
                 <div class="flex flex-wrap items-center gap-2">
-                    @foreach (['today' => 'Today', 'wtd' => 'WTD', 'mtd' => 'MTD', '30d' => '30D', '90d' => '90D'] as $key => $label)
-                        <label class="cursor-pointer">
-                            <input type="radio" name="range" value="{{ $key }}" class="sr-only" @checked($range === $key)>
-                            <span class="oh-btn h-9 px-3 {{ $range === $key ? 'oh-btn--primary' : '' }}">{{ $label }}</span>
-                        </label>
+                    @foreach (['today' => 'Today', 'wtd' => 'WTD', 'mtd' => 'MTD', '30d' => '30D'] as $key => $label)
+                        <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId, 'range' => $key, 'queue' => $queue]) }}"
+                            class="oh-pill {{ $range === $key ? 'oh-pill--active' : '' }}">
+                            {{ $label }}
+                        </a>
                     @endforeach
-                </div>
-
-                <select name="owner" class="oh-select h-9 text-sm">
-                    <option value="">All owners</option>
-                    @foreach ($owners as $o)
-                        <option value="{{ $o['id'] }}" @selected($owner == $o['id'])>{{ $o['name'] }}</option>
-                    @endforeach
-                </select>
-
-                <select name="source" class="oh-select h-9 text-sm">
-                    <option value="">All sources</option>
-                    @foreach ($sources as $s)
-                        <option value="{{ $s }}" @selected($src === $s)>{{ ucfirst($s) }}</option>
-                    @endforeach
-                </select>
-
-                <div class="flex gap-2 md:justify-end">
-                    <button class="oh-btn oh-btn--primary h-9 px-3">Filter</button>
-                    <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId]) }}" class="oh-btn h-9 px-3">Reset</a>
+                    <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId, 'range' => $range, 'queue' => $queue]) }}"
+                        class="oh-btn h-9 px-3">Filter</a>
+                    @if (request()->has('range') || request()->has('queue'))
+                        <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId]) }}" class="oh-btn h-9 px-3">
+                            Reset
+                        </a>
+                    @endif
                 </div>
             </div>
-        </form>
-
-        {{-- KPI row --}}
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <x-insight-kpi-tile title="New Leads ({{ strtoupper($range) }})" icon="fa-user-plus" :stat="(int) ($metrics['new'] ?? 0)" colorType="brand"
-                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
-            <x-insight-kpi-tile title="Conversion Rate" icon="fa-chart-line" :stat="number_format((float) ($metrics['convRate'] ?? 0), 1) . '%'" colorType="success"
-                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
-            <x-insight-kpi-tile title="Avg. Days to Convert" icon="fa-stopwatch" :stat="number_format((float) ($metrics['avgDaysToConvert'] ?? 0), 1)" colorType="info"
-                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
-            <x-insight-kpi-tile title="Active Leads" icon="fa-filter" :stat="(int) ($metrics['active'] ?? 0)" colorType="accent"
-                href="{{ route('tenant.leads.index', ['tenant' => $tenantId] + request()->query()) }}" />
         </div>
 
-        {{-- Charts --}}
-        <div class="grid gap-6 lg:grid-cols-3">
+        {{-- Attention in the next 7 days --}}
+        <div class="grid gap-4 lg:grid-cols-3">
             <section class="oh-card border border-border-default/70 rounded-2xl p-5">
-                <h3 class="text-sm font-semibold text-text-base mb-3">Pipeline by Status</h3>
-                <div class="relative h-[300px]">
-                    @if (!empty($byStatus['labels']))
-                        <canvas id="statusPie"></canvas>
-                    @else
-                        <x-empty-state message="No pipeline data." />
-                    @endif
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-text-subtle">Tasks due soon</p>
+                        <div class="mt-2 text-2xl font-semibold text-text-base">{{ $tasksDueSoonCount }}</div>
+                        <p class="text-sm text-text-subtle mt-1">Due in the next 7 days.</p>
+                    </div>
+                    <span class="oh-pill">Due soon</span>
                 </div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($tasksDueSoon->take(3) as $task)
+                        <div class="flex items-start justify-between gap-3 text-sm">
+                            <div>
+                                <div class="font-medium text-text-base">{{ $task->title }}</div>
+                                <div class="text-xs text-text-subtle">{{ $task->project?->project_name ?? 'No project' }}</div>
+                            </div>
+                            <div class="text-xs text-text-subtle">{{ $task->due_date?->format('M j') ?? '—' }}</div>
+                        </div>
+                    @empty
+                        <div class="text-sm text-text-subtle">No tasks due soon.</div>
+                    @endforelse
+                </div>
+                <a href="{{ Route::has('tenant.tasks.index') ? route('tenant.tasks.index', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn oh-btn--ghost mt-4">View tasks</a>
             </section>
 
             <section class="oh-card border border-border-default/70 rounded-2xl p-5">
-                <h3 class="text-sm font-semibold text-text-base mb-3">Lead Sources</h3>
-                <div class="relative h-[300px]">
-                    @if (!empty($bySource['labels']))
-                        <canvas id="sourceBar"></canvas>
-                    @else
-                        <x-empty-state message="No source data." />
-                    @endif
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-text-subtle">Invoices due soon</p>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <span class="text-2xl font-semibold text-text-base">{{ $formatCurrency($invoicesDueSoonTotal) }}</span>
+                            <span class="text-sm text-text-subtle">({{ $invoicesDueSoonCount }})</span>
+                        </div>
+                        <p class="text-sm text-text-subtle mt-1">Due in the next 7 days.</p>
+                    </div>
+                    <span class="oh-pill">Due soon</span>
                 </div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($invoicesDueSoon as $invoice)
+                        <div class="flex items-start justify-between gap-3 text-sm">
+                            <div>
+                                <div class="font-medium text-text-base">{{ $invoice->invoice_number ?? 'Invoice' }}</div>
+                                <div class="text-xs text-text-subtle">
+                                    {{ $invoice->contact?->first_name ?? '' }} {{ $invoice->contact?->last_name ?? '' }}
+                                </div>
+                            </div>
+                            <div class="text-xs text-text-subtle">{{ $invoice->due_date?->format('M j') ?? '—' }}</div>
+                        </div>
+                    @empty
+                        <div class="text-sm text-text-subtle">No invoices due soon.</div>
+                    @endforelse
+                </div>
+                <a href="{{ Route::has('tenant.invoices.index') ? route('tenant.invoices.index', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn oh-btn--ghost mt-4">View invoices</a>
             </section>
 
             <section class="oh-card border border-border-default/70 rounded-2xl p-5">
-                <h3 class="text-sm font-semibold text-text-base mb-3">Conversion Funnel</h3>
-                <div class="relative h-[300px]">
-                    <canvas id="funnelBar"></canvas>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-text-subtle">Projects at risk</p>
+                        <div class="mt-2 text-2xl font-semibold text-text-base">{{ $atRiskProjectsCount }}</div>
+                        <p class="text-sm text-text-subtle mt-1">Needs attention this week.</p>
+                    </div>
+                    <span class="oh-pill">At risk</span>
                 </div>
-            </section>
-
-            <section class="oh-card lg:col-span-3 border border-border-default rounded-2xl shadow-card p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-base font-semibold text-heading">New Leads Over Time</h3>
+                <div class="mt-4 space-y-3">
+                    @forelse ($atRiskProjects->take(3) as $project)
+                        <div class="flex items-start justify-between gap-3 text-sm">
+                            <div>
+                                <div class="font-medium text-text-base">{{ $project['name'] }}</div>
+                                <div class="text-xs text-text-subtle">{{ $project['reason'] }}</div>
+                            </div>
+                            <div class="text-xs text-text-subtle">{{ $project['client'] }}</div>
+                        </div>
+                    @empty
+                        <div class="text-sm text-text-subtle">No projects flagged right now.</div>
+                    @endforelse
                 </div>
-                <div class="relative h-[340px]">
-                    @if (!empty($growth['labels']))
-                        <canvas id="growthLine"></canvas>
-                    @else
-                        <x-empty-state message="No timeline yet." />
-                    @endif
-                </div>
+                <a href="{{ Route::has('tenant.projects.index') ? route('tenant.projects.index', ['tenant' => $tenantId]) : '#' }}"
+                    class="oh-btn oh-btn--ghost mt-4">View projects</a>
             </section>
         </div>
 
-        {{-- Recent leads --}}
-        <section class="oh-card bg-surface-card border border-border-default rounded-2xl shadow-card p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-base font-semibold text-heading">Recent Leads</h3>
-                <a href="{{ route('tenant.leads.index', ['tenant' => $tenantId]) }}" class="oh-btn">View all</a>
+        {{-- Main content --}}
+        <div class="grid gap-6 lg:grid-cols-12">
+            <div class="lg:col-span-7 space-y-6">
+                <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h2 class="text-base font-semibold text-text-base">Attention queue</h2>
+                        <div class="flex flex-wrap items-center gap-2">
+                            @foreach (['overdue' => 'Overdue', 'today' => 'Due today', 'soon' => 'Due soon', 'blocked' => 'Blocked'] as $key => $label)
+                                <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantId, 'range' => $range, 'queue' => $key]) }}"
+                                    class="oh-pill {{ $queue === $key ? 'oh-pill--active' : '' }}">
+                                    {{ $label }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @forelse ($tasksQueue as $task)
+                        @php
+                            $dueDate = $task->due_date?->format('M j') ?? '—';
+                            $status = strtolower((string) ($task->status ?? 'todo'));
+                            $statusPill = match ($status) {
+                                'completed' => 'oh-pill oh-pill--success',
+                                'in_progress' => 'oh-pill oh-pill--info',
+                                'blocked' => 'oh-pill oh-pill--warning',
+                                default => 'oh-pill',
+                            };
+                        @endphp
+                        <div class="flex items-start justify-between gap-4 py-3 border-b border-border-default/60 last:border-b-0">
+                            <div>
+                                <div class="text-sm font-medium text-text-base">{{ $task->title }}</div>
+                                <div class="text-xs text-text-subtle">
+                                    {{ $task->project?->project_name ?? 'No project' }}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="{{ $statusPill }}">{{ str_replace('_', ' ', $status) }}</span>
+                                <div class="text-xs text-text-subtle mt-1">{{ $dueDate }}</div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-sm text-text-subtle">
+                            No items in this queue. Create a task or start a project to populate your work list.
+                            <a class="oh-btn oh-btn--ghost ml-2"
+                                href="{{ Route::has('tenant.tasks.create') ? route('tenant.tasks.create', ['tenant' => $tenantId]) : '#' }}">
+                                New Task
+                            </a>
+                        </div>
+                    @endforelse
+                    <div class="mt-4">
+                        <a href="{{ Route::has('tenant.tasks.index') ? route('tenant.tasks.index', ['tenant' => $tenantId]) : '#' }}"
+                            class="oh-btn">View all tasks</a>
+                    </div>
+                </section>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="text-left bg-[rgb(var(--surface-muted)/.55)]">
-                        <tr class="text-[11px] uppercase tracking-wide font-semibold text-text-subtle border-b border-border-default/60">
-                            <th class="py-2 pr-4">Lead</th>
-                            <th class="py-2 pr-4">Owner</th>
-                            <th class="py-2 pr-4">Source</th>
-                            <th class="py-2 pr-4">Status</th>
-                            <th class="py-2 pr-4">Created</th>
-                            <th class="py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y" style="--tw-divide-color: rgb(var(--border) / .35);">
-                        @forelse ($recentLeads as $lead)
-                            @php
-                                $id = data_get($lead, 'id');
-                                $name = trim((data_get($lead, 'first_name') ?? '') . ' ' . (data_get($lead, 'last_name') ?? '')) ?: (data_get($lead, 'email') ?? 'Unknown');
-                                $ownerN = data_get($lead, 'owner_name', '—');
-                                $statusVal = strtolower((string) data_get($lead, 'status', 'new'));
-                                $sourceVal = strtolower((string) data_get($lead, 'source', '—'));
-                                $status = ucfirst((string) data_get($lead, 'status', 'New'));
-                                $source = ucfirst((string) data_get($lead, 'source', '—'));
-                                $created = optional(data_get($lead, 'created_at') ? \Carbon\Carbon::parse(data_get($lead, 'created_at')) : null)?->format('M j, Y') ?? '—';
-                                $statusPillClass = match (true) {
-                                    str_contains($statusVal, 'won') || str_contains($statusVal, 'client') || str_contains($statusVal, 'converted') => 'oh-pill oh-pill--success',
-                                    str_contains($statusVal, 'lost') || str_contains($statusVal, 'closed') => 'oh-pill oh-pill--danger',
-                                    str_contains($statusVal, 'qualified') || str_contains($statusVal, 'interested') => 'oh-pill oh-pill--info',
-                                    str_contains($statusVal, 'contact') => 'oh-pill oh-pill--warning',
-                                    default => 'oh-pill',
-                                };
-                                $sourcePillClass = match ($sourceVal) {
-                                    'referral' => 'oh-pill oh-pill--success',
-                                    'ads' => 'oh-pill oh-pill--warning',
-                                    'web' => 'oh-pill oh-pill--info',
-                                    default => 'oh-pill',
-                                };
-                            @endphp
-                            <tr class="hover:bg-surface-accent/40 transition-colors">
-                                <td class="py-2 pr-4 font-medium text-heading">{{ $name }}</td>
-                                <td class="py-2 pr-4 text-text-subtle">{{ $ownerN }}</td>
-                                <td class="py-3 pr-4"><span class="{{ $sourcePillClass }}">{{ $source }}</span></td>
-                                <td class="py-3 pr-4"><span class="{{ $statusPillClass }}">{{ $status }}</span></td>
-                                <td class="py-2 pr-4 text-text-subtle">{{ $created }}</td>
-                                <td class="py-2 text-right">
-                                    <a href="{{ route('tenant.leads.show', ['tenant' => $tenantId, 'lead' => $id]) }}" class="oh-icon-btn" title="View">
-                                        <i class="fa-solid fa-circle-info text-[12px]"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="py-4 text-center text-text-subtle">No recent leads.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="lg:col-span-5 space-y-6">
+                <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-semibold text-text-base">Money in motion</h2>
+                        <span class="text-xs uppercase tracking-wide text-text-subtle">{{ $rangeLabel }}</span>
+                    </div>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-text-subtle">Outstanding</span>
+                            <span class="font-semibold text-text-base">{{ $formatCurrency($outstandingTotal) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-text-subtle">Due in next 7 days</span>
+                            <span class="font-semibold text-text-base">{{ $formatCurrency($invoicesDueSoonTotal) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-text-subtle">Overdue</span>
+                            <span class="font-semibold text-text-base">{{ $formatCurrency($invoicesOverdueTotal) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-text-subtle">Collected ({{ $rangeLabel }})</span>
+                            <span class="font-semibold text-text-base">{{ $formatCurrency($collectedTotal) }}</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <a href="{{ Route::has('tenant.invoices.create') ? route('tenant.invoices.create', ['tenant' => $tenantId]) : '#' }}"
+                            class="oh-btn oh-btn--primary">Create invoice</a>
+                        <a href="{{ Route::has('tenant.invoices.index') ? route('tenant.invoices.index', ['tenant' => $tenantId]) : '#' }}"
+                            class="oh-btn {{ $invoicesOverdueCount > 0 ? '' : 'opacity-50 pointer-events-none' }}"
+                            @if ($invoicesOverdueCount === 0) aria-disabled="true" @endif>
+                            Send reminder
+                        </a>
+                    </div>
+                </section>
+
+                <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-semibold text-text-base">At-risk projects</h2>
+                        <span class="text-xs uppercase tracking-wide text-text-subtle">Last activity</span>
+                    </div>
+                    @forelse ($atRiskProjects as $project)
+                        <div class="flex items-start justify-between gap-4 py-3 border-b border-border-default/60 last:border-b-0">
+                            <div>
+                                <div class="text-sm font-medium text-text-base">{{ $project['name'] }}</div>
+                                <div class="text-xs text-text-subtle">{{ $project['client'] }}</div>
+                                <div class="text-xs text-text-subtle mt-1">{{ $project['reason'] }}</div>
+                            </div>
+                            <a href="{{ Route::has('tenant.projects.show') ? route('tenant.projects.show', ['tenant' => $tenantId, 'project' => $project['id']]) : '#' }}"
+                                class="oh-btn">View</a>
+                        </div>
+                    @empty
+                        <div class="text-sm text-text-subtle">No projects at risk.</div>
+                    @endforelse
+                </section>
+            </div>
+        </div>
+
+        {{-- Recent activity --}}
+        <section class="oh-card border border-border-default/70 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-text-base">Recent activity</h2>
+                @if (Route::has('tenant.activity.index'))
+                    <a href="{{ route('tenant.activity.index', ['tenant' => $tenantId]) }}" class="oh-btn">View all</a>
+                @endif
+            </div>
+            <div class="space-y-0">
+                @forelse ($recentActivity as $activity)
+                    @php
+                        $actor = trim(($activity->user?->first_name ?? '') . ' ' . ($activity->user?->last_name ?? '')) ?: ($activity->user?->email ?? 'Someone');
+                        $label = $activity->description ?: str_replace('_', ' ', (string) $activity->action);
+                        $time = $activity->created_at ? $activity->created_at->diffForHumans() : '';
+                    @endphp
+                    <div class="flex items-start justify-between gap-4 py-3 border-b border-border-default/60 last:border-b-0">
+                        <div>
+                            <div class="text-sm text-text-base">{{ $label }}</div>
+                            <div class="text-xs text-text-subtle">By {{ $actor }}</div>
+                        </div>
+                        <div class="text-xs text-text-subtle">{{ $time }}</div>
+                    </div>
+                @empty
+                    <div class="text-sm text-text-subtle">
+                        No activity yet. Log time, add a task, or create a project to get started.
+                        <a class="oh-btn oh-btn--ghost ml-2"
+                            href="{{ Route::has('tenant.time.create') ? route('tenant.time.create', ['tenant' => $tenantId]) : '#' }}">
+                            Log time
+                        </a>
+                    </div>
+                @endforelse
             </div>
         </section>
     </div>

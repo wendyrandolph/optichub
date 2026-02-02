@@ -16,12 +16,19 @@ class InvoicePayment extends Model
         'amount',
         'method',
         'reference',
+        'provider',
+        'status',
+        'currency',
+        'provider_payment_id',
+        'provider_checkout_id',
+        'raw',
         'paid_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'raw' => 'array',
     ];
 
     public function invoice(): BelongsTo

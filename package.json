@@ -5,9 +5,12 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "format": "prettier \"resources/**/*.{css,js,ts,blade.php}\" --write"
+        "format": "prettier \"resources/**/*.{css,js,ts,blade.php}\" --write",
+        "ui:qa": "playwright test --config tests/ui/playwright.config.ts",
+        "ui:qa:install": "playwright install --with-deps"
     },
     "devDependencies": {
+        "@playwright/test": "^1.42.0",
         "@popperjs/core": "^2.11.6",
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/line-clamp": "^0.4.4",

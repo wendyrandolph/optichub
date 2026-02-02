@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\ClientMagicLinkController;
 use App\Http\Controllers\PublicTradeQuoteController;
 use App\Http\Controllers\TenantHomeController;
 use App\Http\Controllers\LeadInboxController;
+use App\Http\Controllers\ProposalController;
 
 // Public/marketing
 require __DIR__ . '/publicRoutes.php';
@@ -63,6 +64,25 @@ Route::post('/quote/{token}/accept', [PublicTradeQuoteController::class, 'accept
 Route::post('/lead-inbox/{inbox_key}', [LeadInboxController::class, 'store'])
   ->middleware(['web', 'nocache', 'throttle:lead-inbox'])
   ->name('public.leads.inbox');
+
+// Public proposal viewing + approval
+Route::get('/proposal/{token}', [\App\Http\Controllers\ProposalPublicController::class, 'show'])
+  ->middleware(['web', 'nocache'])
+  ->name('proposal.public.show');
+Route::post('/proposal/{token}/sign', [\App\Http\Controllers\ProposalPublicController::class, 'sign'])
+  ->middleware(['web', 'nocache'])
+  ->name('proposal.public.sign');
+
+// Legacy routes (kept for backward compatibility)
+Route::get('/proposals/{token}', [\App\Http\Controllers\ProposalPublicController::class, 'show'])
+  ->middleware(['web', 'nocache'])
+  ->name('proposals.client.show');
+Route::post('/proposals/{token}/accept', [ProposalController::class, 'accept'])
+  ->middleware(['web', 'nocache'])
+  ->name('proposals.client.accept');
+Route::post('/proposals/{token}/reject', [ProposalController::class, 'reject'])
+  ->middleware(['web', 'nocache'])
+  ->name('proposals.client.reject');
 
 Route::prefix('portal')
   ->middleware(['web', 'nocache'])

@@ -12,9 +12,10 @@ use Illuminate\Support\Facades\View;
 use App\Support\Branding;
 use App\Models\Client;
 use App\Models\Project;
-use App\Models\ProjectConversation;
-use App\Models\ProjectMessage;
+use App\Models\ChatChannel;
+use App\Models\ChatMessage;
 use App\Models\MagicLink;
+use App\Http\Middleware\RequireCapability;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->bound('router')) {
+            $this->app['router']->aliasMiddleware('capability', RequireCapability::class);
+        }
+
         /**
          * URL tenant defaults (safe in web only).
          * Ensures route('tenant.*') doesn’t need you to pass ['tenant' => ...] every time.
@@ -134,29 +139,164 @@ class AppServiceProvider extends ServiceProvider
                         ->pluck('id');
 
                     if ($projectIds->isNotEmpty()) {
-                        $conversationIds = ProjectConversation::whereIn('project_id', $projectIds)
-                            ->pluck('id');
+                        $channelsQuery = ChatChannel::query()
+                            ->where('type', 'project')
+                            ->whereIn('project_id', $projectIds);
 
-                        if ($conversationIds->isNotEmpty()) {
-                            $lastMessageSub = ProjectMessage::select('sender_type')
-                                ->whereColumn('conversation_id', 'pc.id')
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('chat_channels', 'tenant_id')) {
+                            $channelsQuery->where('tenant_id', $clientUser->tenant_id);
+                        }
+
+                        $channelIds = $channelsQuery->pluck('id');
+
+                        if ($channelIds->isNotEmpty()) {
+                            $lastMessageAtSub = ChatMessage::select('created_at')
+                                ->whereColumn('channel_id', 'c.id')
+                                ->orderByDesc('created_at')
+                                ->limit(1);
+                            $lastMessageUserSub = ChatMessage::select('user_id')
+                                ->whereColumn('channel_id', 'c.id')
                                 ->orderByDesc('created_at')
                                 ->limit(1);
 
-                            $unreadCount = ProjectConversation::from('project_conversations as pc')
-                                ->whereIn('pc.id', $conversationIds)
-                                ->whereNotNull('pc.last_message_at')
-                                ->whereRaw('pc.last_message_at > COALESCE(pc.public_last_viewed_at, ?)', ['1970-01-01 00:00:00'])
-                                ->whereRaw('(' . $lastMessageSub->toSql() . ') = ?', ['tenant'])
-                                ->addBinding($lastMessageSub->getBindings())
+                            $unreadCount = ChatChannel::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                                ->from('chat_channels as c')
+                                ->whereIn('c.id', $channelIds)
+                                ->whereNull('c.archived_at')
+                                ->leftJoin('chat_reads as r', function ($join) use ($clientUser) {
+                                    $join->on('r.channel_id', '=', 'c.id')
+                                        ->where('r.user_id', '=', $clientUser->id);
+                                })
+                                ->when(
+                                    \Illuminate\Support\Facades\Schema::hasColumn('chat_channels', 'tenant_id'),
+                                    fn($q) => $q->where('c.tenant_id', $clientUser->tenant_id),
+                                )
+                                ->whereRaw('(' . $lastMessageAtSub->toSql() . ') is not null')
+                                ->whereRaw('(' . $lastMessageAtSub->toSql() . ') > COALESCE(r.last_read_at, ?)', ['1970-01-01 00:00:00'])
+                                ->whereRaw('(' . $lastMessageUserSub->toSql() . ') != ?', [$clientUser->id])
+                                ->addBinding($lastMessageAtSub->getBindings())
+                                ->addBinding($lastMessageAtSub->getBindings())
+                                ->addBinding($lastMessageUserSub->getBindings())
                                 ->count();
                         }
                     }
                 }
             }
 
+            $portalAlerts = collect();
+            $portalAlertCount = 0;
+
+            if ($clientUser && $clientUser->role === 'client' && $clientUser->contact_id) {
+                $client = \App\Models\Client::where('tenant_id', $clientUser->tenant_id)
+                    ->where('id', $clientUser->contact_id)
+                    ->first();
+                $lastSeen = $clientUser->portal_last_seen_at;
+
+                if ($client) {
+                    $clientId = (int) $client->id;
+
+                    $taskBaseQuery = \App\Models\Task::query()
+                        ->where('tenant_id', $clientUser->tenant_id)
+                        ->where(function ($q) use ($clientId) {
+                            $q->where('contact_id', $clientId)
+                                ->orWhere(function ($sub) use ($clientId) {
+                                    $sub->where('assign_type', 'client')
+                                        ->where('assign_id', $clientId);
+                                });
+                        })
+                        ->whereNotIn('status', ['completed', 'closed', 'archived']);
+
+                    $overdueTasksQuery = (clone $taskBaseQuery)
+                        ->whereNotNull('due_date')
+                        ->whereDate('due_date', '<', now()->toDateString());
+
+                    $newTasksQuery = (clone $taskBaseQuery)
+                        ->when($lastSeen, fn($q) => $q->where('created_at', '>', $lastSeen));
+
+                    $overdueTasks = $overdueTasksQuery->orderBy('due_date')->limit(3)->get();
+                    $newTasks = $newTasksQuery->orderByDesc('created_at')->limit(3)->get();
+
+                    $overdueTaskCount = $overdueTasksQuery->count();
+                    $newTaskCount = $newTasksQuery->count();
+
+                    $invoiceBaseQuery = \App\Models\Invoice::query()
+                        ->where('tenant_id', $clientUser->tenant_id)
+                        ->where('contact_id', $clientId)
+                        ->whereNotIn('status', ['paid', 'void', 'cancelled']);
+
+                    $overdueInvoicesQuery = (clone $invoiceBaseQuery)
+                        ->whereNotNull('due_date')
+                        ->whereDate('due_date', '<', now()->toDateString());
+
+                    $newInvoicesQuery = (clone $invoiceBaseQuery)
+                        ->when($lastSeen, fn($q) => $q->where('created_at', '>', $lastSeen));
+
+                    $overdueInvoices = $overdueInvoicesQuery->orderBy('due_date')->limit(3)->get();
+                    $newInvoices = $newInvoicesQuery->orderByDesc('created_at')->limit(3)->get();
+
+                    $overdueInvoiceCount = $overdueInvoicesQuery->count();
+                    $newInvoiceCount = $newInvoicesQuery->count();
+
+                    $portalAlertCount = $overdueTaskCount + $newTaskCount + $overdueInvoiceCount + $newInvoiceCount;
+
+                    $portalAlerts = collect()
+                        ->merge($overdueTasks->map(function ($task) {
+                            $url = $task->project_id
+                                ? route('portal.projects.show', $task->project_id)
+                                : route('portal.tasks.comments.index', $task->id);
+                            return [
+                                'type' => 'task',
+                                'title' => 'Task overdue: ' . ($task->title ?? 'Task'),
+                                'meta' => $task->due_date ? 'Due ' . $task->due_date->format('M j, Y') : 'Past due',
+                                'url' => $url,
+                                'is_urgent' => true,
+                                'created_at' => $task->due_date ?? $task->created_at,
+                            ];
+                        }))
+                        ->merge($newTasks->map(function ($task) {
+                            $url = $task->project_id
+                                ? route('portal.projects.show', $task->project_id)
+                                : route('portal.tasks.comments.index', $task->id);
+                            return [
+                                'type' => 'task',
+                                'title' => 'New task assigned: ' . ($task->title ?? 'Task'),
+                                'meta' => $task->due_date ? 'Due ' . $task->due_date->format('M j, Y') : 'No due date',
+                                'url' => $url,
+                                'is_urgent' => false,
+                                'created_at' => $task->created_at,
+                            ];
+                        }))
+                        ->merge($overdueInvoices->map(function ($invoice) {
+                            return [
+                                'type' => 'invoice',
+                                'title' => 'Invoice overdue: ' . ($invoice->invoice_number ?? 'Invoice'),
+                                'meta' => $invoice->due_date ? 'Due ' . $invoice->due_date->format('M j, Y') : 'Past due',
+                                'url' => route('portal.invoices.show', $invoice->id),
+                                'is_urgent' => true,
+                                'created_at' => $invoice->due_date ?? $invoice->created_at,
+                            ];
+                        }))
+                        ->merge($newInvoices->map(function ($invoice) {
+                            return [
+                                'type' => 'invoice',
+                                'title' => 'New invoice: ' . ($invoice->invoice_number ?? 'Invoice'),
+                                'meta' => $invoice->due_date ? 'Due ' . $invoice->due_date->format('M j, Y') : 'No due date',
+                                'url' => route('portal.invoices.show', $invoice->id),
+                                'is_urgent' => false,
+                                'created_at' => $invoice->created_at,
+                            ];
+                        }))
+                        ->sortByDesc('is_urgent')
+                        ->sortByDesc('created_at')
+                        ->values()
+                        ->take(6);
+                }
+            }
+
             $view->with('portalTheme', $portalTheme);
             $view->with('portalUnreadCount', $unreadCount);
+            $view->with('portalAlerts', $portalAlerts);
+            $view->with('portalAlertCount', $portalAlertCount);
             $view->with('portalMagicLink', $portalMagicLink);
             $view->with('portalMagicLinkDaysLeft', $portalMagicLinkDaysLeft);
         });

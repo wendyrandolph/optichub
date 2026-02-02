@@ -25,7 +25,9 @@ class EmailController extends Controller
   public function create(\App\Models\Tenant $tenant)
   {
     $clients = \App\Models\Client::where('tenant_id', $tenant->id)
-      ->orderBy('lastName')->get(['id', 'lastName as name', 'email']);
+      ->orderBy('lastName')
+      ->orderBy('firstName')
+      ->get(['id', 'firstName', 'lastName', 'email']);
 
     $leads = \App\Models\Lead::where('tenant_id', $tenant->id)
       ->orderBy('name')->get(['id', 'name', 'email']);

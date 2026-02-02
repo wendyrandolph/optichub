@@ -29,7 +29,9 @@ class TenantController extends Controller
     // -------------------------------------------------
     if ($request->routeIs('admin.tenants.*')) {
       // List all tenants (your SaaS customers)
-      $tenants = Tenant::orderBy('created_at', 'desc')->paginate(20);
+      $tenants = Tenant::with('stripePaymentAccount')
+        ->orderBy('created_at', 'desc')
+        ->paginate(20);
 
       // Simple KPIs based on the current page collection
       $collection = $tenants->getCollection();
@@ -212,6 +214,7 @@ class TenantController extends Controller
     $statusOptions = [
       'active'    => 'Active',
       'trialing'  => 'Trialing',
+      'beta'      => 'Beta',
       'paused'    => 'Paused',
       'canceled'  => 'Canceled',
     ];
@@ -231,7 +234,7 @@ class TenantController extends Controller
       'name'               => 'required|string|max:255',
       'website'            => 'nullable|string|max:255',
       'timezone'           => 'nullable|string|max:100',
-      'subscription_status' => 'required|string|in:active,trialing,paused,canceled',
+      'subscription_status' => 'required|string|in:active,trialing,beta,paused,canceled',
       'plan_name'          => 'nullable|string|max:100',
       'primary_color'      => 'nullable|string|max:20',
       'secondary_color'    => 'nullable|string|max:20',
@@ -241,6 +244,20 @@ class TenantController extends Controller
 
 
     $tenant->update($data);
+
+    $subscription = $tenant->currentSubscription;
+    if ($subscription) {
+      $subscriptionUpdates = [];
+      if (!empty($data['plan_name'])) {
+        $subscriptionUpdates['plan_code'] = $data['plan_name'];
+      }
+      if (!empty($data['subscription_status'])) {
+        $subscriptionUpdates['status'] = $data['subscription_status'];
+      }
+      if ($subscriptionUpdates) {
+        $subscription->update($subscriptionUpdates);
+      }
+    }
 
     return redirect()->route('admin.tenants.show', $tenant)
       ->with('success', 'Tenant updated successfully.');

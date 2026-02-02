@@ -26,7 +26,6 @@ class DevAdminSeeder extends Seeder
       ['email' => 'admin@example.com'],
       [
         'tenant_id'            => $tenant->id,
-        'username'             => 'admin',
         'first_name'           => 'Admin',
         'last_name'            => 'User',
         'password'             => Hash::make('secret123'),

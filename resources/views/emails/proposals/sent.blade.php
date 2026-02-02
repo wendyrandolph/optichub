@@ -1,37 +1,23 @@
 @component('mail::message')
+@if(!empty($logoUrl))
+<div style="text-align:left;margin-bottom:16px;">
+    <img src="{{ $logoUrl }}" alt="{{ $brandName ?? 'Renlo' }} logo" style="max-height:48px;max-width:200px;">
+</div>
+@endif
 
-New Proposal: {{ $proposal->title }}
-Hello {{ $clientFirstName }},
+# New proposal ready
 
-A new proposal has been created for you. You can view the full details and respond to it below.
+Hi {{ $clientFirstName ?? 'there' }},
 
-@component('mail::button', ['url' => $proposalUrl])
-View Proposal
+{{ $brandName ?? 'Renlo' }} has prepared a proposal for you. You can review it and approve online.
+
+@component('mail::button', ['url' => $proposalUrl, 'color' => 'primary'])
+View proposal
 @endcomponent
 
-Proposal Details
-Field
+If the button doesn’t work, copy and paste this link into your browser:
+{{ $proposalUrl }}
 
-Value
-
-Title
-
-{{ $proposal->title }}
-
-Project
-
-{{ $proposal->project->name ?? 'N/A' }}
-
-Status
-
-{{ Str::title($proposal->status) }}
-
-If you have any questions, please reply to this email.
-
-Thanks,
-
-
-
-
-{{ config('app.name') }} Team
+Thanks,  
+{{ $brandName ?? 'Renlo' }}
 @endcomponent

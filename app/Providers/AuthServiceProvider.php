@@ -39,6 +39,8 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\TradeAppointment::class => \App\Policies\TradeAppointmentPolicy::class,
         \App\Models\TradeQuote::class => \App\Policies\TradeQuotePolicy::class,
         \App\Models\TradeServicePlan::class => \App\Policies\TradeServicePlanPolicy::class,
+        \App\Models\SupportTicket::class => \App\Policies\SupportTicketPolicy::class,
+        \App\Models\Proposal::class => \App\Policies\ProposalPolicy::class,
     ];
 
     /**

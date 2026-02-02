@@ -28,11 +28,27 @@
                 <p class="text-sm text-text-subtle">Review the opportunity details and keep follow-ups on track.</p>
             </div>
             <div class="flex flex-wrap items-center justify-end gap-2">
+                <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">
+                    <i class="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden="true"></i>
+                    View All Opportunities
+                </a>
                 @if (strtolower($opp->stage) === 'won')
                     <form method="POST"
                         action="{{ route('tenant.opportunities.convert', ['tenant' => $tenantId, 'opportunity' => $opp->id]) }}">
                         @csrf
                         <button type="submit" class="oh-btn oh-btn--primary">Convert to Project</button>
+                    </form>
+                @endif
+                @if (strtolower($opp->stage) === 'lost')
+                    <form method="POST"
+                        action="{{ route('tenant.opportunities.destroy', ['tenant' => $tenantId, 'opportunity' => $opp->id]) }}"
+                        onsubmit="return confirm('Delete this lost opportunity?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="oh-btn">
+                            <i class="fa-solid fa-trash mr-2 text-xs" aria-hidden="true"></i>
+                            Delete
+                        </button>
                     </form>
                 @endif
                 <a href="{{ route('tenant.opportunities.edit', ['tenant' => $tenantId, 'opportunity' => $opp->id]) }}"
@@ -47,6 +63,7 @@
                     <span class="oh-pill oh-pill--danger text-[11px]">Overdue follow-up</span>
                 @endif
             </div>
+            <p class="text-xs text-text-subtle">Convert to Project is available once the opportunity is marked Won.</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                 <div>
                     <div class="text-text-subtle text-xs uppercase tracking-wide">Estimated value</div>
@@ -58,7 +75,7 @@
                 </div>
                 @php
                     $ownerName = $opp->owner
-                        ? trim(($opp->owner->first_name ?? '') . ' ' . ($opp->owner->last_name ?? '')) ?: ($opp->owner->username ?? 'Unassigned')
+                        ? trim(($opp->owner->first_name ?? '') . ' ' . ($opp->owner->last_name ?? '')) ?: ($opp->owner->email ?? 'Unassigned')
                         : 'Unassigned';
                 @endphp
                 <div>
@@ -108,38 +125,43 @@
 
             <div class="md:grid md:grid-cols-2 md:gap-4 min-[1220px]:block min-[1220px]:space-y-4">
                 <section class="oh-card p-4 space-y-3">
-                    <div class="text-xs uppercase tracking-wide text-text-subtle">At a glance</div>
+                    <div class="text-xs uppercase tracking-wide text-text-subtle">Key dates</div>
                     <div class="text-sm text-text-base flex justify-between">
-                        <span>Owner</span><span>{{ $opp->owner->name ?? 'Unassigned' }}</span>
+                        <span>Next follow-up</span>
+                        <span>{{ $opp->next_followup_at ? $opp->next_followup_at->format('M j, Y g:ia') : '—' }}</span>
+                    </div>
+                    <div class="text-sm text-text-base flex justify-between">
+                        <span>Expected close</span>
+                        <span>{{ $opp->expected_close_date ? $opp->expected_close_date->format('M j, Y') : '—' }}</span>
                     </div>
                     <div class="text-sm text-text-base flex justify-between">
                         <span>Stage</span><span>{{ ucfirst($opp->stage) }}</span>
                     </div>
-                    <div class="text-sm text-text-base flex justify-between">
-                        <span>Value</span><span>{{ '$' . number_format((float) $opp->estimated_value, 0) }}</span>
-                    </div>
                 </section>
 
                 <section class="oh-card p-4 space-y-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
                         <div>
                             <h3 class="text-xs uppercase tracking-wide text-text-subtle">Activity</h3>
                             <p class="text-xs text-text-subtle mt-1">Log follow-ups or notes for your team.</p>
                         </div>
-                        <form method="POST"
-                            action="{{ route('tenant.opportunities.activities.store', ['tenant' => $tenantId, 'opportunity' => $opp->id]) }}"
-                            class="flex flex-wrap items-center gap-2">
-                            @csrf
-                            <input name="body" placeholder="Add note…" class="oh-input h-9">
-                            <button type="submit" class="oh-btn oh-btn--primary text-xs">Add</button>
-                        </form>
                     </div>
+                    <form method="POST"
+                        action="{{ route('tenant.opportunities.activities.store', ['tenant' => $tenantId, 'opportunity' => $opp->id]) }}"
+                        class="flex flex-col gap-2">
+                        @csrf
+                        <label class="text-xs text-text-subtle">Add a note</label>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input name="body" placeholder="Add note…" class="oh-input h-9 flex-1 min-w-[200px]">
+                            <button type="submit" class="oh-btn oh-btn--primary text-xs">Add</button>
+                        </div>
+                    </form>
                     <div class="space-y-3">
                         @forelse($activities as $activity)
                             <div class="border border-border-default/60 rounded-lg p-3 text-sm">
                                 @php
                                     $activityUser = $activity->user
-                                        ? trim(($activity->user->first_name ?? '') . ' ' . ($activity->user->last_name ?? '')) ?: ($activity->user->username ?? 'User')
+                                        ? trim(($activity->user->first_name ?? '') . ' ' . ($activity->user->last_name ?? '')) ?: ($activity->user->email ?? 'User')
                                         : 'System';
                                 @endphp
                                 <div class="flex items-center justify-between text-xs text-text-subtle mb-1">

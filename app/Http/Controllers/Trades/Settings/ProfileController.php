@@ -31,7 +31,22 @@ class ProfileController extends Controller
             'accent_color',
             'brand_tagline',
             'invoice_footer',
+            'team_member_colors',
         ]);
+
+        if (array_key_exists('team_member_colors', $updates)) {
+            $colors = collect($updates['team_member_colors'] ?? [])
+                ->map(fn($color) => strtoupper(trim((string) $color)))
+                ->filter()
+                ->map(function ($color) {
+                    return str_starts_with($color, '#') ? $color : '#' . $color;
+                })
+                ->unique()
+                ->values()
+                ->all();
+
+            $updates['team_member_colors'] = $colors ?: null;
+        }
 
         if ($request->hasFile('logo')) {
             if ($tenant->logo_path && Storage::disk('public')->exists($tenant->logo_path)) {

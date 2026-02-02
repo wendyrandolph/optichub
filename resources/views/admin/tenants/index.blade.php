@@ -19,11 +19,11 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {{-- Header --}}
         <div class="flex flex-col gap-2">
-            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Settings</p>
+            <p class="text-xs uppercase tracking-wide text-text-subtle">Settings</p>
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h1 class="text-2xl font-semibold text-text-base">Tenants &amp; Workspaces</h1>
-                    <p class="text-sm text-text-subtle mt-1">Monitor who’s live, trialing, and which workspaces are branded.</p>
+                    <h1 class="text-2xl font-semibold text-text-base">Tenants</h1>
+                    <p class="text-sm text-text-subtle mt-1">Monitor who’s live, trialing, and which tenants are branded.</p>
                 </div>
                 <a href="{{ route('admin.tenants.create') }}" class="oh-btn oh-btn--primary">
                     <i class="fa-solid fa-plus mr-2 text-[12px]"></i> New Tenant
@@ -31,27 +31,24 @@
             </div>
         </div>
 
+        @include('admin.tenants.provider-tabs', ['active' => 'tenants'])
+
         {{-- KPIs --}}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div class="oh-card border border-border-default/60 rounded-xl p-4">
-                <p class="text-xs uppercase tracking-wide text-text-subtle">All Workspaces</p>
-                <p class="text-[13px] text-text-subtle">
-                    {{ $tenants->count() }} shown
-                    @if (method_exists($tenants, 'total'))
-                        · {{ $tenants->total() }} total
-                    @endif
-                </p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle mb-1">Total Tenants</p>
+                <p class="text-xl font-semibold text-text-base">{{ $k['total'] }}</p>
             </div>
             <div class="oh-card border border-border-default/60 rounded-xl p-4">
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle mb-1">Active</p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle mb-1">Active</p>
                 <p class="text-xl font-semibold text-text-base">{{ $k['active'] }}</p>
             </div>
             <div class="oh-card border border-border-default/60 rounded-xl p-4">
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle mb-1">Trialing</p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle mb-1">Trialing</p>
                 <p class="text-xl font-semibold text-text-base">{{ $k['trialing'] }}</p>
             </div>
             <div class="oh-card border border-border-default/60 rounded-xl p-4">
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle mb-1">Branded</p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle mb-1">Branded</p>
                 <p class="text-xl font-semibold text-text-base">{{ $k['with_branding'] }}</p>
             </div>
         </div>
@@ -102,13 +99,7 @@
         {{-- Table --}}
         <div class="oh-card bg-surface-card/90 border border-border-default/70 shadow-sm rounded-2xl overflow-hidden">
             <div class="px-4 py-3 border-b border-border-default/60">
-                <p class="text-xs uppercase tracking-wide text-text-subtle mb-0.5">All workspaces</p>
-                <p class="text-[13px] text-text-subtle">
-                    {{ $tenants->count() }} shown on this page
-                    @if (method_exists($tenants, 'total'))
-                        · {{ $tenants->total() }} total
-                    @endif
-                </p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle mb-0.5">All tenants</p>
             </div>
 
             {{-- Mobile cards --}}
@@ -145,6 +136,9 @@
                             @if ($hasBranding)
                                 <span class="oh-pill oh-pill--info">Branded</span>
                             @endif
+                            @if (($tenant->stripePaymentAccount?->status ?? null) === 'active')
+                                <span class="oh-pill oh-pill--success">Stripe connected</span>
+                            @endif
                         </div>
                         <div class="flex items-center justify-end gap-2 pt-2">
                             <a href="{{ route('admin.tenants.show', $tenant) }}" class="oh-btn">View</a>
@@ -152,19 +146,20 @@
                         </div>
                     </article>
                 @empty
-                    <p class="text-sm text-text-subtle">No tenants found yet.</p>
+                    <p class="text-sm text-text-subtle">No tenants found.</p>
                 @endforelse
             </div>
 
             {{-- Desktop table --}}
             <div class="hidden md:block overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead class="bg-[rgb(var(--surface-muted)/.55)]">
+                    <thead class="bg-surface-muted/50">
                         <tr class="text-left text-text-subtle border-b border-border-default/60">
                             <th class="px-5 py-3 font-medium">Name</th>
                             <th class="px-5 py-3 font-medium">Domain</th>
                             <th class="px-5 py-3 font-medium">Plan</th>
                             <th class="px-5 py-3 font-medium">Status</th>
+                            <th class="px-5 py-3 font-medium">Payments</th>
                             <th class="px-5 py-3 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
@@ -194,6 +189,16 @@
                                 <td class="px-5 py-3">
                                     <span class="oh-pill">{{ $statusLabel }}</span>
                                 </td>
+                                <td class="px-5 py-3">
+                                    @php $stripeStatus = $tenant->stripePaymentAccount?->status ?? null; @endphp
+                                    @if ($stripeStatus === 'active')
+                                        <span class="oh-pill oh-pill--success">Stripe connected</span>
+                                    @elseif ($stripeStatus === 'pending')
+                                        <span class="oh-pill oh-pill--info">Stripe pending</span>
+                                    @else
+                                        <span class="text-xs text-text-subtle">Not connected</span>
+                                    @endif
+                                </td>
                                 <td class="px-5 py-3 text-right">
                                     <div class="inline-flex items-center gap-2">
                                         <a href="{{ route('admin.tenants.show', $tenant) }}" class="oh-icon-btn" title="View">
@@ -215,7 +220,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-6 text-center text-text-subtle">No tenants found.</td>
+                                <td colspan="6" class="px-5 py-6 text-center text-text-subtle">No tenants found.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -12,26 +12,76 @@
         ['admin', 'owner', 'super_admin', 'superadmin', 'provider'],
         true,
     );
+    $canGrantUserDirectory = in_array(
+        strtolower((string) ($currentUser->role ?? '')),
+        ['admin', 'owner', 'super_admin', 'superadmin', 'provider'],
+        true,
+    );
     $colorValue = old('color_hex', $teamMember->color_hex ?? '');
+    $defaultTeamColors = [
+        '#1F3C66',
+        '#2563EB',
+        '#10B981',
+        '#F59E0B',
+        '#EF4444',
+        '#9333EA',
+        '#14B8A6',
+        '#64748B',
+    ];
+    $teamColors = $tenant?->team_member_colors ?? $defaultTeamColors;
+    $teamColors = is_array($teamColors) ? $teamColors : $defaultTeamColors;
+    $usedColors = $usedColors ?? [];
+    $usedColors = is_array($usedColors) ? $usedColors : [];
+    if (!empty($colorValue) && !in_array(strtoupper($colorValue), $teamColors, true)) {
+        $teamColors[] = strtoupper($colorValue);
+    }
+    $teamColors = collect($teamColors)
+        ->map(fn($color) => strtoupper(trim((string) $color)))
+        ->filter()
+        ->map(function ($color) {
+            return str_starts_with($color, '#') ? $color : '#' . $color;
+        })
+        ->unique()
+        ->values()
+        ->all();
+    $availableColors = collect($teamColors)
+        ->reject(fn($color) => in_array($color, $usedColors, true))
+        ->when(!empty($colorValue), function ($collection) use ($colorValue) {
+            $colorValue = strtoupper(trim((string) $colorValue));
+            return $collection->push(str_starts_with($colorValue, '#') ? $colorValue : '#' . $colorValue);
+        })
+        ->unique()
+        ->values()
+        ->all();
     $isTrades = ($tenant?->workspace_type ?? null) === 'trades';
     $hiredAt = $isTrades ? old('hired_at', optional($teamMember?->user)->hired_at?->format('Y-m-d')) : null;
     $formAction = $isExisting
         ? route($routePrefix . '.update', ['tenant' => $tenantParam, 'team_member' => $teamMember?->id])
         : route($routePrefix . '.store', ['tenant' => $tenantParam]);
     $roleOptions = $roles ?? ['admin', 'employee', 'contractor'];
+    $directoryAccess = (bool) old('can_view_registered_users', $teamMember?->user?->can_view_registered_users ?? false);
+    $supportAccess = (bool) old('can_manage_support', $teamMember?->user?->can_manage_support ?? false);
 @endphp
 
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
     {{-- Page header --}}
-    <div class="space-y-1">
-        <p class="text-[11px] uppercase tracking-wider text-text-subtle">Team</p>
-        <h1 class="text-2xl font-semibold text-text-base">
-            {{ $isExisting ? 'Edit Team Member' : 'New Team Member' }}
-        </h1>
-        <p class="text-sm text-text-subtle">Manage access and responsibilities for this workspace.</p>
-        @if ($isExisting)
-            <p class="text-xs text-text-subtle">This user already has access. Changing email will resend an invite.</p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="space-y-1">
+            <p class="text-[11px] uppercase tracking-wider text-text-subtle">Team</p>
+            <h1 class="text-2xl font-semibold text-text-base">
+                {{ $isExisting ? 'Edit Team Member' : 'New Team Member' }}
+            </h1>
+            <p class="text-sm text-text-subtle">Manage access and responsibilities for this workspace.</p>
+            @if ($isExisting)
+                <p class="text-xs text-text-subtle">This user already has access. Changing email will resend an invite.</p>
+            @endif
+        </div>
+        @if ($tenantParam)
+            <a href="{{ route($routePrefix . '.index', ['tenant' => $tenantParam]) }}" class="oh-btn oh-btn--secondary">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                Back to Team Members
+            </a>
         @endif
     </div>
 
@@ -81,6 +131,12 @@
                 <span class="text-xs text-text-subtle">An invite will be sent to this email if the user does not already
                     have access.</span>
             </label>
+            <label class="grid gap-1 text-sm">
+                <span class="text-text-subtle">Phone (optional)</span>
+                <input type="text" name="phone" value="{{ old('phone', $teamMember->phone ?? '') }}"
+                    class="oh-input h-10">
+                <span class="text-xs text-text-subtle">&nbsp;</span>
+            </label>
             @if ($isTrades)
                 <label class="grid gap-1 text-sm">
                     <span class="text-text-subtle">Hire date (optional)</span>
@@ -120,29 +176,59 @@
                         class="oh-input h-10">
                 </label>
             </div>
-            @if ($canSetColor)
-                <label class="grid gap-1 text-sm">
-                    <span class="text-text-subtle">Member color</span>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <input type="color" value="{{ $colorValue ?: '#1F3C66' }}"
-                            class="h-10 w-12 rounded-lg border border-border-default bg-white"
-                            oninput="document.getElementById('color_hex').value = this.value">
-                        <input id="color_hex" type="text" name="color_hex" value="{{ $colorValue }}"
-                            placeholder="#1F3C66"
-                            class="oh-input h-10 w-36 @error('color_hex') ring-2 ring-rose-300 @enderror">
-                    </div>
-                    <span class="text-xs text-text-subtle">Used for lead owners and scheduling views. Must be unique per
-                        team member.</span>
-                    @error('color_hex')
-                        <span class="text-xs text-rose-600">{{ $message }}</span>
-                    @enderror
+            @if ($canGrantUserDirectory)
+                <label class="flex items-start gap-3 text-sm">
+                    <input type="checkbox" name="can_view_registered_users" value="1" class="mt-1 rounded border-border-default text-brand-primary"
+                        @checked($directoryAccess)>
+                    <span>
+                        <span class="text-text-base font-medium">Allow access to Registered Users</span>
+                        <span class="block text-xs text-text-subtle">
+                            Grants this user permission to view the registered users directory for this tenant.
+                        </span>
+                    </span>
                 </label>
             @endif
+            @if (auth('admin')->check())
+                <label class="flex items-start gap-3 text-sm">
+                    <input type="checkbox" name="can_manage_support" value="1"
+                        class="mt-1 rounded border-border-default text-brand-primary" @checked($supportAccess)>
+                    <span>
+                        <span class="text-text-base font-medium">Support inbox access</span>
+                        <span class="block text-xs text-text-subtle">
+                            Allows this provider team member to access the Support Inbox.
+                        </span>
+                    </span>
+                </label>
+            @endif
+        @if ($canSetColor)
             <label class="grid gap-1 text-sm">
-                <span class="text-text-subtle">Phone (optional)</span>
-                <input type="text" name="phone" value="{{ old('phone', $teamMember->phone ?? '') }}"
-                    class="oh-input h-10">
-            </label>
+                <span class="text-text-subtle">Member color</span>
+                <div class="flex flex-wrap gap-2">
+                    <label class="inline-flex items-center cursor-pointer" title="No color">
+                        <input type="radio" name="color_hex" value=""
+                            class="sr-only peer" @checked(empty($colorValue))>
+                        <span
+                            class="h-8 w-8 rounded-md border border-border-default/70 bg-surface-muted peer-checked:ring-2 peer-checked:ring-brand-primary"></span>
+                    </label>
+                    @foreach ($availableColors as $teamColor)
+                        <label class="inline-flex items-center cursor-pointer" title="{{ $teamColor }}">
+                            <input type="radio" name="color_hex" value="{{ $teamColor }}"
+                                class="sr-only peer" @checked(strtoupper($colorValue) === $teamColor)>
+                            <span class="h-8 w-8 rounded-md border border-border-default/70 peer-checked:ring-2 peer-checked:ring-brand-primary"
+                                style="background: {{ $teamColor }}"></span>
+                        </label>
+                    @endforeach
+                </div>
+                <span class="text-xs text-text-subtle">Used for lead owners and scheduling views. Must be unique per team
+                    member.</span>
+                @error('color_hex')
+                    <span class="text-xs text-rose-600">{{ $message }}</span>
+                @enderror
+                    @if (!$errors->has('color_hex'))
+                        <span class="text-xs text-text-subtle">&nbsp;</span>
+                    @endif
+                </label>
+            @endif
         </div>
 
         {{-- Account Status --}}
@@ -181,7 +267,7 @@
                 Cancel
             </a>
             <button type="submit" class="oh-btn oh-btn--primary">
-                Save Changes
+                {{ $isExisting ? 'Save Changes' : 'Add Team Member' }}
             </button>
         </div>
     </form>

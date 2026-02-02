@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\NotifyLeadInbox;
 use App\Models\Lead;
 use App\Models\Tenant;
+use App\Models\TenantLeadSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -19,13 +20,15 @@ class LeadsController extends Controller
             $tenant->update(['inbox_key' => $this->generateInboxKey()]);
         }
 
-        $webhookUrl = route('public.leads.inbox', ['inbox_key' => $tenant->inbox_key]);
+        $settings = TenantLeadSetting::firstOrCreate(['tenant_id' => $tenant->id]);
+        $webhookUrl = route('api.leads.ingest', ['tenant' => $tenant->getRouteKey()]);
         $mapping = $this->normalizeMapping($tenant->lead_field_mapping ?? []);
 
         return view('trades.settings.leads', [
             'tenant' => $tenant,
             'webhookUrl' => $webhookUrl,
             'leadFieldMapping' => $mapping,
+            'settings' => $settings,
         ]);
     }
 
@@ -53,6 +56,16 @@ class LeadsController extends Controller
             ->with('success', 'Test lead created.');
     }
 
+    public function regenerateSecret(Tenant $tenant): RedirectResponse
+    {
+        $settings = TenantLeadSetting::firstOrCreate(['tenant_id' => $tenant->id]);
+        $settings->rotateSecret();
+
+        return redirect()
+            ->route('tenant.trades.settings.leads', ['tenant' => $tenant->getRouteKey()])
+            ->with('success', 'Secret token regenerated.');
+    }
+
     public function updateRecipients(Request $request, Tenant $tenant): RedirectResponse
     {
         $data = $request->validate([
@@ -60,11 +73,9 @@ class LeadsController extends Controller
         ]);
 
         $raw = trim((string) ($data['lead_notification_recipients'] ?? ''));
-        $recipients = $raw === '' ? [] : array_values(array_filter(array_map('trim', preg_split('/[,\n]+/', $raw))));
-
-        $tenant->update([
-            'lead_notification_recipients' => $recipients,
-        ]);
+        $recipients = $raw === '' ? '' : $raw;
+        $settings = TenantLeadSetting::firstOrCreate(['tenant_id' => $tenant->id]);
+        $settings->update(['notify_email' => $recipients]);
 
         return redirect()
             ->route('tenant.trades.settings.leads', ['tenant' => $tenant->getRouteKey()])
@@ -97,6 +108,30 @@ class LeadsController extends Controller
         return redirect()
             ->route('tenant.trades.settings.leads', ['tenant' => $tenant->getRouteKey()])
             ->with('success', 'Lead field mapping updated.');
+    }
+
+    public function updateSettings(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $data = $request->validate([
+            'allowlist_domains' => ['nullable', 'string'],
+            'auto_reply_enabled' => ['nullable', 'boolean'],
+            'auto_reply_subject' => ['nullable', 'string', 'max:255'],
+            'auto_reply_body' => ['nullable', 'string'],
+        ]);
+
+        $domains = array_values(array_filter(array_map('trim', preg_split('/[,\n]+/', (string) ($data['allowlist_domains'] ?? '')))));
+
+        $settings = TenantLeadSetting::firstOrCreate(['tenant_id' => $tenant->id]);
+        $settings->update([
+            'allowlist_domains' => $domains,
+            'auto_reply_enabled' => $request->boolean('auto_reply_enabled'),
+            'auto_reply_subject' => $data['auto_reply_subject'] ?? null,
+            'auto_reply_body' => $data['auto_reply_body'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('tenant.trades.settings.leads', ['tenant' => $tenant->getRouteKey()])
+            ->with('success', 'Lead settings updated.');
     }
 
     protected function generateInboxKey(): string

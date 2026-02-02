@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\TradePtoType;
 
 // use App\Enums\OrganizationType;
@@ -23,17 +24,20 @@ class Tenant extends Model
     'type',
     'workspace_type',
     'name',
+    'brand_name',
     'industry',
     'location',
     'website',
     'phone',
     'notes',
     'support_email',
+    'reply_to_email',
     'business_type',
     'default_uses_phases',
     'primary_color',
     'secondary_color',
     'accent_color',
+    'team_member_colors',
     'logo_path',
     'brand_tagline',
     'invoice_footer',
@@ -47,6 +51,7 @@ class Tenant extends Model
     'client_type_prompt',
     'onboarding_completed_at',
     'allow_partial_payments',
+    'registered_users_enabled',
     'pricing_visible_to_techs',
     'reminders_enabled',
     'reminder_offsets',
@@ -79,6 +84,7 @@ class Tenant extends Model
     'tax_enabled'    => 'bool',
     'tax_inclusive'  => 'bool',
     'allow_partial_payments' => 'bool',
+    'registered_users_enabled' => 'bool',
     'pricing_visible_to_techs' => 'bool',
     'reminders_enabled' => 'bool',
     'reminder_offsets' => 'array',
@@ -87,6 +93,7 @@ class Tenant extends Model
     'trades_work_type' => 'string',
     'lead_notification_recipients' => 'array',
     'lead_field_mapping' => 'array',
+    'team_member_colors' => 'array',
     'pto_approver_id' => 'int',
     'pto_backup_approver_id' => 'int',
     'overtime_enabled' => 'bool',
@@ -112,6 +119,11 @@ class Tenant extends Model
   public function users(): HasMany
   {
     return $this->hasMany(User::class, 'tenant_id');
+  }
+
+  public function leadSettings(): HasOne
+  {
+    return $this->hasOne(TenantLeadSetting::class, 'tenant_id');
   }
   public function clients(): HasMany
   {
@@ -150,10 +162,20 @@ class Tenant extends Model
     return $this->hasOne(\App\Models\TenantMailSetting::class);
   }
 
-  public function invoices()
-  {
-    return $this->hasMany(Invoice::class, 'tenant_id');
-  }
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class, 'tenant_id');
+    }
+
+    public function paymentAccounts()
+    {
+        return $this->hasMany(TenantPaymentAccount::class, 'tenant_id');
+    }
+
+    public function stripePaymentAccount()
+    {
+        return $this->hasOne(TenantPaymentAccount::class, 'tenant_id')->where('provider', 'stripe');
+    }
   public function taxRates()
   {
     return $this->hasMany(TaxRate::class);

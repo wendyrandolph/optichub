@@ -2,6 +2,8 @@
     use App\Models\Tenant;
 
     $year = now()->year;
+    $startYear = 2026;
+    $yearRange = $startYear . ' - ' . $year;
     $appName = config('app.name', 'Renlo');
     $version = config('app.version');
 
@@ -177,7 +179,7 @@
         <hr class="my-8 border-[rgb(var(--ui-border))/0.65]">
 
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-            <p>© {{ $year }} {{ $appName }}. All rights reserved.</p>
+            <p>© {{ $yearRange }} {{ $appName }}. All rights reserved.</p>
 
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                 @if ($version)
@@ -192,6 +194,8 @@
                         Status
                     </a>
                 @endif
+
+                <a href="#" data-cookie-settings class="hover:text-[rgb(var(--ui-text))]">Cookie settings</a>
             </div>
         </div>
     </div>

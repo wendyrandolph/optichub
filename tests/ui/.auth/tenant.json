@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6IldLd3k1ajBncnRQTldvZllHOUJOckE9PSIsInZhbHVlIjoiRUVOZkdPeFZCeFltR2lFMjh1dWVYVGU2NHM4M0JlTXcyTkJPdGMwVVFzU2Z0SWJWS3lZNUVoYjBoU3Z2Z0lwZ3BKazd4dExRbmNkS2h3QjJudHNuMmMzWmpDdjdTWmxMN3U5ZHBNUlY4OXBKcUpxa0pKNEdUVWFyK1NNTHdnSXgiLCJtYWMiOiJiYjgwOTdjYjRkZmY1ZDQxOTgxNWNlNWNjMWViYTI1N2NiZmYxOThjMWRlZjRiZjFjYWFhZDY3M2MxNzZmZDIzIiwidGFnIjoiIn0%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1770077907.853988,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "renlo_session",
+      "value": "eyJpdiI6IkF2QWdNekFUWjd3YlUxMTV0NmFsVkE9PSIsInZhbHVlIjoiRjd4RXkvdkRzUXR2Z2g0VU9yZ3dvY2lBVmVJUU1JQWJkZW5ZMUEya05HZUJxMjFheUVyeEpiUGtnK0IwSUdjaUNpcGJqKzRIb3FxTUJvLzdmdGg3UllXd3liK0RNVkRUMnBrRDZnRDdSQTFGSEl1Yml6ZFRWU0tLRTYybXRvbm0iLCJtYWMiOiJhZThjNjU2NmZmZmQ5NDRlNjMyZmI5YzE5YWY0YTNlN2QxYzY1YmJiOThjZWZmNjA4NWQ5NzNiZDU1YzVmZmUyIiwidGFnIjoiIn0%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1770077907.854051,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

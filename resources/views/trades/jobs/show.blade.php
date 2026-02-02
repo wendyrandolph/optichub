@@ -37,7 +37,7 @@
                     <a class="oh-btn"
                         href="{{ route('tenant.trades.jobs.chat', ['tenant' => $tenantKey, 'job' => $job->id]) }}">
                         <i class="fa-solid fa-comments text-[12px]"></i>
-                        Chat
+                        Job chat
                     </a>
                     @if ($isAdminRole)
                         <form method="POST"

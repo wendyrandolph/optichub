@@ -108,7 +108,7 @@
                             @php
                                 $label =
                                     trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?:
-                                    $user->username ??
+                                    $user->email ??
                                     $user->email;
                                 $schedule = $schedules[$user->id] ?? null;
                                 $cadenceLabel = $schedule?->cadence ? ucfirst($schedule->cadence) : '—';

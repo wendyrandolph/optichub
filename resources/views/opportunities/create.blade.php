@@ -15,7 +15,10 @@
                 <h1 class="text-2xl font-semibold text-text-base">New Opportunity</h1>
                 <p class="text-sm text-text-subtle">Create a pipeline record and set the next follow-up.</p>
             </div>
-            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">Cancel</a>
+            <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}" class="oh-btn">
+                <i class="fa-solid fa-arrow-left mr-2 text-xs" aria-hidden="true"></i>
+                View All Opportunities
+            </a>
         </header>
 
         <section class="oh-card p-6 space-y-6">
@@ -55,7 +58,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <span class="text-[11px] text-text-subtle opacity-0">Helper text</span>
+                            <span class="text-[11px] text-text-subtle">Selecting “Lost” requires a reason below.</span>
                         </label>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Estimated value</span>
@@ -76,6 +79,8 @@
                     </div>
                 </div>
 
+                <div class="border-t border-border-default/60"></div>
+
                 {{-- Link --}}
                 <div class="space-y-3">
                     <div>
@@ -92,7 +97,7 @@
                                     @php
                                         $ownerName =
                                             trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?:
-                                            $u->username ?? 'User';
+                                            $u->email ?? 'User';
                                     @endphp
                                     <option value="{{ $u->id }}" @selected(old('owner_id') == $u->id)>{{ $ownerName }}
                                     </option>
@@ -133,6 +138,8 @@
                     </div>
                 </div>
 
+                <div class="border-t border-border-default/60"></div>
+
                 {{-- Follow-up --}}
                 <div class="space-y-3">
                     <div>
@@ -156,6 +163,8 @@
                     </div>
                 </div>
 
+                <div class="border-t border-border-default/60"></div>
+
                 {{-- Notes --}}
                 <div class="space-y-2">
                     <h2 class="text-sm font-semibold text-text-base">Notes</h2>
@@ -166,33 +175,16 @@
                     </label>
                 </div>
 
+                <div class="border-t border-border-default/60"></div>
+
                 {{-- Lost reason (conditional) --}}
                 <div id="lostReasonBlock" class="space-y-2 hidden">
                     <h2 class="text-sm font-semibold text-text-base">Lost reason</h2>
-                    <textarea name="lost_reason" rows="2"
-                        class="w-full rounded-lg bg-surface-card text-text-base px-3 py-2 text-sm border border-border-default focus:ring-1 focus:ring-brand-primary">{{ old('lost_reason') }}</textarea>
+                    <label class="grid gap-1 text-sm">
+                        <span class="text-text-subtle">Only required if stage is Lost</span>
+                        <textarea name="lost_reason" rows="2" class="oh-textarea">{{ old('lost_reason') }}</textarea>
+                    </label>
                 </div>
-
-                {{-- After saving --}}
-                <details class="rounded-lg border border-border-default/70 bg-surface-card/60 p-4">
-                    <summary class="text-sm font-semibold text-text-base cursor-pointer">After saving…</summary>
-                    <div class="mt-3 space-y-2 text-sm text-text-base">
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" name="create_followup_task" value="1"
-                                {{ old('create_followup_task') ? 'checked' : '' }}>
-                            <span>Create a follow-up task (placeholder)</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="checkbox" name="add_activity_note" value="1"
-                                {{ old('add_activity_note') ? 'checked' : '' }}>
-                            <span>Log an activity note: “Opportunity created”</span>
-                        </label>
-                        <label class="flex items-center gap-2 text-text-subtle">
-                            <input type="checkbox" disabled>
-                            <span>Send internal notification (coming soon)</span>
-                        </label>
-                    </div>
-                </details>
 
                 <div class="flex items-center justify-end gap-3 pt-2">
                     <a href="{{ route('tenant.opportunities.index', ['tenant' => $tenantId]) }}"

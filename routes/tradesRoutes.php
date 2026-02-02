@@ -53,8 +53,10 @@ Route::prefix('trades')->name('trades.')->group(function () {
             ->name('settings.time.work-schedules.user');
         Route::get('settings/leads', [LeadsController::class, 'index'])->name('settings.leads');
         Route::patch('settings/leads/recipients', [LeadsController::class, 'updateRecipients'])->name('settings.leads.recipients');
+        Route::patch('settings/leads/config', [LeadsController::class, 'updateSettings'])->name('settings.leads.config');
         Route::patch('settings/leads/mapping', [LeadsController::class, 'updateMapping'])->name('settings.leads.mapping');
         Route::post('settings/leads/test', [LeadsController::class, 'testLead'])->name('settings.leads.test');
+        Route::post('settings/leads/regenerate', [LeadsController::class, 'regenerateSecret'])->name('settings.leads.regenerate');
         Route::put('settings/pto-approvers', [SettingsController::class, 'updateApprovers'])->name('settings.pto-approvers');
         Route::put('settings/recurring', [SettingsController::class, 'updateRecurring'])->name('settings.recurring');
         Route::put('settings/warranty', [SettingsController::class, 'updateWarranty'])->name('settings.warranty');
@@ -168,8 +170,15 @@ Route::prefix('trades')->name('trades.')->group(function () {
 
     // Team Chat Routes
     Route::get('chat', [TradesChatController::class, 'index'])->name('chat.index');
+    Route::get('chat/dm', [TradesChatController::class, 'dmIndex'])->name('chat.dm.index');
+    Route::get('chat/dm/{user}', [TradesChatController::class, 'dmStart'])->name('chat.dm.start');
     Route::get('chat/{channel}', [TradesChatController::class, 'show'])->name('chat.show');
     Route::post('chat/{channel}/messages', [TradesChatController::class, 'store'])->name('chat.messages.store');
+    Route::patch('chat/{channel}/messages/{message}', [TradesChatController::class, 'updateMessage'])
+        ->name('chat.messages.update');
+    Route::delete('chat/{channel}/messages/{message}', [TradesChatController::class, 'destroyMessage'])
+        ->name('chat.messages.destroy');
+    Route::post('chat/{channel}/archive', [TradesChatController::class, 'archive'])->name('chat.archive');
     Route::get('jobs/{job}/chat', [TradesChatController::class, 'job'])
         ->name('jobs.chat');
 

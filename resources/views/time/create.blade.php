@@ -73,7 +73,9 @@
                         class="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                         <option value="">Select Project</option>
                         @foreach ($projects as $project)
-                            <option value="{{ $project->id }}">{{ $project->name ?? $project->project_name }}</option>
+                            <option value="{{ $project->id }}" @selected((string) old('project_id', request('project_id')) === (string) $project->id)>
+                                {{ $project->name ?? $project->project_name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -85,7 +87,9 @@
                         class="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                         <option value="">Select Task</option>
                         @foreach ($tasks as $task)
-                            <option value="{{ $task->id }}">{{ $task->title }}</option>
+                            <option value="{{ $task->id }}" @selected((string) old('task_id', request('task_id')) === (string) $task->id)>
+                                {{ $task->title }}
+                            </option>
                         @endforeach
                     </select>
                 </div>

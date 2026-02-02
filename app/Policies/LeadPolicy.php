@@ -10,11 +10,11 @@ class LeadPolicy
   public function before(User $user, string $ability): ?bool
   {
     $role = strtolower((string) $user->role);
-    $org  = strtolower((string) $user->organization_type);
+    $org  = strtolower((string) (session('organization_type') ?? $user->organization_type ?? ''));
 
     if (
-      in_array($role, ['admin', 'provider'], true) &&
-      in_array($org, ['provider', 'saas_tenant'], true)
+      in_array($role, ['admin'], true) &&
+      in_array($org, ['saas_tenant'], true)
     ) {
       return true;
     }
@@ -31,7 +31,6 @@ class LeadPolicy
       'super_admin',
       'superadmin',
       'tenant_admin',
-      'provider',
       'employee',
     ], true);
   }

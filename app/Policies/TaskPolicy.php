@@ -24,9 +24,8 @@ class TaskPolicy
     // 1. Authorization for Team Members (Admins/Managers)
     // This is the simplest check: does the task belong to the user's organization?
     if ($user->role !== 'client') {
-      // Check the task's project's tenant_id against the logged-in user's tenant_id.
-      // Assumes Task -> belongsTo -> Project, and Project has a 'tenant_id' column.
-      if ($task->project->tenant_id === $user->tenant_id) {
+      $projectTenantId = $task->project?->tenant_id;
+      if ($projectTenantId && (int) $projectTenantId === (int) $user->tenant_id) {
         return Response::allow();
       }
 
@@ -40,14 +39,26 @@ class TaskPolicy
 
     // 2. Authorization for Clients (Your original focus)
 
-    // Ensure the client user actually has a linked client_id.
-    if (!$user->client_id) {
+    // Ensure the client user actually has a linked contact_id.
+    if (!$user->contact_id) {
       return Response::deny('Client user is not associated with a client account.');
     }
 
-    // Check if the project linked to the task belongs to the logged-in client.
-    // Assumes Task -> belongsTo -> Project, and Project has a 'client_id' column.
-    if ($task->project->client_id === $user->client_id) {
+    $contactId = (int) $user->contact_id;
+    $assignedDirectly = (int) ($task->contact_id ?? 0) === $contactId
+      || (($task->assign_type ?? '') === 'client' && (int) ($task->assign_id ?? 0) === $contactId);
+
+    if ($assignedDirectly) {
+      return Response::allow();
+    }
+
+    $project = $task->project;
+    if ($project && (int) ($project->contact_id ?? 0) === $contactId) {
+      return Response::allow();
+    }
+
+    $clientCompanyId = $user->contact?->client_company_id;
+    if ($project && $clientCompanyId && (int) ($project->client_company_id ?? 0) === (int) $clientCompanyId) {
       return Response::allow();
     }
 

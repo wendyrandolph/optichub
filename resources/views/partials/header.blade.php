@@ -68,6 +68,18 @@
             $profileRoute = route('portal.settings.edit');
         }
     }
+
+    $chatInboxUrl = null;
+    $chatUser = auth('admin')->user() ?? auth('web')->user();
+    $isTradesContext = ($currentUser?->tenant?->workspace_type ?? null) === 'trades' || request()->routeIs('tenant.trades.*');
+    if ($chatUser && $tenantId) {
+        if ($isTradesContext && \Illuminate\Support\Facades\Route::has('tenant.trades.chat.index')) {
+            $chatInboxUrl = route('tenant.trades.chat.index', ['tenant' => $tenantId]);
+        } elseif (\Illuminate\Support\Facades\Route::has('tenant.chat.index')) {
+            $chatInboxUrl = route('tenant.chat.index', ['tenant' => $tenantId]);
+        }
+
+    }
 @endphp
 
 
@@ -119,6 +131,14 @@
             aria-label="Notifications">
             <i class="fas fa-bell text-lg leading-none"></i>
         </button>
+
+        @if ($chatInboxUrl)
+            <a href="{{ $chatInboxUrl }}"
+                class="relative text-[rgb(var(--ui-text-subtle))] hover:text-[rgb(var(--ui-primary))] transition p-2 rounded-full hover:bg-[rgb(var(--ui-surface-muted))]"
+                aria-label="Inbox">
+                <i class="fa-regular fa-comment-dots text-lg leading-none"></i>
+            </a>
+        @endif
 
         <!-- Profile / Logout -->
         <div class="flex items-center gap-2 sm:gap-3">

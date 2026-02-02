@@ -161,6 +161,21 @@ class SettingsController extends Controller
     $tenant   = $this->tenantModel->with([])->findOrFail($tenantId);
 
     $data = $request->validated();
+    $data['registered_users_enabled'] = $request->boolean('registered_users_enabled');
+
+    if (array_key_exists('team_member_colors', $data)) {
+      $colors = collect($data['team_member_colors'] ?? [])
+        ->map(fn($color) => strtoupper(trim((string) $color)))
+        ->filter()
+        ->map(function ($color) {
+          return str_starts_with($color, '#') ? $color : '#' . $color;
+        })
+        ->unique()
+        ->values()
+        ->all();
+
+      $data['team_member_colors'] = $colors ?: null;
+    }
 
     // handle logo upload
     if ($request->hasFile('logo')) {

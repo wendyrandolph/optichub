@@ -10,14 +10,14 @@ use App\Models\Client;
 use App\Services\StripeService; // NEW: For Stripe API calls
 use App\Services\InvoiceTotalsService;
 use App\Models\Tenant;
-use App\Mail\InvoiceMailable;   // NEW: For clean email sending
+use App\Jobs\SendTrackedEmail;
+use App\Models\OutboundEmail;
 use App\Http\Requests\Invoice\StoreInvoiceRequest; // NEW: For validation/CSRF
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use App\Models\ActivityLog;
@@ -561,8 +561,21 @@ class InvoiceController extends Controller
       }
 
       try {
-        // Replaces procedural mail() function with Laravel Mailable
-        Mail::to($client->email)->send(new InvoiceMailable($invoice, $client));
+        $outbound = OutboundEmail::create([
+          'tenant_id' => $invoice->tenant_id,
+          'user_id' => auth()->id(),
+          'to_email' => $client->email,
+          'to_name' => trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? '')) ?: ($client->name ?? null),
+          'subject' => 'Invoice #' . ($invoice->invoice_number ?? $invoice->id),
+          'type' => 'invoice_sent',
+          'related_type' => Invoice::class,
+          'related_id' => $invoice->id,
+          'status' => 'queued',
+          'queued_at' => now(),
+          'meta' => ['invoice_id' => $invoice->id],
+        ]);
+
+        SendTrackedEmail::dispatch($outbound->id);
 
       // Update status (optional, but good practice)
         $invoice->update([
@@ -580,7 +593,7 @@ class InvoiceController extends Controller
         );
 
       return Redirect::route($this->routePrefix() . '.show', ['tenant' => $tenantParam, 'invoice' => $invoice])
-        ->with('success', 'Invoice email sent successfully.');
+        ->with('success', 'Invoice email queued.');
     } catch (\Throwable $e) {
       Log::error("[invoices.send] Email failed: " . $e->getMessage());
 

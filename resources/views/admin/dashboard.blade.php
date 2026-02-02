@@ -58,28 +58,17 @@
         $isProvider = in_array($role, ['provider'], true);
     @endphp
     <div class="oh-page">
-        <section class="rounded-2xl border border-border/60 bg-card shadow-card-light p-6 space-y-4">
+        <section class="rounded-2xl border border-border/60 bg-white shadow-card-light p-6 space-y-4">
             <header class="space-y-1">
+                @if ($isProvider)
+                    <p class="text-[11px] uppercase tracking-[0.08em] text-text-subtle">You’re in Provider mode</p>
+                @endif
                 <h1 class="text-2xl font-semibold text-card-fg leading-tight">My Dashboard</h1>
                 <p class="text-sm text-muted-fg">Overview of tasks, projects, and activity for {{ $rangeLabel }}.</p>
             </header>
 
             <x-quick-actions :range="$range ?? 'wtd'" :range-label="$rangeLabel" />
 
-            @if ($isProvider)
-                <div
-                    class="rounded-xl border border-border/60 bg-muted/40 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div>
-                        <p class="text-xs uppercase tracking-wide text-muted-fg mb-1">You’re in Provider mode</p>
-                        <h3 class="text-base font-semibold text-card-fg">Tenant Management Tools</h3>
-                        <p class="text-sm text-muted-fg mt-1">Manage tenant orgs, trials, and global settings.</p>
-                    </div>
-
-                    <a href="{{ route('admin.tenants.index') }}" class="oh-btn oh-btn--primary">
-                        View All Tenants <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
-                    </a>
-                </div>
-            @endif
         </section>
 
         @php
@@ -195,6 +184,38 @@
                 </div>
             </div>
         </section>
+
+        {{-- ========================== PROFITABILITY SIGNALS ========================== --}}
+        @php
+            $profitabilitySignals = $profitabilitySignals ?? ['healthy' => 0, 'drifting' => 0, 'time-heavy' => 0];
+            $avgEhrText = $avgEhr ?? '—';
+        @endphp
+        <section class="mt-8">
+            <div class="flex items-end justify-between mb-3">
+                <h2 class="text-xs font-semibold tracking-wide text-muted-fg uppercase">Profitability signal</h2>
+            </div>
+            <div class="oh-card border border-border/60 bg-card shadow-card-light p-4 space-y-3">
+                <div class="grid gap-4 md:grid-cols-3">
+                    @foreach (['healthy' => 'Healthy', 'drifting' => 'Drifting', 'time-heavy' => 'Time-heavy'] as $key => $label)
+                        <div class="space-y-1">
+                            <div class="text-xs text-text-subtle uppercase tracking-[0.3em]">{{ $label }}</div>
+                            <div class="text-2xl font-semibold text-text-base">
+                                {{ number_format($profitabilitySignals[$key] ?? 0) }}</div>
+                            <div class="text-sm text-text-subtle">
+                                {{ $key === 'healthy' ? 'Projects hitting target' : ($key === 'drifting' ? 'Close watch advised' : 'Time-heavy jobs') }}
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="text-sm text-text-subtle">Avg. EHR this week: {{ $avgEhrText }}</p>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('tenant.dashboards.index', ['tenant' => $tenantParam]) }}"
+                        class="oh-btn oh-btn--ghost">Go to tenant dashboard</a>
+                </div>
+            </div>
+        </section>
+
+        {{-- ========================== PROFITABILITY SIGNALS ========================== --}}
 
 
         {{-- ========================== REPORTS & LISTS ========================== --}}

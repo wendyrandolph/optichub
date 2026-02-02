@@ -22,11 +22,11 @@
                 </a>
 
                 <a href="{{ route('tenant.tasks.create', ['tenant' => $tenantParam]) }}" class="oh-btn oh-btn--primary">
-                    <i class="fa-regular fa-list-check mr-1.5"></i> New Task
+                    <i class="fa-solid fa-list-check mr-1.5 text-xs"></i> New Task
                 </a>
 
                 <a href="{{ route('tenant.projects.create', ['tenant' => $tenantParam]) }}" class="oh-btn">
-                    <i class="fa-regular fa-diagram-project mr-1.5"></i> New Project
+                    <i class="fa-regular fa-square-plus mr-1.5 text-xs"></i> New Project
                 </a>
 
                 <a href="{{ route('tenant.companies.create', ['tenant' => $tenantParam]) }}" class="oh-btn">

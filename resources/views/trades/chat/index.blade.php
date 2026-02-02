@@ -16,19 +16,9 @@
             </div>
         </div>
 
-        @if (!empty($defaultChannel))
-            <div class="oh-card p-5">
-                <p class="text-sm text-text-subtle">Opening chat…</p>
-            </div>
-
-            <script>
-                window.location = @json(route('tenant.trades.chat.show', ['tenant' => $tenantKey, 'channel' => $defaultChannel->id]));
-            </script>
-        @else
-            <div class="oh-card p-5">
-                <div class="text-sm font-semibold text-text-base">No channels yet</div>
-                <p class="text-sm text-text-subtle mt-1">Create a channel to start chatting.</p>
-            </div>
-        @endif
+        <div class="oh-card p-5">
+            <div class="text-sm font-semibold text-text-base">No conversations yet</div>
+            <p class="text-sm text-text-subtle mt-1">Message a teammate or open a job chat to get started.</p>
+        </div>
     </div>
 @endsection

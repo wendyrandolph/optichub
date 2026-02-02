@@ -311,6 +311,8 @@
   .oh-sidebar .oh-sidebar__link--icon {
     padding: 0.65rem;
     border-radius: 12px;
+    overflow: visible;
+    position: relative;
   }
   .oh-sidebar .oh-sidebar__link--icon::before {
     left: 0;
@@ -343,9 +345,19 @@
     transition: opacity 150ms ease, transform 150ms ease;
     z-index: 6000;
   }
-  .oh-sidebar.sidebar-collapsed .oh-sidebar__link--icon:hover::after {
+  .oh-sidebar.sidebar-collapsed .oh-sidebar__link--icon:hover::after,
+  .oh-sidebar.sidebar-collapsed .oh-sidebar__link--icon:focus-visible::after {
     opacity: 1;
     transform: translateY(-50%) translateX(0);
+  }
+
+  .oh-sidebar.sidebar-collapsed .oh-sidebar__pinned {
+    overflow: visible;
+    position: relative;
+    z-index: 60;
+  }
+  .oh-sidebar.sidebar-collapsed .oh-sidebar__pinned .grid {
+    overflow: visible;
   }
 
   /* Active section background */

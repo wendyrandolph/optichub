@@ -24,93 +24,106 @@
 
 @section($section)
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {{-- Header card --}}
-        <div class="oh-card p-5 border border-border-default bg-surface-card shadow-card space-y-3">
-            <div class="flex items-center justify-between">
-                <a href="{{ route($routePrefix . '.show', ['tenant' => $tenantParam, 'invoice' => $invoice]) }}"
-                    class="oh-link-underline inline-flex self-start items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
-                    <i class="fa-solid fa-arrow-left text-[10px] mr-2"></i> Back to invoice
-                </a>
-                @if ($isSent)
-                    <span class="oh-pill oh-pill--warning text-[11px]">
-                        Sent — edits may notify client
-                    </span>
-                @endif
-            </div>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {{-- Header --}}
+        <div class="space-y-3">
+            <a href="{{ route($routePrefix . '.index', ['tenant' => $tenantParam]) }}"
+                class="oh-link-underline inline-flex items-center text-[11px] font-semibold uppercase tracking-wide text-text-subtle hover:text-text-base">
+                <i class="fa-solid fa-arrow-left text-[10px] mr-2"></i> Back to invoices
+            </a>
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div class="space-y-1">
                     <p class="text-[11px] uppercase tracking-wider text-text-subtle">Billing</p>
-                    <h1 class="text-2xl font-semibold text-text-base">Invoice #{{ $invoice->invoice_number ?? $invoice->id }}</h1>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-2xl font-semibold text-text-base">
+                            Invoice #{{ $invoice->invoice_number ?? $invoice->id }}
+                        </h1>
+                        <span class="{{ $statusPill }} text-[11px] px-3 py-1">{{ ucfirst($statusValue) }}</span>
+                    </div>
                     <p class="text-sm text-text-subtle">Client: {{ $clientName }}</p>
                 </div>
-                <span class="{{ $statusPill }} text-[11px] px-3 py-1">{{ ucfirst($statusValue) }}</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    @if (Route::has($routePrefix . '.pdf'))
+                        <a href="{{ route($routePrefix . '.pdf', ['tenant' => $tenantParam, 'invoice' => $invoice]) }}"
+                            class="oh-btn oh-btn--secondary" target="_blank">
+                            Download PDF
+                        </a>
+                    @endif
+                    <button type="button" class="oh-btn" onclick="window.print()">Print</button>
+                </div>
             </div>
         </div>
 
         {{-- Form --}}
         <form action="{{ route($routePrefix . '.update', ['tenant' => $tenantParam, 'invoice' => $invoice]) }}" method="POST"
-            class="oh-card border border-border-default/70 shadow-card"
+            class="grid grid-cols-1 lg:grid-cols-12 gap-6"
             @if ($isSent) onsubmit="return confirm('This invoice has been sent. Save changes?');" @endif>
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
-                {{-- Left column --}}
-                <div class="xl:col-span-2 space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{-- Left column --}}
+            <div class="lg:col-span-8">
+                <div class="oh-card p-6 space-y-6">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Client</span>
+                                <select name="contact_id" class="oh-select h-10">
+                                    @foreach ($clients as $client)
+                                        @php $name = trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? '')); @endphp
+                                        <option value="{{ $client->id }}"
+                                            @selected(old('contact_id', $invoice->contact_id) == $client->id)>
+                                            {{ $name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('contact_id')
+                                    <p class="text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </label>
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Invoice number</span>
+                                <input type="text" name="invoice_number" value="{{ old('invoice_number', $invoice->invoice_number) }}"
+                                    class="oh-input h-10">
+                                @error('invoice_number')
+                                    <p class="text-xs text-rose-500">{{ $message }}</p>
+                                @enderror
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Issue date</span>
+                                <input type="date" name="issue_date"
+                                    value="{{ old('issue_date', optional($invoice->issue_date)->toDateString()) }}"
+                                    class="oh-input h-10">
+                            </label>
+                            <label class="grid gap-1 text-sm">
+                                <span class="text-text-subtle">Due date</span>
+                                <input type="date" name="due_date"
+                                    value="{{ old('due_date', optional($invoice->due_date)->toDateString()) }}"
+                                    class="oh-input h-10">
+                            </label>
+                        </div>
+
                         <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Client</span>
-                            <select name="contact_id" class="oh-select h-10">
-                                @foreach ($clients as $client)
-                                    @php $name = trim(($client->firstName ?? '') . ' ' . ($client->lastName ?? '')); @endphp
-                                    <option value="{{ $client->id }}"
-                                        @selected(old('contact_id', $invoice->contact_id) == $client->id)>
-                                        {{ $name }}
-                                    </option>
-                                @endforeach
+                            <span class="text-text-subtle">Status</span>
+                            <select name="status" class="oh-select h-10">
+                                @php $st = $statusValue; @endphp
+                                <option value="draft" @selected($st === 'draft')>Draft</option>
+                                <option value="sent" @selected($st === 'sent')>Sent</option>
+                                <option value="paid" @selected($st === 'paid')>Paid</option>
+                                <option value="overdue" @selected($st === 'overdue')>Overdue</option>
                             </select>
-                            @error('contact_id')
+                            @error('status')
                                 <p class="text-xs text-rose-500">{{ $message }}</p>
                             @enderror
                         </label>
+
                         <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Invoice number</span>
-                            <input type="text" name="invoice_number" value="{{ old('invoice_number', $invoice->invoice_number) }}"
-                                class="oh-input h-10">
-                            @error('invoice_number')
-                                <p class="text-xs text-rose-500">{{ $message }}</p>
-                            @enderror
+                            <span class="text-text-subtle">Notes (optional)</span>
+                            <textarea name="notes" rows="4" class="oh-textarea">{{ old('notes', $invoice->notes) }}</textarea>
                         </label>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Issue date</span>
-                            <input type="date" name="issue_date"
-                                value="{{ old('issue_date', optional($invoice->issue_date)->toDateString()) }}"
-                                class="oh-input h-10">
-                        </label>
-                        <label class="grid gap-1 text-sm">
-                            <span class="text-text-subtle">Due date</span>
-                            <input type="date" name="due_date"
-                                value="{{ old('due_date', optional($invoice->due_date)->toDateString()) }}"
-                                class="oh-input h-10">
-                        </label>
-                    </div>
-
-                    <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Status</span>
-                        <select name="status" class="oh-select h-10">
-                            @php $st = $statusValue; @endphp
-                            <option value="draft" @selected($st === 'draft')>Draft</option>
-                            <option value="sent" @selected($st === 'sent')>Sent</option>
-                            <option value="paid" @selected($st === 'paid')>Paid</option>
-                            <option value="overdue" @selected($st === 'overdue')>Overdue</option>
-                        </select>
-                        @error('status')
-                            <p class="text-xs text-rose-500">{{ $message }}</p>
-                        @enderror
-                    </label>
 
                     {{-- Line items --}}
                     <div class="space-y-2">
@@ -122,7 +135,7 @@
                         </div>
                         <div class="overflow-hidden rounded-xl border border-border-default/70">
                             <table class="min-w-full text-sm" id="line-items-table">
-                                <thead class="bg-[rgba(var(--surface-muted)/.6)] text-text-subtle">
+                                <thead class="bg-[rgba(var(--surface-muted)/.6)] text-text-subtle hidden sm:table-header-group">
                                     <tr>
                                         <th class="px-3 py-2 text-left font-medium">Item</th>
                                         <th class="px-3 py-2 text-right font-medium w-24">Qty</th>
@@ -133,35 +146,39 @@
                                 </thead>
                                 <tbody id="line-items-body">
                                     @foreach ($lineItems as $idx => $item)
-                                        <tr class="border-t border-border-default/60">
+                                        <tr class="border-t border-border-default/60 block sm:table-row">
                                             @php $locked = in_array($item->source_type, ['time_entry','time_entry_group']); @endphp
-                                            <td class="px-3 py-2 align-top">
+                                            <td class="px-3 py-2 align-top block sm:table-cell">
                                                 <input type="hidden" name="items[{{ $idx }}][id]" value="{{ $item->id }}">
                                                 <input type="hidden" name="items[{{ $idx }}][position]" value="{{ $idx }}" class="position-input">
                                                 <input type="hidden" name="items[{{ $idx }}][source_type]" value="{{ $item->source_type }}">
                                                 <input type="hidden" name="items[{{ $idx }}][source_id]" value="{{ $item->source_id }}">
+                                                <div class="sm:hidden text-[11px] uppercase tracking-wider text-text-subtle mb-1">Item</div>
                                                 <input type="text" name="items[{{ $idx }}][name]" value="{{ old('items.' . $idx . '.name', $item->name) }}" placeholder="Item name"
                                                     class="oh-input h-9 w-full mb-1" @disabled($locked)>
                                                 <textarea name="items[{{ $idx }}][description]" rows="2" placeholder="Description (optional)"
-                                                    class="oh-input w-full text-xs" @disabled($locked)>{{ old('items.' . $idx . '.description', $item->description) }}</textarea>
+                                                    class="oh-textarea w-full text-xs" @disabled($locked)>{{ old('items.' . $idx . '.description', $item->description) }}</textarea>
                                                 @if ($item->source_type === 'time_entry')
                                                     <span class="oh-pill oh-pill--info text-[11px] mt-1 inline-flex items-center gap-1">Time entry</span>
                                                 @elseif ($item->source_type === 'time_entry_group')
                                                     <span class="oh-pill text-[11px] mt-1 inline-flex items-center gap-1">Time group</span>
                                                 @endif
                                             </td>
-                                            <td class="px-3 py-2 align-top">
+                                            <td class="px-3 py-2 align-top block sm:table-cell">
+                                                <div class="sm:hidden text-[11px] uppercase tracking-wider text-text-subtle mb-1">Qty</div>
                                                 <input type="number" step="0.01" min="0" name="items[{{ $idx }}][quantity]" value="{{ old('items.' . $idx . '.quantity', $item->quantity) }}"
                                                     class="oh-input h-9 w-full text-right item-qty" @disabled($locked)>
                                             </td>
-                                            <td class="px-3 py-2 align-top">
+                                            <td class="px-3 py-2 align-top block sm:table-cell">
+                                                <div class="sm:hidden text-[11px] uppercase tracking-wider text-text-subtle mb-1">Rate</div>
                                                 <input type="number" step="0.01" min="0" name="items[{{ $idx }}][unit_price]" value="{{ old('items.' . $idx . '.unit_price', $item->unit_price) }}"
                                                     class="oh-input h-9 w-full text-right item-rate" @disabled($locked)>
                                             </td>
-                                            <td class="px-3 py-2 align-top text-right">
+                                            <td class="px-3 py-2 align-top text-right block sm:table-cell">
+                                                <div class="sm:hidden text-[11px] uppercase tracking-wider text-text-subtle mb-1">Total</div>
                                                 <div class="item-total text-sm font-semibold text-text-base">—</div>
                                             </td>
-                                            <td class="px-3 py-2 align-top text-right">
+                                            <td class="px-3 py-2 align-top text-right block sm:table-cell">
                                                 <button type="button" class="oh-icon-btn remove-line" @disabled($locked)>
                                                     <i class="fa-regular fa-trash-can text-[12px]"></i>
                                                 </button>
@@ -172,27 +189,57 @@
                             </table>
                         </div>
                     </div>
-                </div>
 
-                {{-- Right column --}}
-                <div class="space-y-4">
-                    <label class="grid gap-1 text-sm">
-                        <span class="text-text-subtle">Notes (optional)</span>
-                        <textarea name="notes" rows="5" class="oh-input">{{ old('notes', $invoice->notes) }}</textarea>
-                    </label>
-                    <div class="rounded-lg border border-border-default/70 bg-surface-card/80 p-3 text-xs text-text-subtle space-y-1">
-                        <div><strong>Draft:</strong> internal until sent.</div>
-                        <div><strong>Sent:</strong> shared with client; edits may notify them.</div>
-                        <div><strong>Paid:</strong> marked complete; balance closed.</div>
-                        <div><strong>Overdue:</strong> due date passed; follow up.</div>
+                    {{-- Activity --}}
+                    <div class="text-xs text-text-subtle space-y-1">
+                        <div>Created {{ optional($invoice->created_at)->format('M j, Y') ?? '—' }}</div>
+                        <div>Sent {{ optional($invoice->sent_at)->format('M j, Y') ?? '—' }}</div>
+                        <div>Updated {{ optional($invoice->updated_at)->format('M j, Y') ?? '—' }}</div>
                     </div>
 
-                    {{-- Totals --}}
-                    <div class="rounded-xl border border-border-default/80 bg-surface-card/80 p-4 space-y-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-text-subtle">Subtotal</span>
-                            <span id="subtotal-display" class="font-semibold text-text-base">$0.00</span>
+                    {{-- Footer actions --}}
+                    <div class="mt-2 -mx-6 px-6 pt-4 pb-2 border-t border-border-default/70 bg-surface-card flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-xs text-text-subtle">Review totals before saving.</p>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route($routePrefix . '.show', ['tenant' => $tenantParam, 'invoice' => $invoice]) }}" class="oh-btn">
+                                Cancel
+                            </a>
+                            <button type="submit" class="oh-btn oh-btn--primary">Save changes</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right column --}}
+            <div class="lg:col-span-4">
+                <div class="oh-card p-5 space-y-4">
+                    <div class="text-sm font-semibold text-text-base">Summary</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-subtle">Invoice #</span>
+                        <span class="text-text-base font-semibold">{{ $invoice->invoice_number ?? $invoice->id }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-subtle">Issued</span>
+                        <span class="text-text-base">{{ optional($invoice->issue_date)->format('M j, Y') ?? '—' }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-text-subtle">Due</span>
+                        <span class="text-text-base">{{ optional($invoice->due_date)->format('M j, Y') ?? '—' }}</span>
+                    </div>
+                    @if ($invoice->client?->email || $invoice->client?->phone)
+                        <div class="pt-2 border-t border-border-default/70 space-y-1 text-sm">
+                            <div class="text-text-subtle">Client contact</div>
+                            @if ($invoice->client?->email)
+                                <div class="text-text-base">{{ $invoice->client->email }}</div>
+                            @endif
+                            @if ($invoice->client?->phone)
+                                <div class="text-text-base">{{ $invoice->client->phone }}</div>
+                            @endif
+                        </div>
+                    @endif
+
+                    <div class="pt-2 border-t border-border-default/70 space-y-3 text-sm">
+                        <div class="text-text-subtle text-xs uppercase tracking-wider">Inputs</div>
                         <label class="grid gap-1 text-sm">
                             <span class="text-text-subtle">Tax rate (%)</span>
                             <input type="number" step="0.01" min="0" name="tax_rate" value="{{ old('tax_rate', $invoice->tax_rate) }}"
@@ -214,6 +261,13 @@
                                     class="oh-input h-10 discount-value">
                             </label>
                         </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-border-default/70 space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-text-subtle">Subtotal</span>
+                            <span id="subtotal-display" class="font-semibold text-text-base">$0.00</span>
+                        </div>
                         <div class="flex justify-between">
                             <span class="text-text-subtle">Tax total</span>
                             <span id="tax-display" class="text-text-base">$0.00</span>
@@ -224,17 +278,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {{-- Actions --}}
-            <div class="flex flex-wrap justify-end gap-3 px-6 py-4 border-t border-border-default/70 bg-surface-accent">
-                <a href="{{ route($routePrefix . '.show', ['tenant' => $tenantParam, 'invoice' => $invoice]) }}" class="oh-btn">
-                    Cancel
-                </a>
-                @if ($statusValue === 'draft')
-                    <button type="submit" class="oh-btn">Send invoice</button>
-                @endif
-                <button type="submit" class="oh-btn oh-btn--primary">Save changes</button>
             </div>
         </form>
     </div>

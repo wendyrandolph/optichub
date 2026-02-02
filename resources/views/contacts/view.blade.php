@@ -29,6 +29,8 @@
         // Status / portal
         $status = strtolower(data_get($contact, 'status', 'active'));
         $hasLogin = (bool) (data_get($contact, 'has_login') ?? optional($contact->userAccount ?? null)->exists);
+        $invitedAt = data_get($contact, 'invited_at');
+        $invited = !$hasLogin && !empty($invitedAt);
 
         // KPI fallbacks
         $kpiOpenProjects = (int) (data_get($contact, 'projects_count') ?? data_get($contact, 'kpi_open_projects', 0));
@@ -78,6 +80,11 @@
 
     @if (session('success_message') || session('error_message'))
         <div class="mb-4">
+            @if (session('magic_link_url'))
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    Magic link: <span class="font-mono text-[11px] break-all">{{ session('magic_link_url') }}</span>
+                </div>
+            @endif
             @if (session('success_message'))
                 <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                     {{ session('success_message') }}
@@ -86,11 +93,6 @@
             @if (session('error_message'))
                 <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mt-2">
                     {{ session('error_message') }}
-                </div>
-            @endif
-            @if (session('magic_link_url'))
-                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 mt-2">
-                    Magic link: <span class="font-mono text-[11px] break-all">{{ session('magic_link_url') }}</span>
                 </div>
             @endif
         </div>
@@ -136,58 +138,15 @@
     <div class="oh-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="space-y-1">
-                <p class="text-[11px] uppercase tracking-[0.2em] text-text-subtle">Contacts</p>
-                <h1 class="text-2xl font-semibold text-text-base">{{ $fullName }}</h1>
-                <p class="text-sm text-text-subtle">
-                    Manage this client’s profile, portal access, and communication.
-                </p>
+                <p class="text-[11px] uppercase tracking-[0.2em] text-text-subtle">People</p>
+                <h1 class="text-2xl font-semibold text-text-base">Contact Details</h1>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <a href="{{ $routeOr('tenant.contacts.index', ['tenant' => $tenantId], url('/contacts')) }}"
-                    class="oh-btn">
+                    class="text-xs text-text-subtle hover:text-text-base inline-flex items-center gap-1 mr-1">
+                    <i class="fa-solid fa-arrow-left text-[10px]"></i>
                     Back to contacts
                 </a>
-                <a href="{{ $routeOr('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
-                    class="oh-btn oh-btn--primary">
-                    Edit contact
-                </a>
-            </div>
-        </header>
-
-        <section class="oh-card space-y-4">
-            <div class="flex flex-col gap-2">
-                <h2 class="text-base font-semibold text-text-base">Contact overview</h2>
-                <p class="text-sm text-text-subtle">
-                    A quick snapshot of status, portal access, and recent details.
-                </p>
-            </div>
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                <div class="flex items-start gap-3">
-                    <div
-                        class="h-12 w-12 rounded-xl bg-[rgba(var(--brand-primary)/.14)] text-[rgb(var(--brand-primary))] ring-1 ring-[rgba(var(--brand-primary)/.28)] grid place-items-center text-sm font-semibold">
-                        {{ $initials($firstName, $lastName, $email) }}
-                    </div>
-                    <div class="min-w-0 space-y-2">
-                        <div class="flex flex-wrap gap-2 text-xs">
-                            <span
-                                class="oh-pill {{ $status === 'active' ? 'oh-pill--success' : 'oh-pill--muted' }}">{{ ucfirst($status) }}</span>
-                            <span class="oh-pill {{ $hasLogin ? 'oh-pill--info' : 'oh-pill--muted' }}">
-                                {{ $hasLogin ? 'Portal Access' : 'No Login' }}
-                            </span>
-                            @if ($company)
-                                <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
-                                    class="oh-pill oh-pill--muted inline-flex items-center gap-1">
-                                    <i class="fa-solid fa-building text-[11px]"></i>
-                                    {{ $company }}
-                                </a>
-                            @endif
-                        </div>
-                        <div class="text-sm text-text-subtle">
-                            {{ $email ?: 'No email on file' }} @if ($phone) • {{ $phone }} @endif
-                        </div>
-                    </div>
-                </div>
-
                 <div class="flex flex-wrap items-center gap-2">
                     @if ($email)
                         <a href="mailto:{{ $email }}" class="oh-btn oh-btn--primary inline-flex items-center gap-2">
@@ -195,8 +154,7 @@
                             Email
                         </a>
                     @else
-                        <span class="oh-btn opacity-60 cursor-not-allowed inline-flex items-center gap-2"
-                            aria-disabled="true">
+                        <span class="oh-btn opacity-60 cursor-not-allowed inline-flex items-center gap-2" aria-disabled="true">
                             <i class="fa-regular fa-envelope text-[12px]"></i>
                             Email
                         </span>
@@ -204,39 +162,62 @@
 
                     @if ($phone)
                         <a href="tel:{{ preg_replace('/[^0-9+]/', '', $phone) }}"
-                            class="oh-btn inline-flex items-center gap-2">
+                            class="oh-btn oh-btn--secondary inline-flex items-center gap-2">
                             <i class="fa-solid fa-phone text-[11px]"></i>
                             Call
                         </a>
+                    @else
+                        <span class="oh-btn oh-btn--secondary opacity-60 cursor-not-allowed inline-flex items-center gap-2" aria-disabled="true">
+                            <i class="fa-solid fa-phone text-[11px]"></i>
+                            Call
+                        </span>
                     @endif
 
-                    @if ($hasLogin)
-                        <form method="POST"
-                            action="{{ $routeOr('tenant.contacts.magic-link', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
-                            @csrf
-                            <button type="submit" class="oh-btn inline-flex items-center gap-2">
-                                <i class="fa-solid fa-link text-[11px]"></i>
-                                Send Magic Link
-                            </button>
-                        </form>
-                    @endif
-
-                    @if (($tenant_workspace_type ?? null) === 'trades')
-                        <a href="{{ $routeOr('tenant.trades.locations.create', ['tenant' => $tenantId, 'client' => data_get($contact, 'id')]) }}"
-                            class="oh-btn inline-flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-[12px]"></i>
-                            Add Location
-                        </a>
-                    @endif
-
-                    <a href="#" class="oh-btn inline-flex items-center gap-2">
+                    <a href="{{ $routeOr('tenant.tasks.create', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                        class="oh-btn oh-btn--primary inline-flex items-center gap-2 opacity-80">
                         <i class="fa-regular fa-square-plus text-[12px]"></i>
                         New Task
                     </a>
-                    <a href="#" class="oh-btn inline-flex items-center gap-2" title="Coming soon" aria-disabled="true">
-                        <i class="fa-regular fa-file-lines text-[12px]"></i>
-                        New Invoice
-                    </a>
+                </div>
+                <a href="{{ $routeOr('tenant.contacts.edit', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                    class="oh-btn">
+                    Edit contact
+                </a>
+            </div>
+        </header>
+
+        <section class="oh-card p-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div
+                        class="h-11 w-11 rounded-xl bg-surface-accent text-text-base ring-1 ring-border-default grid place-items-center text-sm font-semibold">
+                        {{ $initials($firstName, $lastName, $email) }}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-semibold text-text-base truncate">{{ $fullName }}</div>
+                        <div class="text-sm text-text-subtle truncate">
+                            {{ $email ?: 'No email on file' }} @if ($phone) • {{ $phone }} @endif
+                        </div>
+                        <div class="text-xs text-text-subtle truncate">
+                            @if ($company)
+                                {{ $company }}
+                            @else
+                                No company on file
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    @php
+                        $statusLabel = $invited ? 'Invited' : ucfirst($status);
+                        $statusPill = match (true) {
+                            $invited => 'oh-pill oh-pill--info',
+                            $status === 'active' => 'oh-pill oh-pill--success',
+                            default => 'oh-pill oh-pill--muted',
+                        };
+                    @endphp
+                    <span class="{{ $statusPill }}">{{ $statusLabel }}</span>
+                    <span class="oh-pill oh-pill--muted">{{ $hasLogin ? 'Portal Access' : 'No Login' }}</span>
                 </div>
             </div>
         </section>
@@ -245,34 +226,39 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div class="oh-card p-4">
                 <div class="text-[11px] uppercase tracking-wide text-text-subtle">Open projects</div>
-                <div class="text-2xl font-semibold text-text-base mt-1">{{ $kpiOpenProjects }}</div>
+                <div class="text-base font-semibold text-text-base mt-2">{{ $kpiOpenProjects ?: '—' }}</div>
+                @if (!$kpiOpenProjects)
+                    <div class="text-xs text-text-subtle mt-1">No data yet</div>
+                @endif
             </div>
             <div class="oh-card p-4">
                 <div class="text-[11px] uppercase tracking-wide text-text-subtle">Unpaid balance</div>
-                <div class="text-2xl font-semibold text-text-base mt-1">
-                    {{ is_null($kpiUnpaid) ? '—' : $money($kpiUnpaid) }}</div>
+                <div class="text-base font-semibold text-text-base mt-2">
+                    {{ is_null($kpiUnpaid) || $kpiUnpaid == 0 ? '—' : $money($kpiUnpaid) }}
+                </div>
+                @if (is_null($kpiUnpaid) || $kpiUnpaid == 0)
+                    <div class="text-xs text-text-subtle mt-1">No data yet</div>
+                @endif
             </div>
             <div class="oh-card p-4">
                 <div class="text-[11px] uppercase tracking-wide text-text-subtle">Last activity</div>
-                <div class="text-sm mt-1">{{ $kpiLastActivity ?: '—' }}</div>
+                <div class="text-base font-semibold text-text-base mt-2">{{ $kpiLastActivity ?: '—' }}</div>
+                @if (!$kpiLastActivity)
+                    <div class="text-xs text-text-subtle mt-1">No data yet</div>
+                @endif
             </div>
             <div class="oh-card p-4">
-                <div class="text-[11px] uppercase tracking-wide text-text-subtle flex items-center gap-2">
-                    Next follow-up
-                    @php
-                        $isOverdue = $kpiNextFollowup && \Illuminate\Support\Carbon::parse($kpiNextFollowup)->isPast();
-                    @endphp
-                    @if ($isOverdue)
-                        <span class="oh-pill oh-pill--danger text-[10px]">Overdue</span>
-                    @endif
-                </div>
-                <div class="text-sm mt-1">
+                <div class="text-[11px] uppercase tracking-wide text-text-subtle">Next follow-up</div>
+                <div class="text-base font-semibold text-text-base mt-2">
                     @if ($kpiNextFollowup)
                         {{ \Illuminate\Support\Carbon::parse($kpiNextFollowup)->format('M j, Y g:ia') }}
                     @else
-                        Not scheduled
+                        —
                     @endif
                 </div>
+                @if (!$kpiNextFollowup)
+                    <div class="text-xs text-text-subtle mt-1">No data yet</div>
+                @endif
             </div>
         </div>
 
@@ -282,21 +268,14 @@
                 <div class="oh-card p-5">
                     <div class="flex flex-col gap-1 mb-4">
                         <h2 class="text-base font-semibold text-text-base">Engagement</h2>
-                        <p class="text-sm text-text-subtle">Review activity, work, and notes for this contact.</p>
                     </div>
                     <nav class="tabs__nav flex flex-wrap gap-2 mb-4 text-xs font-medium">
-                        <button class="px-3 py-1 rounded-full bg-surface-accent text-text-base is-active"
-                            data-tab="activity">Activity</button>
-                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
-                            data-tab="projects">Projects</button>
-                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
-                            data-tab="tasks">Tasks</button>
-                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
-                            data-tab="billing">Billing</button>
-                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
-                            data-tab="notes">Notes</button>
-                        <button class="px-3 py-1 rounded-full hover:bg-surface-accent text-text-subtle"
-                            data-tab="files">Files</button>
+                        <button class="oh-pill oh-pill--info is-active" data-tab="activity">Activity</button>
+                        <button class="oh-pill oh-pill--muted" data-tab="projects">Projects</button>
+                        <button class="oh-pill oh-pill--muted" data-tab="tasks">Tasks</button>
+                        <button class="oh-pill oh-pill--muted" data-tab="billing">Billing</button>
+                        <button class="oh-pill oh-pill--muted" data-tab="notes">Notes</button>
+                        <button class="oh-pill oh-pill--muted" data-tab="files">Files</button>
                     </nav>
 
                     {{-- Activity --}}
@@ -577,17 +556,13 @@
                             @endforelse
                         </div>
                         @if ($company)
-                            <div
-                                class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3 flex items-start gap-2">
-
-                                <div>
-                                    Tip: Contract/SOW or Billing documents often belong on the company. Upload here if
-                                    contact-specific,
-                                    or
-                                    <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
-                                        class="text-brand-primary hover:text-brand-secondary">open Company files</a>.
-                                </div>
-                            </div>
+                            <p class="text-xs text-text-subtle mt-3">
+                                Tip: Contract/SOW or Billing documents often belong on the company. Upload here if
+                                contact-specific,
+                                or
+                                <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
+                                    class="text-brand-primary hover:text-brand-secondary">open Company files</a>.
+                            </p>
                         @endif
                     </div>
                 </div>
@@ -595,9 +570,9 @@
 
             {{-- Right rail --}}
             <aside class="space-y-4 xl:col-span-1">
-                <div class="oh-card p-5">
+                <div class="oh-card p-4">
                     <h3 class="text-sm font-semibold text-text-base mb-1">Next follow-up</h3>
-                    <p class="text-xs text-text-subtle mb-3">Stay on top of the next check-in.</p>
+                    <p class="text-xs text-text-subtle mb-3">Pick a date to keep the follow-up on track.</p>
                     @php
                         $isOverdue = $kpiNextFollowup && \Illuminate\Support\Carbon::parse($kpiNextFollowup)->isPast();
                     @endphp
@@ -618,62 +593,54 @@
                         <input type="datetime-local" id="next_followup_at" name="next_followup_at"
                             value="{{ $kpiNextFollowup ? \Illuminate\Support\Carbon::parse($kpiNextFollowup)->format('Y-m-d\\TH:i') : '' }}"
                             class="oh-input w-full">
-                        <button type="submit" class="oh-btn oh-btn--primary w-full text-sm">Save follow-up</button>
+                        <div class="flex items-center gap-2">
+                            <button type="submit" class="oh-btn oh-btn--primary w-full text-sm">Save follow-up</button>
+                            @if ($kpiNextFollowup)
+                                <a href="{{ $routeOr('contacts.followup', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}"
+                                    class="text-xs text-text-subtle hover:text-text-base whitespace-nowrap">Clear</a>
+                            @endif
+                        </div>
                     </form>
                 </div>
 
-                <div class="oh-card p-5">
-                    <h3 class="text-sm font-semibold text-text-base mb-1">Contact details</h3>
-                    <p class="text-xs text-text-subtle mb-3">Contact channels and portal access.</p>
-                    <dl class="text-sm space-y-2">
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-text-subtle">Email</dt>
-                            <dd class="text-right">
-                                @if ($email)
-                                    <a href="mailto:{{ $email }}"
-                                        class="text-brand-primary hover:text-brand-secondary break-all">
-                                        {{ $email }}
-                                    </a>
-                                @else
-                                    <span class="text-text-subtle">—</span>
-                                @endif
-                            </dd>
+                <div class="oh-card p-4">
+                    <h3 class="text-sm font-semibold text-text-base mb-1">Login details</h3>
+                    <p class="text-xs text-text-subtle mb-3">Portal access and authentication.</p>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-text-subtle">Magic link access</span>
+                            @if ($hasLogin)
+                                <form method="POST"
+                                    action="{{ $routeOr('tenant.contacts.magic-link', ['tenant' => $tenantId, 'contact' => data_get($contact, 'id')]) }}">
+                                    @csrf
+                                    <button type="submit"
+                                        class="oh-btn inline-flex items-center gap-2 text-xs">
+                                        <i class="fa-solid fa-link text-[11px]"></i>
+                                        Send magic link
+                                    </button>
+                                </form>
+                            @else
+                                <span class="text-xs text-text-subtle">Create a login first</span>
+                            @endif
                         </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-text-subtle">Phone</dt>
-                            <dd class="text-right">
-                                @if ($phone)
-                                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $phone) }}"
-                                        class="hover:text-brand-primary">
-                                        {{ $phone }}
-                                    </a>
-                                @else
-                                    <span class="text-text-subtle">—</span>
-                                @endif
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-text-subtle">Company</dt>
-                            <dd class="text-right">
-                                @if ($company)
-                                    <a href="{{ $routeOr('tenant.companies.show', ['tenant' => $tenantId, 'company' => $companyId]) }}"
-                                        class="hover:text-brand-primary">
-                                        {{ $company }}
-                                    </a>
-                                @else
-                                    <span class="text-text-subtle">—</span>
-                                @endif
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-text-subtle">Status</dt>
-                            <dd class="text-right capitalize">{{ $status }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-text-subtle">Portal</dt>
-                            <dd class="text-right">{{ $hasLogin ? 'Has login' : 'No login' }}</dd>
-                        </div>
-                    </dl>
+                        @if (session('magic_link_url'))
+                            <div class="flex items-center gap-2">
+                                <input type="text" readonly value="{{ session('magic_link_url') }}"
+                                    class="oh-input w-full text-[11px]" aria-label="Magic link URL">
+                                <button type="button"
+                                    class="oh-btn text-xs"
+                                    onclick="navigator.clipboard?.writeText('{{ session('magic_link_url') }}')">
+                                    Copy
+                                </button>
+                            </div>
+                        @endif
+                        @if (!empty($magicLink) && $magicLink?->expires_at)
+                            <div class="text-xs text-text-subtle">
+                                Active link expires {{ \Illuminate\Support\Carbon::parse($magicLink->expires_at)->diffForHumans() }}.
+                            </div>
+                        @endif
+                    </div>
 
                     <div class="mt-4 space-y-2">
                         @if (!$hasLogin)
@@ -806,13 +773,13 @@
                     const target = btn.dataset.tab;
                     navBtns.forEach(b => {
                         b.classList.remove('is-active');
-                        b.classList.remove('bg-surface-accent');
-                        b.classList.add('text-text-subtle');
+                        b.classList.remove('oh-pill--info');
+                        b.classList.add('oh-pill--muted');
                     });
                     panels.forEach(p => p.classList.add('hidden'));
                     btn.classList.add('is-active');
-                    btn.classList.add('bg-surface-accent');
-                    btn.classList.remove('text-text-subtle');
+                    btn.classList.add('oh-pill--info');
+                    btn.classList.remove('oh-pill--muted');
                     const panel = document.getElementById('tab-' + target);
                     if (panel) panel.classList.remove('hidden');
                 });

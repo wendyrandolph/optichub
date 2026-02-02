@@ -17,13 +17,19 @@
         {{-- Header + CTA --}}
         <header class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-semibold text-text-base">Email Log</h1>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Emails</p>
+                <h1 class="text-2xl font-semibold text-text-base">Emails</h1>
                 <p class="text-sm text-text-subtle mt-1">Your email communications with clients in one place.</p>
             </div>
-            <a href="{{ route('tenant.emails.create', ['tenant' => $tenantParam]) }}" class="oh-btn oh-btn--primary">
-                <i class="fa-solid fa-plus text-xs"></i>
-                New Email
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('tenant.emails.create', ['tenant' => $tenantParam]) }}" class="oh-btn oh-btn--primary">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    New Email
+                </a>
+                <a href="{{ route('tenant.email-logs.index', ['tenant' => $tenantParam]) }}" class="oh-btn oh-btn--secondary">
+                    Synced Email Logs
+                </a>
+            </div>
         </header>
 
         {{-- Toolbar --}}
@@ -82,34 +88,28 @@
 
                     <tbody>
                         @forelse ($emails as $email)
-                            @php
-                                $id = $get($email, 'id');
-                                $subject = $get($email, 'subject', '—');
-                                $recipient = $get($email, 'recipient_email', '—');
-                                $related = (string) $get($email, 'related_type', 'record');
-                                $relatedId = $get($email, 'related_id');
-                                $sentAt = $get($email, 'date_sent') ?: $get($email, 'created_at');
-                                try {
-                                    $sentAtFmt = $sentAt
-                                        ? \Carbon\Carbon::parse($sentAt)->format('M j, Y • g:ia')
-                                        : '—';
-                                } catch (\Throwable $e) {
-                                    $sentAtFmt = (string) $sentAt ?: '—';
-                                }
-                                $chipColors = [
-                                    'project' =>
-                                        'bg-blue-50 text-blue-700 border-blue-200',
-                                    'task' =>
-                                        'bg-green-50 text-green-700 border-green-200',
-                                    'lead' =>
-                                        'bg-purple-50 text-purple-700 border-purple-200',
-                                    'invoice' =>
-                                        'bg-amber-50 text-amber-700 border-amber-200',
-                                ];
-                                $chipClass =
-                                    $chipColors[strtolower($related)] ??
-                                    'bg-slate-50 text-slate-700 border-slate-200';
-                            @endphp
+                                @php
+                                    $id = $get($email, 'id');
+                                    $subject = $get($email, 'subject', '—');
+                                    $recipient = $get($email, 'recipient_email', '—');
+                                    $related = (string) $get($email, 'related_type', 'record');
+                                    $relatedId = $get($email, 'related_id');
+                                    $sentAt = $get($email, 'date_sent') ?: $get($email, 'created_at');
+                                    try {
+                                        $sentAtFmt = $sentAt
+                                            ? \Carbon\Carbon::parse($sentAt)->format('M j, Y • g:ia')
+                                            : '—';
+                                    } catch (\Throwable $e) {
+                                        $sentAtFmt = (string) $sentAt ?: '—';
+                                    }
+                                    $chipMap = [
+                                        'project' => 'oh-pill oh-pill--info',
+                                        'task' => 'oh-pill oh-pill--success',
+                                        'lead' => 'oh-pill oh-pill--primary',
+                                        'invoice' => 'oh-pill oh-pill--warning',
+                                    ];
+                                    $chipClass = $chipMap[strtolower($related)] ?? 'oh-pill oh-pill--muted';
+                                @endphp
 
                             <tr class="hover:bg-surface-accent/50">
                                 {{-- Subject (primary) --}}
@@ -139,7 +139,7 @@
 
                                 {{-- Related --}}
                                 <td>
-                                    <span class="oh-pill oh-pill--muted text-[11px]">
+                                    <span class="{{ $chipClass }} text-[11px]">
                                         {{ ucfirst($related) }}@if ($relatedId)
                                             #{{ $relatedId }}
                                         @endif
@@ -182,9 +182,8 @@
                             @empty
                                 <tr>
                                     <td colspan="5" class="px-6 py-12">
-                                        <div class="text-center text-slate-500">
-                                            No emails logged yet — click <span class="font-medium">New Email</span> to add your
-                                            first.
+                                        <div class="text-center text-text-subtle">
+                                            No emails yet. Start by creating a message for a client.
                                         </div>
                                     </td>
                                 </tr>

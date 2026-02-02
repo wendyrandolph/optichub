@@ -2,11 +2,13 @@
     use Illuminate\Support\Carbon;
     use Illuminate\Support\Collection;
 
-    // Tenant-driven colors with Renlo fallbacks
-    $primary = $tenant->primary_color ?: '#1F3C66'; // deep blue
-    $accent = $tenant->secondary_color ?: '#2563EB'; // mid blue
+    $tenant = $tenant ?? $invoice->tenant ?? null;
 
-    $logoPath = $tenant->logo_path ? public_path('storage/' . $tenant->logo_path) : null;
+    // Tenant-driven colors with Renlo fallbacks
+    $primary = $tenant?->primary_color ?: '#1F3C66'; // deep blue
+    $accent = $tenant?->secondary_color ?: '#2563EB'; // mid blue
+
+    $logoPath = $tenant?->logo_path ? public_path('storage/' . $tenant->logo_path) : null;
 
     // ----- CLIENT / BILL TO -----
     $client = $invoice->client;
@@ -72,11 +74,11 @@
     $taglineDefault = 'Thoughtful tools that remove tech stress and help service businesses move forward with clarity.';
     $invoiceFooterDefault =
         'Thank you for your business. For questions, please contact ' .
-        ($tenant->support_email ?: 'your account manager') .
+        ($tenant?->support_email ?: 'your account manager') .
         '.';
 
-    $brandTagline = $tenant->brand_tagline ?: $taglineDefault;
-    $invoiceFooter = $tenant->invoice_footer ?: $invoiceFooterDefault;
+    $brandTagline = $tenant?->brand_tagline ?: $taglineDefault;
+    $invoiceFooter = $tenant?->invoice_footer ?: $invoiceFooterDefault;
 @endphp
 
 

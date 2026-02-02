@@ -29,7 +29,7 @@
                             @php
                                 $actor = $a->user?->first_name
                                     ? "{$a->user->first_name} {$a->user->last_name}"
-                                    : $a->user?->username ?? 'System';
+                                    : $a->user?->email ?? 'System';
                             @endphp
                             <tr class="border-b">
                                 <td class="py-2 px-3 whitespace-nowrap">{{ $a->created_at?->format('M j, Y g:ia') }}</td>

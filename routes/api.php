@@ -4,6 +4,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\LeadApiController;
 use App\Http\Controllers\Api\EventApiController;
+use App\Http\Controllers\Api\LeadsIngestController;
+
+Route::post('/leads/ingest/{tenant:routeKey}', [LeadsIngestController::class, 'store'])
+  ->middleware('throttle:lead-ingest')
+  ->name('api.leads.ingest');
 
 Route::prefix('v1')->middleware('apikey')->group(function () {
   // Public ping (no key)

@@ -7,8 +7,9 @@
     $client = $client ?? null;
     $tenant = $tenant ?? (optional($client)->tenant ?? (optional($user)->tenant ?? null));
     $portalTheme = $portalTheme ?? [];
-
-    $pageTitle = trim(($title ?? '') . ' | ' . config('app.name', 'Renlo'), ' |');
+    $tenantName = $tenant?->name ?? $tenant?->company_name ?? 'Workspace';
+    $renloName = config('app.name', 'Renlo');
+    $pageTitle = $renloName . ' Client Portal — ' . $tenantName;
 
     $hexToRgb = function (?string $hex, string $fallback = '#1C2E70') {
         $h = ltrim($hex ?: $fallback, '#');
@@ -32,6 +33,18 @@
     [$pr, $pg, $pb] = array_map('intval', explode(' ', $tenantPrimary));
     $luminance = 0.2126 * ($pr / 255) + 0.7152 * ($pg / 255) + 0.0722 * ($pb / 255);
     $tenantOnPrimary = $luminance > 0.6 ? '0 0 0' : '255 255 255';
+    $tenantLogo = $portalTheme['logo_light'] ?? asset('images/renlo.svg');
+    $renloLogo = asset('images/renlo.svg');
+    $clientFirst = $user?->first_name ?? $client?->firstName ?? $client?->first_name ?? '';
+    $clientLast = $user?->last_name ?? $client?->lastName ?? $client?->last_name ?? '';
+    $clientEmail = $user?->email ?? '';
+    $clientDisplay = trim($clientFirst . ' ' . $clientLast);
+    $clientDisplay = $clientDisplay !== '' ? $clientDisplay : ($clientEmail ?: 'Client');
+    $clientInitials = strtoupper(mb_substr($clientFirst, 0, 1) . mb_substr($clientLast, 0, 1));
+    if ($clientInitials === '' && $clientEmail !== '') {
+        $clientInitials = strtoupper(mb_substr($clientEmail, 0, 1));
+    }
+    $clientInitials = $clientInitials ?: 'C';
 @endphp
 
 <!DOCTYPE html>
@@ -47,7 +60,7 @@
     <link rel="icon" type="image/png" href="{{ asset('images/renlomicroicon.png') }}">
 </head>
 
-<body class="min-h-screen flex flex-col bg-[rgb(var(--ui-bg))] text-[rgb(var(--ui-text))]"
+<body class="min-h-screen flex flex-col bg-[rgba(var(--brand-primary),0.035)] text-[rgb(var(--ui-text))]"
     style="
         --brand-primary: {{ $tenantPrimary }};
         --brand-primary-hover: {{ $tenantSecondary }};
@@ -61,83 +74,6 @@
         --tenant-neutral: {{ $tenantNeutral }};
         --tenant-on-primary: {{ $tenantOnPrimary }};
     ">
-
-    {{-- Top header (portal, mobile-only) --}}
-    <header class="lg:hidden border-b border-[rgb(var(--ui-border))] bg-[rgb(var(--ui-surface))]">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-            <div class="flex items-center gap-3 min-w-0">
-                {{-- Mobile toggle for sidebar --}}
-                <button type="button"
-                    class="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border-default bg-surface-card hover:bg-surface-accent text-text-subtle hover:text-text-base"
-                    aria-label="Open sidebar"
-                    data-portal-sidebar-toggle>
-                    <i class="fa-solid fa-bars text-sm text-text-base"></i>
-                </button>
-
-                <div class="flex flex-col min-w-0">
-                    <a href="{{ route('portal.dashboard') }}" class="flex items-center gap-2 min-w-0"
-                        aria-label="{{ $portalTheme['brand_name'] ?? 'Renlo' }} home">
-                        @if (!empty($portalTheme['logo_light']))
-                            <img src="{{ $portalTheme['logo_light'] }}" alt="{{ $portalTheme['brand_name'] ?? 'Renlo' }}"
-                                class="h-5 w-auto block dark:hidden">
-                            <img src="{{ $portalTheme['logo_dark'] ?? $portalTheme['logo_light'] }}"
-                                alt="{{ $portalTheme['brand_name'] ?? 'Renlo' }}" class="h-5 w-auto hidden dark:block">
-                        @else
-                            <span class="text-base font-semibold select-none text-[rgb(var(--ui-primary))]">
-                                {{ $portalTheme['brand_name'] ?? 'Renlo' }}
-                            </span>
-                        @endif
-                        @if (!empty($tenant?->name))
-                            <span class="text-xs text-text-subtle truncate">• {{ $tenant->name }}</span>
-                        @endif
-                    </a>
-                    <span class="text-[11px] uppercase tracking-wide text-text-subtle">
-                        Secure Client Portal
-                    </span>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3 text-xs">
-                @if ($user)
-                    <a href="{{ route('portal.messages.index') }}"
-                        class="relative inline-flex items-center justify-center h-8 w-8 rounded-full border border-border-default bg-surface-card text-text-subtle hover:text-text-base hover:bg-surface-accent"
-                        aria-label="Messages">
-                        <i class="fa-solid fa-envelope text-[12px] text-text-base"></i>
-                        @if (!empty($portalUnreadCount))
-                            <span
-                                class="absolute -top-1 -right-1 h-4 min-w-[1rem] rounded-full bg-[rgb(var(--brand-primary))] px-1 text-[10px] font-semibold text-white flex items-center justify-center">
-                                {{ $portalUnreadCount }}
-                            </span>
-                        @endif
-                    </a>
-                    <div class="hidden sm:block text-right leading-tight text-[rgb(var(--ui-text))]">
-                        <div class="text-xs text-text-subtle">Client</div>
-                        <div class="font-medium">{{ $user->first_name ?? ($client->firstName ?? '') }}</div>
-                    </div>
-                    @php
-                        $first = $user->first_name ?? $client?->firstName ?? $client?->first_name ?? '';
-                        $last = $user->last_name ?? $client?->lastName ?? $client?->last_name ?? '';
-                        $email = $user->email ?? '';
-                        $initials = strtoupper(
-                            mb_substr($first, 0, 1) .
-                                mb_substr($last, 0, 1)
-                        );
-                        if ($initials === '' && $email !== '') {
-                            $initials = strtoupper(mb_substr($email, 0, 1));
-                        }
-                        $initials = $initials ?: 'C';
-                    @endphp
-                    <div
-                        class="h-8 w-8 rounded-full bg-[rgb(var(--tenant-primary))] text-[rgb(var(--tenant-on-primary))] flex items-center justify-center text-xs font-semibold ring-1 ring-[rgba(var(--tenant-primary),0.25)]"
-                        aria-label="Client">
-                        {{ $initials }}
-                    </div>
-                @else
-                    <a href="{{ route('portal.login') }}" class="oh-btn">Sign in</a>
-                @endif
-            </div>
-        </div>
-    </header>
 
     {{-- Main area: sidebar + page content --}}
     <div class="flex-1 flex min-h-0 relative">
@@ -187,13 +123,6 @@
     <footer class="border-t border-[rgb(var(--ui-border))] bg-[rgb(var(--ui-surface))]">
         <div
             class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-xs text-[rgb(var(--ui-text-subtle))] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex flex-wrap items-center gap-2">
-                <span>© {{ now()->year }} {{ config('app.name', 'Renlo') }}. All rights reserved.</span>
-                @if (!empty($tenant?->name))
-                    <span class="hidden sm:inline">·</span>
-                    <span>{{ $tenant->name }}</span>
-                @endif
-            </div>
             <div class="flex flex-wrap items-center gap-3">
                 @php
                     $supportEmail = $tenant?->support_email ?? config('mail.from.address');
@@ -203,11 +132,16 @@
                 @endif
                 <a href="{{ route('privacy') }}" class="hover:text-text-base">Privacy</a>
                 <a href="{{ route('terms') }}" class="hover:text-text-base">Terms</a>
-                <span class="hidden sm:inline">·</span>
-                <span>Powered by {{ config('app.name', 'Renlo') }}</span>
+                <a href="#" data-cookie-settings class="hover:text-text-base">Cookie settings</a>
+            </div>
+            <div class="flex items-center gap-2">
+                <img src="{{ $renloLogo }}" alt="{{ $renloName }}" class="h-3 w-auto opacity-70">
+                <span>Powered by {{ $renloName }}</span>
             </div>
         </div>
     </footer>
+
+    @include('partials.cookie-consent')
 
     {{-- Tiny JS for mobile sidebar toggle (no framework required) --}}
     <script>
@@ -216,6 +150,8 @@
             const openBtns = document.querySelectorAll('[data-portal-sidebar-toggle]');
             const closeBtn = document.querySelector('[data-portal-sidebar-close]');
             const backdrop = document.querySelector('[data-portal-backdrop]');
+            const notificationsToggle = document.querySelector('[data-portal-notifications-toggle]');
+            const notificationsMenu = document.querySelector('[data-portal-notifications-menu]');
 
             if (!sidebar) return;
 
@@ -263,6 +199,37 @@
             };
             handleResize();
             window.addEventListener('resize', handleResize);
+
+            if (notificationsToggle && notificationsMenu) {
+                const closeNotifications = () => {
+                    notificationsMenu.classList.add('hidden');
+                };
+                const toggleNotifications = (event) => {
+                    event.stopPropagation();
+                    notificationsMenu.classList.toggle('hidden');
+                    if (!notificationsMenu.classList.contains('hidden')) {
+                        fetch("{{ route('portal.notifications.seen') }}", {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                                'Accept': 'application/json',
+                            },
+                        }).catch(() => {});
+                    }
+                };
+
+                notificationsToggle.addEventListener('click', toggleNotifications);
+                document.addEventListener('click', (event) => {
+                    if (!notificationsMenu.contains(event.target) && !notificationsToggle.contains(event.target)) {
+                        closeNotifications();
+                    }
+                });
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        closeNotifications();
+                    }
+                });
+            }
         });
     </script>
 </body>

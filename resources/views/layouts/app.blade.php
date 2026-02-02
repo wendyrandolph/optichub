@@ -120,24 +120,24 @@
             <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
                 @if (session('status'))
                     <div data-flash
-                        class="mb-4 relative rounded-xl bg-[rgba(var(--ui-success),0.1)] text-[rgb(var(--ui-success))] p-3 pr-10 ring-1 ring-[rgba(var(--ui-success),0.2)]">
+                        class="mb-4 relative rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 pr-10 text-sm text-emerald-800">
                         {{ session('status') }}
                         <button type="button" data-flash-close aria-label="Dismiss"
-                            class="absolute right-3 top-3 text-xs text-[rgb(var(--ui-success))] hover:text-text-base">x</button>
+                            class="absolute right-3 top-3 text-xs text-emerald-700 hover:text-emerald-900">x</button>
                     </div>
                 @elseif (session('success'))
                     <div data-flash
-                        class="mb-4 relative rounded-xl bg-[rgba(var(--ui-success),0.1)] text-[rgb(var(--ui-success))] p-3 pr-10 ring-1 ring-[rgba(var(--ui-success),0.2)]">
+                        class="mb-4 relative rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 pr-10 text-sm text-emerald-800">
                         {{ session('success') }}
                         <button type="button" data-flash-close aria-label="Dismiss"
-                            class="absolute right-3 top-3 text-xs text-[rgb(var(--ui-success))] hover:text-text-base">x</button>
+                            class="absolute right-3 top-3 text-xs text-emerald-700 hover:text-emerald-900">x</button>
                     </div>
                 @elseif (session('error'))
                     <div data-flash
-                        class="mb-4 relative rounded-xl bg-[rgba(var(--ui-danger),0.1)] text-[rgb(var(--ui-danger))] p-3 pr-10 ring-1 ring-[rgba(var(--ui-danger),0.2)]">
+                        class="mb-4 relative rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 pr-10 text-sm text-rose-800">
                         {{ session('error') }}
                         <button type="button" data-flash-close aria-label="Dismiss"
-                            class="absolute right-3 top-3 text-xs text-[rgb(var(--ui-danger))] hover:text-text-base">x</button>
+                            class="absolute right-3 top-3 text-xs text-rose-700 hover:text-rose-900">x</button>
                     </div>
                 @endif
                 @yield('content')
@@ -146,6 +146,8 @@
 
         @include('partials.footer')
     </div>
+
+    @include('partials.cookie-consent')
 
     {{-- Sidebar behavior handled in resources/js/app.js --}}
     <script>
@@ -163,6 +165,7 @@
             });
         });
     </script>
+    @stack('modals')
     @stack('scripts')
 </body>
 

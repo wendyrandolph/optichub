@@ -9,21 +9,41 @@
             $routeTenant instanceof \App\Models\Tenant
                 ? $routeTenant->getKey()
                 : tenant('id') ?? auth()->user()?->tenant_id;
+        $currentView = request()->query('view', 'calendar');
+        $tz = tenant('timezone') ?? config('app.timezone') ?? 'America/Denver';
     @endphp
     <section class="space-y-6">
-        <div class="flex flex-col gap-2">
-            <p class="text-[11px] uppercase tracking-wide text-text-subtle">Calendar</p>
-            <h1 class="text-2xl font-semibold text-text-base">Schedule & Deadlines</h1>
-            <p class="text-sm text-text-subtle">Tasks, follow-ups, invoices, and renewals in one view.</p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Calendar</p>
+                <h1 class="text-2xl font-semibold text-text-base">Schedule & Deadlines</h1>
+                <p class="text-sm text-text-subtle">Tasks, follow-ups, invoices, and renewals in one view.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('tenant.calendar.index', ['tenant' => $calendarTenantId, 'view' => 'calendar']) }}"
+                    class="oh-btn {{ $currentView === 'calendar' ? 'oh-btn--primary' : '' }}">
+                    Calendar
+                </a>
+                <a href="{{ route('tenant.calendar.index', ['tenant' => $calendarTenantId, 'view' => 'schedule']) }}"
+                    class="oh-btn {{ $currentView === 'schedule' ? 'oh-btn--primary' : '' }}">
+                    Schedule
+                </a>
+                <a href="{{ route('tenant.meetings.create', ['tenant' => $calendarTenantId]) }}"
+                    class="oh-btn oh-btn--primary">
+                    New Meeting
+                </a>
+            </div>
         </div>
 
         {{-- Filters --}}
         <div class="oh-card border border-border-default/60 p-4 md:p-5 space-y-3">
             <div class="flex flex-wrap items-center gap-2 text-sm">
-                @php $types = ['task' => 'Tasks', 'opportunity' => 'Follow-ups', 'invoice' => 'Invoices', 'service' => 'Services']; @endphp
+                @php $types = ['task' => 'Tasks', 'meeting' => 'Meetings', 'opportunity' => 'Follow-ups', 'invoice' => 'Invoices', 'service' => 'Services']; @endphp
                 @foreach ($types as $key => $label)
                     <label class="inline-flex items-center gap-2">
-                        <input type="checkbox" class="oh-input h-4 w-4 fc-type" value="{{ $key }}" checked>
+                        <input type="checkbox"
+                            class="h-4 w-4 rounded border-border-default text-[rgb(var(--brand-primary))] fc-type"
+                            value="{{ $key }}" checked>
                         <span class="text-text-base">{{ $label }}</span>
                     </label>
                 @endforeach
@@ -51,9 +71,26 @@
             </div>
         </div>
 
-        <div class="oh-card border border-border-default shadow-sm p-3">
-            <div id="calendar"></div>
-        </div>
+        @if ($currentView === 'calendar')
+            <div class="oh-card border border-border-default shadow-sm p-3">
+                <div id="calendar"></div>
+            </div>
+        @else
+            <div class="oh-card border border-border-default/70 p-4 md:p-5">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-border-default/60">
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Schedule</h2>
+                        <p class="text-sm text-text-subtle">Upcoming activity in a list view.</p>
+                    </div>
+                    <div class="text-xs text-text-subtle">Times shown in {{ $tz }}.</div>
+                </div>
+                <div id="scheduleList" class="mt-4 space-y-3"></div>
+                <div id="scheduleEmpty"
+                    class="mt-4 rounded-xl border border-border-default/60 bg-surface-muted/60 px-4 py-3 text-sm text-text-subtle hidden">
+                    No matching activity for the selected filters.
+                </div>
+            </div>
+        @endif
     </section>
 
     <div id="calendarModal" class="calendar-modal hidden">
@@ -77,9 +114,13 @@
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const calendarEl = document.getElementById('calendar');
+                const scheduleList = document.getElementById('scheduleList');
+                const scheduleEmpty = document.getElementById('scheduleEmpty');
                 const typeInputs = document.querySelectorAll('.fc-type');
                 const memberSelect = document.getElementById('fc-member');
                 const projectSelect = document.getElementById('fc-project');
+                const currentView = @json($currentView);
+                const tenantTz = @json($tz ?: 'America/Denver');
 
                 // --- URL persistence helpers ---
                 const qs = new URLSearchParams(window.location.search);
@@ -123,60 +164,184 @@
 
                 loadFromQuery();
 
-                const calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    height: 'auto',
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'dayGridMonth,timeGridWeek,listWeek',
-                    },
+                const fetchEvents = (params) =>
+                    fetch(`{{ route('tenant.calendar.events', ['tenant' => $calendarTenantId ?? (tenant('id') ?? auth()->user()?->tenant_id)]) }}?` +
+                            params.toString(), {
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            })
+                        .then(r => (r.ok ? r.json() : Promise.reject(r)));
 
-                    // If your backend returns ISO timestamps with TZ offsets, leave this alone.
-                    // If you return date-only all-day events, this helps FullCalendar behave predictably:
-                    timeZone: 'local',
+                const renderSchedule = (events) => {
+                    if (!scheduleList || !scheduleEmpty) return;
+                    scheduleList.innerHTML = '';
 
-                    loading(isLoading) {
-                        const card = calendarEl.closest('.oh-card');
-                        if (!card) return;
-                        card.classList.toggle('fc-loading', isLoading);
-                    },
+                    if (!Array.isArray(events) || events.length === 0) {
+                        scheduleEmpty.classList.remove('hidden');
+                        return;
+                    }
 
-                    events(fetchInfo, success, failure) {
-                        const filters = currentFilters();
-                        writeToQuery(filters);
+                    scheduleEmpty.classList.add('hidden');
 
-                        const params = new URLSearchParams({
-                            start: fetchInfo.startStr,
-                            end: fetchInfo.endStr,
-                            member_id: filters.member_id,
-                            project_id: filters.project_id,
+                    const grouped = events
+                        .map((event) => ({
+                            ...event,
+                            startDate: new Date(event.start),
+                        }))
+                        .sort((a, b) => a.startDate - b.startDate)
+                        .reduce((acc, event) => {
+                            const day = new Intl.DateTimeFormat(undefined, {
+                                weekday: 'long',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                timeZone: tenantTz,
+                            }).format(event.startDate);
+                            acc[day] = acc[day] || [];
+                            acc[day].push(event);
+                            return acc;
+                        }, {});
+
+                    Object.entries(grouped).forEach(([dayLabel, dayEvents]) => {
+                        const section = document.createElement('section');
+                        section.className = 'rounded-xl border border-border-default/60 bg-surface-card';
+
+                        const header = document.createElement('div');
+                        header.className =
+                            'px-4 py-2 border-b border-border-default/60 text-xs uppercase tracking-wide text-text-subtle';
+                        header.textContent = dayLabel;
+                        section.appendChild(header);
+
+                        const list = document.createElement('div');
+                        list.className = 'divide-y divide-border-default/60';
+
+                        dayEvents.forEach((event) => {
+                            const row = document.createElement('div');
+                            row.className = 'px-4 py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between';
+
+                            const left = document.createElement('div');
+                            left.className = 'space-y-1';
+
+                            const title = document.createElement('div');
+                            title.className = 'text-sm font-semibold text-text-base';
+                            title.textContent = event.title || 'Untitled';
+
+                            const meta = document.createElement('div');
+                            meta.className = 'text-xs text-text-subtle';
+                            const typeLabel = event.extendedProps?.type || 'event';
+                            let timeLabel = 'All day';
+                            if (!event.allDay) {
+                                const endDate = event.end ? new Date(event.end) : null;
+                                const startLabel = new Intl.DateTimeFormat([], {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                    timeZone: tenantTz,
+                                }).format(event.startDate);
+                                const endLabel = endDate
+                                    ? new Intl.DateTimeFormat([], {
+                                          hour: 'numeric',
+                                          minute: '2-digit',
+                                          timeZone: tenantTz,
+                                      }).format(endDate)
+                                    : null;
+                                timeLabel = endLabel ? `${startLabel} – ${endLabel}` : startLabel;
+                            }
+                            meta.textContent = `${typeLabel} • ${timeLabel}`;
+
+                            left.appendChild(title);
+                            left.appendChild(meta);
+
+                            const right = document.createElement('div');
+                            right.className = 'text-xs text-text-subtle sm:text-right';
+                            right.textContent = event.extendedProps?.assigned || event.extendedProps?.user || '';
+
+                            row.appendChild(left);
+                            row.appendChild(right);
+
+                            list.appendChild(row);
                         });
-                        filters.types.forEach(t => params.append('types[]', t));
 
-                        fetch(`{{ route('tenant.calendar.events', ['tenant' => $calendarTenantId ?? (tenant('id') ?? auth()->user()?->tenant_id)]) }}?` +
-                                params.toString(), {
-                                    headers: {
-                                        'Accept': 'application/json'
-                                    }
-                                })
-                            .then(r => r.ok ? r.json() : Promise.reject(r))
-                            .then(data => success(data))
-                            .catch(err => failure(err));
-                    },
+                        section.appendChild(list);
+                        scheduleList.appendChild(section);
+                    });
+                };
 
-                    eventClick(info) {
-                        const url = info.event.extendedProps?.url || info.event.url;
-                        if (url) window.location.href = url;
-                    },
-                });
+                const calendar = calendarEl
+                    ? new FullCalendar.Calendar(calendarEl, {
+                          initialView: 'dayGridMonth',
+                          height: 'auto',
+                          headerToolbar: {
+                              left: 'prev,next today',
+                              center: 'title',
+                              right: 'dayGridMonth,timeGridWeek,listWeek',
+                          },
+                          timeZone: tenantTz,
+                          loading(isLoading) {
+                              const card = calendarEl.closest('.oh-card');
+                              if (!card) return;
+                              card.classList.toggle('fc-loading', isLoading);
+                          },
+                          events(fetchInfo, success, failure) {
+                              const filters = currentFilters();
+                              writeToQuery(filters);
+
+                              const params = new URLSearchParams({
+                                  start: fetchInfo.startStr,
+                                  end: fetchInfo.endStr,
+                                  member_id: filters.member_id,
+                                  project_id: filters.project_id,
+                              });
+                              filters.types.forEach((t) => params.append('types[]', t));
+
+                              fetchEvents(params)
+                                  .then((data) => success(data))
+                                  .catch((err) => failure(err));
+                          },
+                          eventClick(info) {
+                              const url = info.event.extendedProps?.url || info.event.url;
+                              if (url) window.location.href = url;
+                          },
+                      })
+                    : null;
 
                 // refetch when filters change
                 [memberSelect, projectSelect, ...typeInputs].forEach(el => {
-                    el?.addEventListener('change', () => calendar.refetchEvents());
+                    el?.addEventListener('change', () => {
+                        if (calendar) {
+                            calendar.refetchEvents();
+                        }
+                        if (currentView === 'schedule') {
+                            const filters = currentFilters();
+                            writeToQuery(filters);
+                            const params = new URLSearchParams({
+                                start: new Date().toISOString(),
+                                end: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60).toISOString(),
+                                member_id: filters.member_id,
+                                project_id: filters.project_id,
+                            });
+                            filters.types.forEach((t) => params.append('types[]', t));
+                            fetchEvents(params).then(renderSchedule).catch(() => renderSchedule([]));
+                        }
+                    });
                 });
 
-                calendar.render();
+                if (calendar && currentView === 'calendar') {
+                    calendar.render();
+                }
+
+                if (currentView === 'schedule') {
+                    const filters = currentFilters();
+                    writeToQuery(filters);
+                    const params = new URLSearchParams({
+                        start: new Date().toISOString(),
+                        end: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60).toISOString(),
+                        member_id: filters.member_id,
+                        project_id: filters.project_id,
+                    });
+                    filters.types.forEach((t) => params.append('types[]', t));
+                    fetchEvents(params).then(renderSchedule).catch(() => renderSchedule([]));
+                }
             });
         </script>
     @else

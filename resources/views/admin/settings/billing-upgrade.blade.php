@@ -13,14 +13,16 @@
                     <h1 class="text-2xl font-semibold text-text-base">Billing &amp; Subscription</h1>
                     <p class="text-sm text-text-subtle mt-1">Choose the plan that fits your workspace and manage payments.</p>
                 </div>
-                <a class="oh-btn" href="{{ route('tenant.settings.billing', ['tenant' => $tenantId]) }}">Back</a>
+                <a class="oh-btn" href="{{ route('tenant.settings.billing', ['tenant' => $tenantId]) }}">
+                    <i class="fa-solid fa-arrow-left text-[12px] mr-2"></i> Back to billing
+                </a>
             </div>
         </div>
 
         @if (isset($plans) && is_array($plans))
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach ($plans as $plan)
-                    <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-3">
+                    <div class="oh-card p-4 md:p-5 space-y-3">
                         <div class="flex items-start justify-between">
                             <div>
                                 <h2 class="text-sm font-semibold text-text-base">{{ $plan['name'] ?? 'Plan' }}</h2>
@@ -36,7 +38,7 @@
                         <ul class="text-sm text-text-subtle space-y-1.5">
                             @foreach ($plan['features'] ?? [] as $feat)
                                 <li class="flex items-start gap-2">
-                                    <i class="fa-solid fa-check text-emerald-500 mt-0.5"></i>
+                                    <i class="fa-solid fa-check text-text-subtle mt-0.5"></i>
                                     <span>{{ $feat }}</span>
                                 </li>
                             @endforeach
@@ -51,15 +53,15 @@
                 @endforeach
             </div>
         @else
-            <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5">
+            <div class="oh-card p-4 md:p-5">
                 <p class="text-sm text-text-subtle">Plan details coming soon.</p>
             </div>
         @endif
 
-        <div class="oh-card border border-border-default/60 rounded-2xl p-4 md:p-5 space-y-2">
+        <div class="oh-card p-4 md:p-5 space-y-2">
             <h2 class="text-sm font-semibold text-text-base">Invoices &amp; history</h2>
             <p class="text-sm text-text-subtle">Billing records for your Renlo subscription.</p>
-            <a class="oh-btn" href="{{ route('tenant.subscription.invoices.index', ['tenant' => $tenantId]) }}">
+            <a class="oh-btn oh-btn--secondary" href="{{ route('tenant.subscription.invoices.index', ['tenant' => $tenantId]) }}">
                 View subscription invoices
             </a>
         </div>

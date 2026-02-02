@@ -899,7 +899,6 @@ class ReportsController extends Controller
       ->select('id', DB::raw("
         COALESCE(
           NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''),
-          username,
           email
         ) as name
       "))
@@ -990,7 +989,7 @@ class ReportsController extends Controller
       ->selectRaw("
         COALESCE(
           NULLIF(TRIM(CONCAT(users.first_name, ' ', users.last_name)), ''),
-          users.username,
+          users.email,
           'Unassigned'
         ) as name
       ")
@@ -1008,7 +1007,7 @@ class ReportsController extends Controller
       ->selectRaw("
         COALESCE(
           NULLIF(TRIM(CONCAT(users.first_name, ' ', users.last_name)), ''),
-          users.username,
+          users.email,
           'Unassigned'
         ) as name
       ")

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Lead;
 use App\Models\Tenant;
+use App\Models\TenantLeadSetting;
 use App\Notifications\LeadInboxNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,7 +37,8 @@ class NotifyLeadInbox implements ShouldQueue
             return;
         }
 
-        $recipients = $tenant->lead_notification_recipients ?? [];
+        $settings = TenantLeadSetting::query()->where('tenant_id', $tenant->id)->first();
+        $recipients = $settings?->notify_email ?? $tenant->lead_notification_recipients ?? [];
         if (is_string($recipients)) {
             $recipients = array_filter(array_map('trim', preg_split('/[,\n]+/', $recipients)));
         }

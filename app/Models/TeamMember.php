@@ -28,6 +28,7 @@ class TeamMember extends Model
         'avatar',
         'color_hex',
         'notes',
+        'can_manage_support',
         'password',
     ];
 
@@ -37,6 +38,7 @@ class TeamMember extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'email_verified_at' => 'datetime',
+        'can_manage_support' => 'boolean',
     ];
 
     // Append computed attributes when toArray()/JSON

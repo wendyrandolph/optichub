@@ -39,13 +39,6 @@
         @endif
     </div>
 
-    {{-- Flash --}}
-    @if (session('status'))
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            {{ session('status') }}
-        </div>
-    @endif
-
     {{-- Toolbar --}}
     <form method="GET" action="{{ route($routePrefix . '.index', ['tenant' => $tenantParam]) }}"
         class="rounded-xl bg-surface-card/70 border border-border-default/60 p-4 flex flex-col gap-3">
@@ -85,7 +78,7 @@
     <div class="md:hidden space-y-3">
         @forelse ($members as $m)
             @php
-                $name = $m->full_name ?? trim(($m->first_name ?? '') . ' ' . ($m->last_name ?? ''));
+                $name = $m->full_name ?? trim(($m->firstName ?? $m->first_name ?? '') . ' ' . ($m->lastName ?? $m->last_name ?? ''));
                 $role = ucfirst($m->role ?? 'User');
                 $status = strtolower($m->status ?? 'active');
                 $isOwner = data_get($m, 'is_owner') ?? (data_get($m, 'owner') ?? false);
@@ -130,18 +123,15 @@
                             <span class="oh-pill oh-pill--muted text-[11px]">Invited</span>
                         @endif
                     </div>
-                    @if ($isOwner)
-                        <span class="oh-pill oh-pill--muted text-[10px]">Owner</span>
-                    @endif
-                    @if ($lastLogin)
-                        <span class="oh-pill oh-pill--muted text-[11px]">Last login:
-                            {{ \Illuminate\Support\Carbon::parse($lastLogin)->diffForHumans() }}</span>
-                    @elseif ($invitedAt)
-                        <span class="oh-pill oh-pill--muted text-[11px]">Invited
-                            {{ \Illuminate\Support\Carbon::parse($invitedAt)->diffForHumans() }}</span>
-                    @else
-                        <span class="oh-pill oh-pill--muted text-[11px]">No login</span>
-                    @endif
+                    <span class="text-xs text-text-subtle">
+                        @if ($lastLogin)
+                            Last login {{ \Illuminate\Support\Carbon::parse($lastLogin)->diffForHumans() }}
+                        @elseif ($invitedAt)
+                            Invited {{ \Illuminate\Support\Carbon::parse($invitedAt)->diffForHumans() }}
+                        @else
+                            No login activity yet
+                        @endif
+                    </span>
                 </div>
                 <div class="flex justify-end gap-2">
                     <a href="{{ route($routePrefix . '.show', ['tenant' => $tenantParam, 'team_member' => $m->id]) }}"
@@ -181,7 +171,7 @@
 
     {{-- Table card (desktop) --}}
     <div class="oh-card border border-border-default bg-surface-card shadow-card overflow-hidden hidden md:block">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-auto max-h-[800px]">
             <table class="oh-table min-w-full text-sm">
                 <thead>
                     <tr>
@@ -197,7 +187,7 @@
                 <tbody>
                     @forelse ($members as $m)
                         @php
-                            $name = $m->full_name ?? trim(($m->first_name ?? '') . ' ' . ($m->last_name ?? ''));
+                            $name = $m->full_name ?? trim(($m->firstName ?? $m->first_name ?? '') . ' ' . ($m->lastName ?? $m->last_name ?? ''));
                             $role = ucfirst($m->role ?? 'User');
                             $status = strtolower($m->status ?? 'active');
                             $isOwner = data_get($m, 'is_owner') ?? (data_get($m, 'owner') ?? false);
@@ -237,7 +227,16 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="oh-pill oh-pill--muted text-[11px]">{{ $role }}</span>
+                                @php
+                                    $roleKey = strtolower($m->role ?? 'user');
+                                    $rolePill = match ($roleKey) {
+                                        'admin' => 'oh-pill oh-pill--primary',
+                                        'employee' => 'oh-pill oh-pill--info',
+                                        'contractor' => 'oh-pill oh-pill--muted',
+                                        default => 'oh-pill oh-pill--muted',
+                                    };
+                                @endphp
+                                <span class="{{ $rolePill }} text-[11px]">{{ $role }}</span>
                             </td>
                             <td>
                                 @if ($lastLogin)

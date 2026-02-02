@@ -342,9 +342,9 @@
   .trial-field--checkbox {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.6rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .trial-field--checkbox input[type='checkbox'] {

@@ -6,7 +6,7 @@
     @php
         $name = $tenant->name ?? 'Untitled workspace';
         $domain = $tenant->website ?? ($tenant->domain ?? null);
-        $plan = $tenant->plan_name ?? ($tenant->subscription_plan ?? 'Not set');
+        $plan = $tenant->currentSubscription?->plan_code ?? $tenant->plan_name ?? ($tenant->subscription_plan ?? 'Not set');
         $created = optional($tenant->created_at)->format('M j, Y') ?? '—';
         $status = strtolower($tenant->subscription_status ?? 'inactive');
         $statusLabel = match ($status) {
@@ -21,6 +21,8 @@
         $accent = $tenant->accent_color ?: '#EA7D51';
         $initials = collect(explode(' ', $name))->filter()->map(fn($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('') ?: 'OH';
         $hasBranding = !empty($tenant->primary_color) || !empty($tenant->secondary_color) || !empty($tenant->accent_color) || !empty($tenant->logo_path);
+        $sincePill = 'oh-pill oh-pill--muted';
+        $brandingPill = $hasBranding ? 'oh-pill oh-pill--success' : 'oh-pill oh-pill--muted';
         $stats = $stats ?? ['clients' => 0, 'projects' => 0, 'invoices' => 0, 'users' => 0];
     @endphp
 
@@ -28,7 +30,7 @@
         {{-- Header --}}
         <div class="flex items-start justify-between gap-3">
             <div>
-                <p class="text-[11px] uppercase tracking-wide text-text-subtle">Settings</p>
+                <p class="text-xs uppercase tracking-wide text-text-subtle">Settings</p>
                 <h1 class="text-2xl font-semibold text-text-base">{{ $name }}</h1>
                 <p class="text-sm text-text-subtle mt-1">Workspace details, subscription status, and branding.</p>
             </div>
@@ -37,6 +39,8 @@
                 <a href="{{ route('admin.tenants.edit', $tenant) }}" class="oh-btn oh-btn--primary">Edit tenant</a>
             </div>
         </div>
+
+        @include('admin.tenants.provider-tabs', ['active' => 'tenants', 'tenant' => $tenant])
 
         {{-- Summary --}}
         <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-5 space-y-3">
@@ -47,10 +51,30 @@
                         {{ $initials }}
                     </div>
                     <div class="space-y-1">
+                        @php
+                            $planKey = strtolower((string) $plan);
+                            $planPill = match ($planKey) {
+                                'starter', 'basic' => 'oh-pill oh-pill--muted',
+                                'pro', 'professional' => 'oh-pill oh-pill--brand',
+                                'studio', 'business' => 'oh-pill oh-pill--secondary',
+                                'enterprise', 'agency' => 'oh-pill oh-pill--accent',
+                                default => 'oh-pill',
+                            };
+
+                            $statusKey = strtolower((string) $status);
+                            $statusPill = match ($statusKey) {
+                                'active' => 'oh-pill oh-pill--success',
+                                'trialing' => 'oh-pill oh-pill--info',
+                                'beta' => 'oh-pill oh-pill--beta',
+                                'paused' => 'oh-pill oh-pill--warning',
+                                'canceled', 'cancelled' => 'oh-pill oh-pill--danger',
+                                default => 'oh-pill oh-pill--muted',
+                            };
+                        @endphp
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="oh-pill">{{ $statusLabel }}</span>
-                            <span class="oh-pill">Plan: {{ $plan }}</span>
-                            <span class="oh-pill">Since {{ $created }}</span>
+                            <span class="{{ $statusPill }}">{{ $statusLabel }}</span>
+                            <span class="{{ $planPill }}">Plan: {{ $plan }}</span>
+                            <span class="{{ $sincePill }}">Since {{ $created }}</span>
                         </div>
                         @if ($domain)
                             <p class="text-sm text-text-subtle truncate">{{ $domain }}</p>
@@ -98,14 +122,6 @@
                         </div>
                     @endif
                     <div class="flex items-center justify-between">
-                        <dt>Status</dt>
-                        <dd><span class="oh-pill">{{ $statusLabel }}</span></dd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <dt>Plan</dt>
-                        <dd class="text-text-base">{{ $plan }}</dd>
-                    </div>
-                    <div class="flex items-center justify-between">
                         <dt>Created</dt>
                         <dd class="text-text-base">{{ $created }}</dd>
                     </div>
@@ -115,18 +131,18 @@
 
         {{-- Branding --}}
         <div class="oh-card border border-border-default/70 rounded-2xl p-4 md:p-5 space-y-4">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-sm font-semibold text-text-base">Branding &amp; Theme</h2>
-                    <p class="text-xs text-text-subtle">How this workspace appears to their team and clients.</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-sm font-semibold text-text-base">Branding &amp; Theme</h2>
+                        <p class="text-xs text-text-subtle">How this workspace appears to their team and clients.</p>
+                    </div>
+                <span class="{{ $brandingPill }}">{{ $hasBranding ? 'Custom branding' : 'Default branding' }}</span>
                 </div>
-                <span class="oh-pill">{{ $hasBranding ? 'Custom branding' : 'Default branding' }}</span>
-            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {{-- Colors --}}
                 <div class="space-y-3">
-                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">Colors</p>
+                    <p class="text-xs uppercase tracking-wide text-text-subtle">Colors</p>
                     <div class="flex items-center gap-3">
                         @foreach ([['label' => 'Primary', 'val' => $primary], ['label' => 'Secondary', 'val' => $secondary], ['label' => 'Accent', 'val' => $accent]] as $s)
                             <div class="flex flex-col items-center gap-1">
@@ -139,7 +155,7 @@
 
                 {{-- Logo / Identity --}}
                 <div class="space-y-3">
-                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">Identity</p>
+                    <p class="text-xs uppercase tracking-wide text-text-subtle">Identity</p>
                     <div class="flex items-center gap-3">
                         @if (!empty($tenant->logo_path))
                             <div class="p-2">
@@ -165,7 +181,7 @@
 
                 {{-- Mini preview --}}
                 <div class="space-y-2">
-                    <p class="text-[11px] uppercase tracking-wide text-text-subtle">UI preview</p>
+                    <p class="text-xs uppercase tracking-wide text-text-subtle">UI preview</p>
                     <div class="rounded-xl ring-1 ring-border-default/60 overflow-hidden shadow-sm">
                         <div class="h-8 px-3 flex items-center justify-between text-[11px]"
                             style="background: linear-gradient(135deg, {{ $primary }}, {{ $secondary }}); color:white;">

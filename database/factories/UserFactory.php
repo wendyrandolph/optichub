@@ -21,7 +21,6 @@ class UserFactory extends Factory
 
         return [
             'tenant_id' => 1, // default for testing
-            'username'   => Str::slug("{$first}{$last}") . $this->faker->numberBetween(100, 999),
             'email'      => $this->faker->unique()->safeEmail(),
             'first_name' => $first,
             'last_name'  => $last,

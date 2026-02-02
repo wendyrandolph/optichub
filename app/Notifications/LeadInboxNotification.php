@@ -27,7 +27,10 @@ class LeadInboxNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $tenantKey = $this->tenant->getRouteKey();
-        $leadUrl = route('tenant.trades.leads.show', ['tenant' => $tenantKey, 'lead' => $this->lead->id]);
+        $routeName = $this->tenant->workspace_type === 'trades'
+            ? 'tenant.trades.leads.show'
+            : 'tenant.leads.show';
+        $leadUrl = route($routeName, ['tenant' => $tenantKey, 'lead' => $this->lead->id]);
 
         return (new MailMessage())
             ->subject('New lead received')

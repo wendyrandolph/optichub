@@ -8,7 +8,9 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Client;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 // Ensure you have a LoginActivity Model defined if you use logLogin/getLoginStats
 // use App\Models\LoginActivity;
@@ -30,7 +32,6 @@ class User extends Authenticatable
    * @var array<int, string>
    */
   protected $fillable = [
-    'username',
     'first_name',
     'last_name',
     'email',
@@ -41,6 +42,8 @@ class User extends Authenticatable
     'admin_id',
     'must_change_password',
     'hired_at',
+    'can_view_registered_users',
+    'can_manage_support',
   ];
 
   /**
@@ -63,6 +66,9 @@ class User extends Authenticatable
     'is_beta' => 'boolean',
     'must_change_password' => 'boolean',
     'hired_at' => 'date',
+    'portal_last_seen_at' => 'datetime',
+    'can_view_registered_users' => 'boolean',
+    'can_manage_support' => 'boolean',
   ];
 
   public function isPlatformOwner(): bool
@@ -72,6 +78,24 @@ class User extends Authenticatable
 
     return $tenantId === (int) config('optichub.platform_tenant_id')
       && in_array($role, ['provider', 'super_admin', 'superadmin'], true);
+  }
+
+  public function isProviderAdmin(): bool
+  {
+    $role = strtolower((string) ($this->role ?? ''));
+    $allowlist = config('provider.admin_allowlist', []);
+    $emails = array_map('strtolower', $allowlist['emails'] ?? []);
+    $ids = array_map('intval', $allowlist['user_ids'] ?? []);
+
+    if (!in_array($role, ['provider', 'super_admin', 'superadmin'], true)) {
+      return false;
+    }
+
+    if (!empty($emails) && in_array(strtolower((string) $this->email), $emails, true)) {
+      return true;
+    }
+
+    return !empty($ids) && in_array((int) $this->getKey(), $ids, true);
   }
 
 
@@ -109,6 +133,28 @@ class User extends Authenticatable
     return $this->hasMany(TechShift::class, 'user_id');
   }
 
+  public function assignedTasks(): HasMany
+  {
+    return $this->hasMany(Task::class, 'assigned_user_id');
+  }
+
+  public function workPreference(): HasOne
+  {
+    return $this->hasOne(UserWorkPreference::class);
+  }
+
+  public function workPreferenceOrCreate(?Tenant $tenant = null): UserWorkPreference
+  {
+    $tenantId = $tenant?->id ?? $this->tenant_id;
+    return UserWorkPreference::firstOrCreate(
+      ['tenant_id' => $tenantId, 'user_id' => $this->id],
+      [
+        'weekly_target_hours' => 40,
+        'working_days_json' => ['mon', 'tue', 'wed', 'thu', 'fri'],
+      ]
+    );
+  }
+
   public function tradeJobTimers(): HasMany
   {
     return $this->hasMany(TradeJobTimer::class, 'user_id');
@@ -122,6 +168,12 @@ class User extends Authenticatable
   public function tradePtoBalances(): HasMany
   {
     return $this->hasMany(TradePtoBalance::class, 'user_id');
+  }
+
+  public function chatChannels(): BelongsToMany
+  {
+    return $this->belongsToMany(ChatChannel::class, 'chat_channel_users', 'user_id', 'channel_id')
+      ->withTimestamps();
   }
 
 
@@ -144,32 +196,6 @@ class User extends Authenticatable
   }
 
   // --- FINDERS (Refactored from raw SQL) ---
-
-  /**
-   * Find a user by username and dynamically generate a 'name' attribute.
-   * Requires 'admin_id' and 'contact_id' to be set.
-   *
-   * @param string $username
-   * @return static|null
-   */
-  public static function findByUsername(string $username): ?self
-  {
-    // NOTE: This complex join is kept here because it was in your original code.
-    // In a true Laravel app, you'd likely use relations or a simpler query.
-    return static::query()
-      ->select('users.*')
-      ->selectRaw("
-                CONCAT(
-                    COALESCE(admins.first_name, clients.first_name),
-                    ' ',
-                    COALESCE(admins.last_name, clients.last_name)
-                ) AS full_name
-            ")
-      ->leftJoin('admins', 'users.admin_id', '=', 'admins.id')
-      ->leftJoin('clients', 'users.contact_id', '=', 'clients.id')
-      ->where('users.username', $username)
-      ->first();
-  }
 
   /**
    * Find a user by email. The tenant scope will automatically be applied
@@ -287,14 +313,12 @@ class User extends Authenticatable
    * Creates a new client user using Eloquent's create method.
    */
   public static function createClientUser(
-    string $username,
     string $email,
     string $hashedPassword,
     int $clientId,
     int $tenantId
   ): self {
     return static::create([
-      'username'             => $username,
       'email'                => $email,
       'password'             => $hashedPassword, // Should be pre-hashed
       'role'                 => 'client',
@@ -310,16 +334,14 @@ class User extends Authenticatable
    * Creates a new admin user.
    */
   public static function createAdminUser(
-    string $username,
     ?string $email,
     string $hashedPassword,
     int $tenantId
   ): self {
     // Fallback for required fields
-    $email = trim((string)($email ?? '')) ?: $username . '@trial.local';
+    $email = trim((string)($email ?? '')) ?: 'user@trial.local';
 
     return static::create([
-      'username'             => $username,
       'email'                => $email,
       'first_name'           => '',
       'last_name'            => '',
@@ -404,14 +426,8 @@ class User extends Authenticatable
    */
   public function updateAdminUser(array $data): bool
   {
-    // The tenant filter must be applied before calling update(), 
-    // e.g., in a Policy or Controller where you fetch the user:
-    // $user = User::forTenant(auth()->user()->tenant_id)->find($id);
-    // $user->updateAdminUser($data);
-
     return $this->update([
-      'username' => $data['username'],
-      'email'    => $data['email'],
+      'email' => $data['email'],
       // Add other updatable fields here
     ]);
   }
@@ -430,29 +446,8 @@ class User extends Authenticatable
     $full = trim(($this->firstName ?? '') . ' ' . ($this->lastName ?? ''));
     if ($full !== '') return $full;
 
-    // Fallbacks if you sometimes still have `name` or `username`
-    return $this->name ?? $this->username ?? 'User';
-  }
-
-
-  // --- UNIQUE USERNAME HELPER (Kept logic, refactored query) ---
-
-  /**
-   * Ensures a unique username by appending a number if necessary.
-   */
-  public function ensureUniqueUsername(string $base): string
-  {
-    $base = preg_replace('/\W+/', '', strtolower($base)) ?: 'user';
-    $try  = $base;
-    $n = 1;
-    while ($this->usernameExists($try)) {
-      $try = $base . (++$n);
-      if ($n > 100) {
-        $try = $base . time();
-        break;
-      }
-    }
-    return $try;
+    // Fallbacks if you sometimes still have `name`
+    return $this->name ?? $this->email ?? 'User';
   }
   public function isTech(): bool
   {
@@ -461,9 +456,4 @@ class User extends Authenticatable
   }
 
 
-  private function usernameExists(string $username): bool
-  {
-    // Eloquent equivalent of SELECT 1 FROM users WHERE username = :u LIMIT 1
-    return static::where('username', $username)->exists();
-  }
 }

@@ -26,6 +26,7 @@
                 $isLoggedIn = auth()->check() || auth('admin')->check() || auth('client')->check();
             @endphp
             <nav class="flex items-center gap-6 text-sm text-[rgb(var(--ui-text))]">
+                <a href="{{ route('marketing.home') }}" class="hover:text-[rgb(var(--ui-primary))]">Home</a>
                 <a href="{{ route('marketing.features') }}" class="hover:text-[rgb(var(--ui-primary))]">Features</a>
                 <a href="{{ route('marketing.pricing') }}" class="hover:text-[rgb(var(--ui-primary))]">Pricing</a>
                 <a href="{{ route('marketing.faq') }}" class="hover:text-[rgb(var(--ui-primary))]">FAQ</a>
@@ -48,10 +49,18 @@
     <main class="marketing bg-[rgb(var(--ui-bg))] text-[rgb(var(--ui-text))]">@yield('content')</main>
 
     <footer class="flex items-center border-t border-[rgb(var(--ui-border))] bg-[rgb(var(--ui-surface))]">
-        <div class="max-w-6xl mx-auto px-6 py-10 text-sm text-[rgb(var(--ui-text-subtle))]">
-            © {{ date('Y') }} Renlo. All rights reserved.
+        <div class="max-w-6xl mx-auto px-6 py-10 text-sm text-[rgb(var(--ui-text-subtle))] flex flex-wrap items-center gap-4">
+            @php
+                $startYear = 2026;
+                $currentYear = (int) date('Y');
+                $yearRange = $startYear . ' - ' . $currentYear;
+            @endphp
+            © {{ $yearRange }} Renlo. All rights reserved.
+            <a href="#" data-cookie-settings class="hover:text-[rgb(var(--ui-text))]">Cookie settings</a>
         </div>
     </footer>
+
+    @include('partials.cookie-consent')
 </body>
 
 <script>

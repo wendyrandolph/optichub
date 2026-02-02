@@ -7,12 +7,21 @@ use App\Models\Project;
 use App\Models\Contact;
 use App\Models\ClientCompany;
 use App\Models\Task;
+use App\Models\ChatChannel;
+use App\Models\ChatMessage;
+use App\Models\ChatRead;
 use App\Models\ProjectConversation;
+use App\Models\Invoice;
+use App\Services\ProjectProfitability;
 use App\Models\Phase;
 use App\Models\TeamMember;
 use App\Models\User;
 use App\Models\TimeEntry;
 use App\Models\ActivityLog;
+use App\Models\ProjectTemplate;
+use App\Services\ProjectTemplateApplier;
+use Illuminate\Support\Facades\DB;
+use Database\Seeders\ProjectTemplateSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -45,7 +54,8 @@ class ProjectController extends Controller
       ->with(['user', 'company', 'contact']);
 
     // Client role: only own projects
-    if ($user && ($user->organization_type === 'client_org' || $user->organization_type === 'provider') && $user->role === 'client') {
+    $orgType = $request->session()->get('organization_type');
+    if ($user && in_array($orgType, ['client_org', 'provider'], true) && $user->role === 'client') {
       $query->where('client_user_id', $user->id);
     }
 
@@ -107,14 +117,31 @@ class ProjectController extends Controller
       ->orderBy('lastName')       // adjust field name if yours is different
       ->get(['id', 'firstName', 'lastName']);
     $users = TeamMember::where('tenant_id', $tenant->id)
-      ->with(['user:id,username,email'])
+      ->with(['user:id,email,first_name,last_name'])
       ->orderBy('firstName')
       ->get(['id', 'firstName', 'lastName', 'email', 'user_id']);
+    $projectTemplates = ProjectTemplate::query()
+      ->forTenantOrGlobal($tenant->id)
+      ->forWorkspaceType($tenant->workspace_type ?? null)
+      ->where('is_active', true)
+      ->orderBy('name')
+      ->get(['id', 'name', 'tenant_id', 'workspace_type']);
+
+    if ($projectTemplates->isEmpty()) {
+      app(ProjectTemplateSeeder::class)->seedForTenant($tenant);
+      $projectTemplates = ProjectTemplate::query()
+        ->forTenantOrGlobal($tenant->id)
+        ->forWorkspaceType($tenant->workspace_type ?? null)
+        ->where('is_active', true)
+        ->orderBy('name')
+        ->get(['id', 'name', 'tenant_id', 'workspace_type']);
+    }
 
     return view('projects.create', [
       'tenant'  => $tenant,
       'clients' => $clients,
       'users'   => $users,
+      'projectTemplates' => $projectTemplates,
       'currentUserId' => Auth::id(),
       'usesPhasesDefault' => (bool) ($tenant->default_uses_phases ?? false),
     ]);
@@ -129,8 +156,9 @@ class ProjectController extends Controller
     $data['tenant_id'] = $tenant->id;
     $data['user_id']   = Auth::id();
     $data['uses_phases'] = $request->boolean('uses_phases', false);
+    $data['status'] = $data['status'] ?? 'open';
     $data['contact_id'] = $data['client_id'] ?? null;
-    unset($data['client_id']);
+    unset($data['client_id'], $data['template_id']);
 
     // ✅ Ensure every project has a color (fallback if none selected)
     $palette = [
@@ -162,15 +190,34 @@ class ProjectController extends Controller
       // $data['color'] = $palette[$clientId % count($palette)];
     }
 
-    $project = Project::create($data);
+    $templateId = (int) $request->input('template_id', 0);
+    $template = null;
+    if ($templateId > 0) {
+      $template = ProjectTemplate::query()
+        ->forTenantOrGlobal($tenant->id)
+        ->forWorkspaceType($tenant->workspace_type ?? null)
+        ->where('is_active', true)
+        ->where('id', $templateId)
+        ->first();
+      abort_if(!$template, 404);
+    }
 
-    ActivityLog::record(
-      $tenant->id,
-      Auth::id(),
-      $project,
-      'project_created',
-      $project->project_name ?? 'Project created'
-    );
+    $project = null;
+    DB::transaction(function () use ($data, $tenant, $template, &$project) {
+      $project = Project::create($data);
+
+      if ($template) {
+        app(ProjectTemplateApplier::class)->apply($template, $project, Auth::id());
+      }
+
+      ActivityLog::record(
+        $tenant->id,
+        Auth::id(),
+        $project,
+        'project_created',
+        $project->project_name ?? 'Project created'
+      );
+    });
 
     return Redirect::route('tenant.projects.show', [
       'tenant'  => $tenant,
@@ -200,14 +247,43 @@ class ProjectController extends Controller
       $conversation->forceFill(['public_token' => Str::random(40)])->save();
     }
 
-    $messages = $conversation->messages()->orderBy('created_at')->get();
+    $chatChannel = ChatChannel::firstOrCreate(
+      ['tenant_id' => $tenant->id, 'type' => 'project', 'project_id' => $project->id],
+      ['name' => $project->project_name]
+    );
+
+    $messages = ChatMessage::query()
+      ->where('channel_id', $chatChannel->id)
+      ->with('user:id,first_name,last_name,email,role')
+      ->orderBy('created_at')
+      ->get();
+
+    $clientUnreadCount = 0;
+    $chatUser = auth('admin')->user() ?? auth()->user();
+    if ($chatUser) {
+      $lastReadAt = ChatRead::query()
+        ->where('channel_id', $chatChannel->id)
+        ->where('user_id', $chatUser->id)
+        ->value('last_read_at');
+
+      $clientUnreadCount = ChatMessage::query()
+        ->where('channel_id', $chatChannel->id)
+        ->whereHas('user', fn($q) => $q->where('role', 'client'))
+        ->when($lastReadAt, fn($q) => $q->where('created_at', '>', $lastReadAt))
+        ->count();
+
+      ChatRead::updateOrCreate(
+        ['channel_id' => $chatChannel->id, 'user_id' => $chatUser->id],
+        ['last_read_at' => now()]
+      );
+    }
 
     $publicUrl = route('conversation.public', ['token' => $conversation->public_token]);
 
     $tasks = Task::where('tenant_id', $tenant->id)
       ->where('project_id', $project->id)
       ->with([
-        'user:id,first_name,last_name,username,display_name',
+        'user:id,first_name,last_name,email',
         'client:id,firstName,lastName',
         'teamMember:id,firstName,lastName',
       ])
@@ -226,14 +302,25 @@ class ProjectController extends Controller
 
     // Hours by task from time entries (source of truth)
     $timeSumsByTask = (clone $timeQuery)
+      ->whereNotNull('end_time')
       ->whereNotNull('task_id')
       ->selectRaw('task_id, SUM(hours) as total_hours')
       ->groupBy('task_id')
       ->pluck('total_hours', 'task_id');
 
-    $projectTotalHours = (clone $timeQuery)->sum('hours');
+    $projectTotalHours = (clone $timeQuery)->whereNotNull('end_time')->sum('hours');
     $unassignedHours = (clone $timeQuery)
+      ->whereNotNull('end_time')
       ->whereNull('task_id')
+      ->sum('hours');
+
+    $projectBillableHours = (clone $timeQuery)
+      ->whereNotNull('end_time')
+      ->where('billable', true)
+      ->sum('hours');
+    $projectNonBillableHours = (clone $timeQuery)
+      ->whereNotNull('end_time')
+      ->where('billable', false)
       ->sum('hours');
 
     $requiresApproval = $tasks->contains(fn($t) => (bool) ($t->requires_approval ?? false));
@@ -250,7 +337,7 @@ class ProjectController extends Controller
 
     // Build lookup maps for assignees (users, team members, clients/contacts)
     $tenantUsers = User::where('tenant_id', $tenant->id)
-      ->get(['id', 'first_name', 'last_name', 'username', 'email']);
+      ->get(['id', 'first_name', 'last_name', 'email']);
     $userMap = $tenantUsers->keyBy(fn($u) => (int) $u->id);
 
     $tenantTeamMembers = TeamMember::where('tenant_id', $tenant->id)
@@ -288,11 +375,11 @@ class ProjectController extends Controller
         $display = $entity->display_name ?? null;
         $first   = $entity->first_name ?? $entity->firstName ?? null;
         $last    = $entity->last_name ?? $entity->lastName ?? null;
-        $username = $entity->username ?? null;
+        $email = $entity->email ?? null;
 
         return $display
           ?: trim(($first ?? '') . ' ' . ($last ?? ''))
-          ?: $username
+          ?: $email
           ?: null;
       };
 
@@ -355,21 +442,36 @@ class ProjectController extends Controller
       return in_array($t->approval_status, ['pending'], true);
     })->count();
 
+    $profitability = app(ProjectProfitability::class)->forProject($project);
+    $milestoneInvoices = Invoice::query()
+      ->where('tenant_id', $tenant->id)
+      ->where('project_id', $project->id)
+      ->where('is_milestone', true)
+      ->orderByRaw('COALESCE(milestone_order, 999999)')
+      ->orderBy('due_date')
+      ->get();
+
     return view('projects.show', compact(
       'tenant',
       'project',
       'conversation',
       'messages',
+      'clientUnreadCount',
       'publicUrl',
       'tasksForView',
       'totalHours',
+      'projectBillableHours',
+      'projectNonBillableHours',
       'openTasks',
       'overdueTasks',
       'blockedTasks',
       'progress',
       'requiresApproval',
-      'pendingApprovals'
-    , 'unassignedHours'));
+      'pendingApprovals',
+      'unassignedHours',
+      'profitability',
+      'milestoneInvoices'
+    ));
   }
 
   /** GET /{tenant}/projects/{project}/edit */
@@ -381,7 +483,7 @@ class ProjectController extends Controller
 
     $users = User::where('tenant_id', $tenant->id)
       ->orderBy('first_name')
-      ->get(['id', 'first_name', 'last_name', 'username', 'email']);
+      ->get(['id', 'first_name', 'last_name', 'email']);
 
     // Ensure the current project owner appears in the list even if not returned above
     if ($project->user_id && !$users->contains('id', $project->user_id)) {
@@ -404,6 +506,14 @@ class ProjectController extends Controller
       ->orderBy('name')
       ->get(['id', 'name']);
 
+    $milestoneInvoices = Invoice::query()
+      ->where('tenant_id', $tenant->id)
+      ->where('project_id', $project->id)
+      ->where('is_milestone', true)
+      ->orderByRaw('COALESCE(milestone_order, 999999)')
+      ->orderBy('due_date')
+      ->get();
+
     $usesPhasesDefault = (bool) ($tenant->default_uses_phases ?? false);
 
     return view('projects.edit', compact(
@@ -413,8 +523,97 @@ class ProjectController extends Controller
       'clients',
       'clientCompanies',
       'projectPhases',
-      'usesPhasesDefault'
+      'usesPhasesDefault',
+      'milestoneInvoices'
     ));
+  }
+
+  public function storeMilestoneInvoice(Request $request, Tenant $tenant, Project $project)
+  {
+    abort_unless($project->tenant_id === $tenant->id, 404);
+    $this->authorize('update', $project);
+    if (($project->billing_model ?? 'fixed') !== 'fixed') {
+      return back()->with('error', 'Milestone invoices are available for fixed-fee projects.');
+    }
+
+    $data = $request->validate([
+      'milestone_label' => ['nullable', 'string', 'max:120'],
+      'amount' => ['required', 'numeric', 'min:0'],
+      'due_date' => ['nullable', 'date'],
+      'status' => ['nullable', 'in:draft,sent,paid,overdue'],
+      'milestone_order' => ['nullable', 'integer', 'min:1'],
+    ]);
+
+    $nextOrder = (int) (Invoice::where('tenant_id', $tenant->id)
+      ->where('project_id', $project->id)
+      ->where('is_milestone', true)
+      ->max('milestone_order') ?? 0) + 1;
+
+    $invoice = new Invoice();
+    $invoice->fill([
+      'tenant_id' => $tenant->id,
+      'project_id' => $project->id,
+      'contact_id' => $project->contact_id,
+      'is_milestone' => true,
+      'milestone_label' => $data['milestone_label'] ?? null,
+      'milestone_order' => $data['milestone_order'] ?? $nextOrder,
+      'issue_date' => now()->toDateString(),
+      'due_date' => $data['due_date'] ?? null,
+      'status' => strtolower($data['status'] ?? 'draft'),
+      'total' => $data['amount'],
+      'total_amount' => $data['amount'],
+      'balance_due' => (strtolower($data['status'] ?? 'draft') === 'paid') ? 0 : $data['amount'],
+    ]);
+    $invoice->save();
+
+    return back()->with('success', 'Milestone invoice created.');
+  }
+
+  public function updateMilestoneInvoice(Request $request, Tenant $tenant, Project $project, Invoice $invoice)
+  {
+    abort_unless($project->tenant_id === $tenant->id, 404);
+    abort_unless($invoice->tenant_id === $tenant->id && $invoice->project_id === $project->id, 404);
+    abort_unless($invoice->is_milestone, 404);
+    $this->authorize('update', $project);
+    if (($project->billing_model ?? 'fixed') !== 'fixed') {
+      return back()->with('error', 'Milestone invoices are available for fixed-fee projects.');
+    }
+
+    $data = $request->validate([
+      'milestone_label' => ['nullable', 'string', 'max:120'],
+      'amount' => ['required', 'numeric', 'min:0'],
+      'due_date' => ['nullable', 'date'],
+      'status' => ['nullable', 'in:draft,sent,paid,overdue'],
+      'milestone_order' => ['nullable', 'integer', 'min:1'],
+    ]);
+
+    $invoice->fill([
+      'milestone_label' => $data['milestone_label'] ?? null,
+      'milestone_order' => $data['milestone_order'] ?? $invoice->milestone_order,
+      'due_date' => $data['due_date'] ?? null,
+      'status' => strtolower($data['status'] ?? $invoice->status ?? 'draft'),
+      'total' => $data['amount'],
+      'total_amount' => $data['amount'],
+      'balance_due' => (strtolower($data['status'] ?? $invoice->status ?? 'draft') === 'paid') ? 0 : $data['amount'],
+    ]);
+    $invoice->save();
+
+    return back()->with('success', 'Milestone invoice updated.');
+  }
+
+  public function destroyMilestoneInvoice(Tenant $tenant, Project $project, Invoice $invoice)
+  {
+    abort_unless($project->tenant_id === $tenant->id, 404);
+    abort_unless($invoice->tenant_id === $tenant->id && $invoice->project_id === $project->id, 404);
+    abort_unless($invoice->is_milestone, 404);
+    $this->authorize('update', $project);
+    if (($project->billing_model ?? 'fixed') !== 'fixed') {
+      return back()->with('error', 'Milestone invoices are available for fixed-fee projects.');
+    }
+
+    $invoice->delete();
+
+    return back()->with('success', 'Milestone invoice deleted.');
   }
 
   /** PUT/PATCH /{tenant}/projects/{project} */
